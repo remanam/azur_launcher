@@ -39,6 +39,7 @@ final class UiKit {
         }
         button.getStyleClass().add(styleClass);
         button.setMinWidth(Region.USE_PREF_SIZE);
+        button.setMaxWidth(Region.USE_PREF_SIZE);
         button.setOnAction(event -> action.run());
         return button;
     }

@@ -98,4 +98,19 @@ class ServerListServiceTest {
             throw new IOException("offline");
         }, "2026-10-29T00:00:00Z").load());
     }
+
+    /** The debug-build path: empty URL, list in cache/servers.json, key from servers_pubkey.txt. */
+    @Test
+    void emptyUrlReadsCacheFileSignedWithTheKeyOverride() throws Exception {
+        Files.createDirectories(dir.resolve("cache"));
+        Files.write(dir.resolve("cache/servers.json"), good());
+        Path keyFile = dir.resolve("servers_pubkey.txt");
+        Files.writeString(keyFile, java.util.Base64.getEncoder().encodeToString(
+                java.util.Arrays.copyOfRange(key.getPublic().getEncoded(), 12, 44)), StandardCharsets.UTF_8);
+        var service = new ServerListService(dir.resolve("cache/servers.json"), ServerListService.loadKey(keyFile), "",
+                url -> {
+                    throw new IOException("must not be called");
+                }, Clock.fixed(Instant.parse("2026-10-29T00:00:00Z"), ZoneOffset.UTC), line -> { });
+        assertEquals(2, service.load().list().servers().size());
+    }
 }

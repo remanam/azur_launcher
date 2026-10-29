@@ -10,4 +10,7 @@ mkdir -p dist-debug
 cp target-debug/azur-launcher-all.jar dist-debug/azur-launcher-debug.jar
 printf '#!/bin/sh\ncd "$(dirname "$0")"\nexec java -jar azur-launcher-debug.jar "$@"\n' > dist-debug/run.sh
 chmod +x dist-debug/run.sh
+mkdir -p ../launcher_builds && cp dist-debug/azur-launcher-debug.jar ../launcher_builds/azur-launcher-debug.jar
+# The debug build has no server URL: seed one signed local entry (needs Go; failure is not fatal).
+sh packaging/dev-servers.sh || echo "dev-servers.sh failed: the server list stays empty until you run it"
 echo "Debug build: $(pwd)/dist-debug/run.sh"

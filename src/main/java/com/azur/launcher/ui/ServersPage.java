@@ -2,7 +2,6 @@ package com.azur.launcher.ui;
 
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.launch.LaunchRequest;
-import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.profile.Instance;
 import com.azur.launcher.profile.InstanceStore;
@@ -26,6 +25,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
@@ -114,7 +114,7 @@ final class ServersPage {
                 Platform.runLater(() -> showList(loaded));
             } catch (IOException | java.security.GeneralSecurityException e) {
                 ctx.log("Server list: " + e.getMessage());
-                Platform.runLater(() -> showListError());
+                Platform.runLater(() -> showListError(e));
             }
         });
     }
@@ -136,16 +136,23 @@ final class ServersPage {
             listBox.getChildren().add(row(entry));
         }
         if (servers.isEmpty()) {
-            listBox.getChildren().add(UiKit.label(I18n.tr("servers.empty"), "empty-hint"));
+            Label empty = UiKit.label(I18n.tr("servers.empty"), "empty-hint");
+            empty.setWrapText(true);
+            listBox.getChildren().add(empty);
         }
         select(servers.stream().filter(e -> selected != null && e.id().equals(selected.id())).findFirst()
                 .orElse(servers.isEmpty() ? null : servers.get(0)));
     }
 
-    private void showListError() {
+    private void showListError(Exception e) {
         servers = List.of();
         rows.clear();
-        listBox.getChildren().setAll(UiKit.label(I18n.tr("servers.unavailable"), "empty-hint"));
+        String reason = ctx.pack.getServersUrl().isBlank() && !Files.isRegularFile(ctx.dirs.serversCacheFile())
+                ? I18n.tr("servers.err.no_source", ctx.dirs.serversCacheFile())
+                : e.getMessage();
+        Label text = UiKit.label(I18n.tr("servers.unavailable", reason), "empty-hint");
+        text.setWrapText(true);
+        listBox.getChildren().setAll(text);
         select(null);
     }
 

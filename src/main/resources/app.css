@@ -6,7 +6,19 @@
 
 .root {
     -fx-font-family: "PT Sans", "Segoe UI", sans-serif;
-    -fx-font-size: 14px;
+    -fx-font-size: -azur-fs-body;
+
+    /* type scale (px): nothing below 13 */
+    -azur-fs-small: 13px;
+    -azur-fs-body: 14px;
+    -azur-fs-card-title: 18px;
+    -azur-fs-title: 28px;
+    -azur-fs-display: 30px;
+
+    /* shape and rhythm */
+    -azur-radius: 6px;
+    -azur-radius-card: 8px;
+    -azur-control-height: 38px;
 
     /* panels */
     -azur-surface: #0b1630;
@@ -18,8 +30,9 @@
 
     /* text */
     -azur-on-surface: #e9e4d4;
-    -azur-on-surface-variant: #b9bccd;
+    -azur-on-surface-variant: #d3d8ea;
     -azur-on-surface-variant-transparent-38: #b9bccd80;
+    -azur-muted: #a9b4d4;
 
     /* gold */
     -azur-primary: #e8c877;
@@ -51,8 +64,12 @@
     -azur-depth-color: rgba(0, 0, 0, 0.45);
 }
 
+.label {
+    -fx-text-fill: -azur-on-surface;
+}
+
 .window-root {
-    -fx-background-color: linear-gradient(to bottom, #2c5aa8 0%, #1b3a78 45%, #0f2147 100%);
+    -fx-background-color: linear-gradient(to bottom, #1e4286 0%, #17316a 45%, #0f2147 100%);
     -fx-background-radius: 8;
     -fx-border-color: -azur-outline;
     -fx-border-radius: 8;
@@ -87,7 +104,7 @@
 .title-bar-title {
     -fx-text-fill: -azur-primary;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 16px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .window-button {
@@ -130,23 +147,24 @@
 }
 
 .nav-item {
-    -fx-padding: 10 12 10 12;
+    -fx-padding: 11 14 11 14;
     -fx-spacing: 12;
-    -fx-background-radius: 20;
+    -fx-background-radius: -azur-radius;
     -fx-cursor: hand;
     -fx-alignment: center-left;
 }
 
 .nav-item > .label {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 14px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .nav-item .icon {
     -fx-background-color: -azur-on-surface-variant;
 }
 
-.nav-item:hover {
+.nav-item:hover,
+.nav-item:focused {
     -fx-background-color: -azur-surface-container-high;
 }
 
@@ -164,8 +182,8 @@
 }
 
 .nav-footer-label {
-    -fx-text-fill: -azur-on-surface-variant-transparent-38;
-    -fx-font-size: 11px;
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: -azur-fs-small;
     -fx-padding: 6 12 6 12;
 }
 
@@ -174,8 +192,8 @@
 }
 
 .page {
-    -fx-padding: 18 20 14 20;
-    -fx-spacing: 4;
+    -fx-padding: 22 26 18 26;
+    -fx-spacing: 8;
 }
 
 .page-scroll {
@@ -191,43 +209,42 @@
 .page-title {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 26px;
+    -fx-font-size: -azur-fs-title;
 }
 
 .page-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .card {
     -fx-background-color: -azur-surface-container-low;
-    -fx-background-radius: 6;
-    -fx-border-color: -azur-outline;
-    -fx-border-radius: 6;
+    -fx-background-radius: -azur-radius-card;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: -azur-radius-card;
     -fx-border-width: 1;
-    -fx-padding: 12;
-    -fx-effect: dropshadow(gaussian, -azur-depth-color, 8, 0.10, -1, 2);
+    -fx-padding: 16;
 }
 
 .card-title {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 17px;
+    -fx-font-size: -azur-fs-card-title;
 }
 
 .card-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .two-line-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .two-line-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .tag {
@@ -235,7 +252,7 @@
     -fx-text-fill: -azur-on-secondary-container;
     -fx-background-radius: 3;
     -fx-padding: 1 6 1 6;
-    -fx-font-size: 11px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .hint {
@@ -253,7 +270,7 @@
 
 .hint.info > .label {
     -fx-text-fill: -azur-on-primary-fixed;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .hint.info .icon {
@@ -316,8 +333,9 @@
 
 .button {
     -fx-cursor: hand;
-    -fx-background-radius: 4;
-    -fx-padding: 6 14 6 14;
+    -fx-background-radius: -azur-radius;
+    -fx-min-height: -azur-control-height;
+    -fx-padding: 8 18 8 18;
     -fx-background-color: transparent;
     -fx-text-fill: -azur-on-surface;
     -fx-border-width: 0;
@@ -329,6 +347,12 @@
     -fx-font-weight: bold;
 }
 
+.button-raised:focused {
+    -fx-border-color: -azur-on-surface;
+    -fx-border-radius: -azur-radius;
+    -fx-border-width: 2;
+}
+
 .button-raised:hover {
     -fx-background-color: -azur-primary-fixed-dim;
     -fx-text-fill: -azur-on-primary-fixed;
@@ -336,8 +360,8 @@
 
 .button-border {
     -fx-background-color: transparent;
-    -fx-border-color: -azur-outline;
-    -fx-border-radius: 4;
+    -fx-border-color: -azur-primary-container;
+    -fx-border-radius: -azur-radius;
     -fx-border-width: 1;
     -fx-text-fill: -azur-primary;
     -fx-graphic-text-gap: 6;
@@ -347,7 +371,8 @@
     -fx-background-color: -azur-primary;
 }
 
-.button-border:hover {
+.button-border:hover,
+.button-border:focused {
     -fx-background-color: -azur-primary-transparent-50;
 }
 
@@ -358,32 +383,34 @@
     -fx-border-width: 0;
 }
 
-.button-text:hover {
+.button-text:hover,
+.button-text:focused {
     -fx-background-color: -azur-primary-transparent-50;
 }
 
 .text-field {
     -fx-background-color: -azur-surface-container-highest;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-text-fill: -azur-on-surface;
-    -fx-prompt-text-fill: -azur-on-surface-variant-transparent-38;
-    -fx-padding: 7 10 7 10;
+    -fx-prompt-text-fill: -azur-muted;
+    -fx-padding: 9 12 9 12;
+    -fx-min-height: -azur-control-height;
     -fx-border-width: 0;
 }
 
 .text-field:focused {
     -fx-background-color: -azur-surface-container-high;
     -fx-border-color: -azur-primary;
-    -fx-border-radius: 4;
+    -fx-border-radius: -azur-radius;
     -fx-border-width: 1;
 }
 
 .combo-box {
     -fx-background-color: -azur-surface-container-highest;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-padding: 0;
     -fx-border-color: -azur-outline;
-    -fx-border-radius: 4;
+    -fx-border-radius: -azur-radius;
     -fx-border-width: 1;
 }
 
@@ -408,9 +435,9 @@
 
 .combo-box-popup .list-view {
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-border-color: -azur-outline;
-    -fx-border-radius: 4;
+    -fx-border-radius: -azur-radius;
     -fx-effect: dropshadow(gaussian, -azur-depth-color, 10, 0.3, 0, 3);
 }
 
@@ -436,7 +463,7 @@
 
 .slider .track {
     -fx-background-color: -azur-secondary-container;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-pref-height: 6;
 }
 
@@ -458,13 +485,13 @@
 
 .progress-bar > .track {
     -fx-background-color: -azur-secondary-container;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-background-insets: 0;
 }
 
 .progress-bar > .bar {
     -fx-background-color: linear-gradient(to right, -azur-azure, -azur-primary);
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-background-insets: 0;
     -fx-padding: 3;
 }
@@ -480,11 +507,11 @@
 
 .options-list-item.first {
     -fx-border-width: 0;
-    -fx-background-radius: 6 6 0 0;
+    -fx-background-radius: 8 8 0 0;
 }
 
 .options-list-item.last {
-    -fx-background-radius: 0 0 6 6;
+    -fx-background-radius: 0 0 8 8;
 }
 
 .options-list-item.first.last {
@@ -493,26 +520,26 @@
 
 .option-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .option-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .value-label {
     -fx-text-fill: -azur-primary;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-small;
     -fx-min-width: 74;
     -fx-alignment: center-right;
 }
 
 .log-area {
     -fx-font-family: "Cascadia Mono", "Consolas", "JetBrains Mono", monospace;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-text-fill: -azur-on-surface;
     -fx-highlight-fill: -azur-primary-container;
     -fx-highlight-text-fill: -azur-on-primary-container;
@@ -521,7 +548,7 @@
 
 .log-area .content {
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
 }
 
 .log-area:focused .content {
@@ -533,8 +560,8 @@
 }
 
 .status-bar {
-    -fx-min-height: 34;
-    -fx-padding: 7 16 7 16;
+    -fx-min-height: 36;
+    -fx-padding: 8 16 8 16;
     -fx-spacing: 12;
     -fx-alignment: center-left;
     -fx-background-color: -azur-surface;
@@ -545,7 +572,7 @@
 
 .status-text {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .download-progress {
@@ -554,7 +581,7 @@
 
 .context-menu {
     -fx-background-color: -azur-surface-container-high;
-    -fx-background-radius: 4;
+    -fx-background-radius: -azur-radius;
     -fx-padding: 4;
     -fx-effect: dropshadow(gaussian, -azur-depth-color, 12, 0.16, 0, 4);
 }
@@ -567,7 +594,7 @@
 
 .context-menu .menu-item .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .context-menu .menu-item:focused {
@@ -707,7 +734,7 @@
 
 .dialog-pane .header-panel .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 15px;
+    -fx-font-size: -azur-fs-body;
     -fx-font-weight: bold;
 }
 
@@ -733,18 +760,18 @@
 .path-value {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Menlo", "Consolas", monospace;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .greeting {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 28px;
+    -fx-font-size: -azur-fs-display;
 }
 
 .greeting-sub {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .hero-card {
@@ -781,7 +808,7 @@
 
 .hero-subtitle {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .account-card {
@@ -813,13 +840,13 @@
 
 .empty-hint {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-body;
     -fx-padding: 18;
 }
 
 .check-box {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .check-box .box {
@@ -843,16 +870,17 @@
 
 .server-row {
     -fx-background-color: -azur-surface-container-low;
-    -fx-background-radius: 6;
+    -fx-background-radius: -azur-radius-card;
     -fx-border-color: -azur-outline-variant;
-    -fx-border-radius: 6;
-    -fx-padding: 10 12 10 12;
+    -fx-border-radius: -azur-radius-card;
+    -fx-padding: 12 14 12 14;
     -fx-spacing: 10;
     -fx-alignment: center-left;
     -fx-cursor: hand;
 }
 
-.server-row:hover {
+.server-row:hover,
+.server-row:focused {
     -fx-background-color: -azur-surface-container;
 }
 
@@ -864,7 +892,7 @@
 .server-name {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 16px;
+    -fx-font-size: -azur-fs-card-title;
 }
 
 .status-dot {
@@ -886,13 +914,13 @@
 
 .kv-key {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
     -fx-min-width: 130;
 }
 
 .kv-value {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .banner-warn {
@@ -900,17 +928,17 @@
     -fx-background-radius: 5;
     -fx-padding: 8 12 8 12;
     -fx-text-fill: -azur-on-error-container;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .about-text {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: -azur-fs-body;
 }
 
 .about-small {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 12px;
+    -fx-font-size: -azur-fs-small;
 }
 
 .about-logo {

@@ -45,10 +45,16 @@ final class AccountsPage {
         root.getChildren().addAll(
                 UiKit.label(I18n.tr("accounts.title"), "page-title"),
                 UiKit.label(I18n.tr("accounts.subtitle"), "page-subtitle"),
-                hint, signInButton, accountList, settingsBox());
-        DebugAccounts.provider().ifPresent(provider -> root.getChildren().add(debugButton(provider)));
+                hint, signInRow(), accountList, settingsBox());
         ctx.onAccountsChanged(this::render);
         render();
+    }
+
+    /** Sign-in button; the debug build adds its extra account button next to it in the same secondary style. */
+    private HBox signInRow() {
+        HBox row = new HBox(10, signInButton);
+        DebugAccounts.provider().ifPresent(provider -> row.getChildren().add(debugButton(provider)));
+        return row;
     }
 
     /** Azure client id and auth proxy fields. */

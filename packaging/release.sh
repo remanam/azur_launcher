@@ -14,4 +14,5 @@ rm -rf dist-release
 mkdir -p dist-release
 cp target/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
 cp -R target/dist/out/. dist-release/
+mkdir -p ../launcher_builds && cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"
