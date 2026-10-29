@@ -1,159 +1,63 @@
-/* Azur Launcher styles. Colours come from the -monet-* variables; .dark on the root switches the palette. */
+/*
+ * Azur Launcher theme. One dark palette (the same as the pack updater): navy panels, gold accents, azure highlights.
+ * Fonts: Philosopher (headings) and PT Sans (text), both SIL OFL 1.1, loaded in LauncherApp from /fonts.
+ * Every colour below is a variable; components reference only the variables.
+ */
 
 .root {
-    -fx-font-family: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", sans-serif;
-    -fx-font-size: 13px;
+    -fx-font-family: "PT Sans", "Segoe UI", sans-serif;
+    -fx-font-size: 14px;
 
-    
-    -monet-primary: #4352A5;
-    -monet-on-primary: #FFFFFF;
-    -monet-primary-container: #DEE0FF;
-    -monet-on-primary-container: #000C60;
-    -monet-primary-fixed: #DEE0FF;
-    -monet-primary-fixed-dim: #BAC3FF;
-    -monet-on-primary-fixed: #000C60;
-    -monet-on-primary-fixed-variant: #2A3A85;
-    -monet-primary-seed: #4352A5;
-    -monet-primary-transparent-50: #4352A580;
-    -monet-primary-transparent-80: #4352A5CC;
+    /* panels */
+    -azur-surface: #0b1630;
+    -azur-surface-container-low: #0e1a38;
+    -azur-surface-container: #13234a;
+    -azur-surface-container-high: #1a2d5c;
+    -azur-surface-container-highest: #0a1430;
+    -azur-surface-variant: #22366b;
 
-    
-    -monet-secondary: #5A5D72;
-    -monet-on-secondary: #FFFFFF;
-    -monet-secondary-container: #DFE1F9;
-    -monet-on-secondary-container: #171B2C;
-    -monet-secondary-fixed: #DFE1F9;
-    -monet-secondary-fixed-dim: #C3C5DD;
-    -monet-on-secondary-fixed: #171B2C;
-    -monet-on-secondary-fixed-variant: #424659;
-    -monet-secondary-container-transparent-50: #DFE1F980;
-    -monet-secondary-container-transparent-80: #DFE1F9CC;
+    /* text */
+    -azur-on-surface: #e9e4d4;
+    -azur-on-surface-variant: #b9bccd;
+    -azur-on-surface-variant-transparent-38: #b9bccd80;
 
-    
-    -monet-tertiary: #77536D;
-    -monet-on-tertiary: #FFFFFF;
-    -monet-tertiary-container: #FFD7F1;
-    -monet-on-tertiary-container: #2D1228;
-    -monet-tertiary-fixed: #FFD7F1;
-    -monet-tertiary-fixed-dim: #E6BAD9;
-    -monet-on-tertiary-fixed: #2D1228;
-    -monet-on-tertiary-fixed-variant: #5D3C54;
+    /* gold */
+    -azur-primary: #e8c877;
+    -azur-on-primary: #0b1630;
+    -azur-primary-container: #c9a227;
+    -azur-on-primary-container: #0b1630;
+    -azur-primary-fixed-dim: #f3dc9c;
+    -azur-on-primary-fixed: #0b1630;
+    -azur-primary-transparent-50: #e8c87733;
+    -azur-surface-tint: #e8c877;
 
-    
-    -monet-error: #BA1A1A;
-    -monet-on-error: #FFFFFF;
-    -monet-error-container: #FFDAD6;
-    -monet-on-error-container: #410002;
+    /* azure */
+    -azur-secondary-container: #22407f;
+    -azur-on-secondary-container: #e9e4d4;
+    -azur-secondary-container-transparent-50: #3b82e040;
+    -azur-azure: #3b82e0;
 
-    
-    -monet-surface: #FBF8FF;
-    -monet-on-surface: #1B1B21;
-    -monet-surface-dim: #DAD9E0;
-    -monet-surface-bright: #FBF8FF;
-    -monet-surface-container-lowest: #FFFFFF;
-    -monet-surface-container-low: #F5F2FA;
-    -monet-surface-container: #EFEDF4;
-    -monet-surface-container-high: #E9E7EF;
-    -monet-surface-container-highest: #E3E1E9;
-    -monet-surface-variant: #E2E1EC;
-    -monet-on-surface-variant: #45464F;
-    -monet-background: #FBF8FF;
-    -monet-on-background: #1B1B21;
-    -monet-surface-tint: #4352A5;
-    -monet-surface-transparent-50: #FBF8FF80;
-    -monet-surface-transparent-80: #FBF8FFCC;
-    -monet-surface-container-low-transparent-80: #F5F2FACC;
-    -monet-on-surface-variant-transparent-38: #45464F61;
+    /* borders */
+    -azur-outline: #8a6a30;
+    -azur-outline-variant: #2b3f73;
 
-    
-    -monet-outline: #767680;
-    -monet-outline-variant: #C6C5D0;
-    -monet-shadow: #000000;
-    -monet-scrim: #000000;
-    -monet-inverse-surface: #303036;
-    -monet-inverse-on-surface: #F3EFF7;
-    -monet-inverse-primary: #BAC3FF;
-    -monet-inverse-surface-transparent-80: #303036CC;
+    /* errors, status */
+    -azur-error: #ff8a80;
+    -azur-on-error: #3a0a0d;
+    -azur-error-container: #6b2127;
+    -azur-on-error-container: #ffd9d6;
+    -azur-online: #6fd28c;
 
-    
-    -monet-depth-color: rgba(0, 0, 0, 0.26);
-}
-
-.root.dark {
-    -monet-primary: #BAC3FF;
-    -monet-on-primary: #1B2A6B;
-    -monet-primary-container: #2A3A85;
-    -monet-on-primary-container: #DEE0FF;
-    -monet-primary-fixed: #DEE0FF;
-    -monet-primary-fixed-dim: #BAC3FF;
-    -monet-on-primary-fixed: #000C60;
-    -monet-on-primary-fixed-variant: #2A3A85;
-    -monet-primary-transparent-50: #BAC3FF80;
-    -monet-primary-transparent-80: #BAC3FFCC;
-
-    -monet-secondary: #C3C5DD;
-    -monet-on-secondary: #2C2F42;
-    -monet-secondary-container: #424659;
-    -monet-on-secondary-container: #DFE1F9;
-    -monet-secondary-fixed: #DFE1F9;
-    -monet-secondary-fixed-dim: #C3C5DD;
-    -monet-on-secondary-fixed: #171B2C;
-    -monet-on-secondary-fixed-variant: #424659;
-    -monet-secondary-container-transparent-50: #42465980;
-    -monet-secondary-container-transparent-80: #424659CC;
-
-    -monet-tertiary: #E6BAD9;
-    -monet-on-tertiary: #45263D;
-    -monet-tertiary-container: #5D3C54;
-    -monet-on-tertiary-container: #FFD7F1;
-    -monet-tertiary-fixed: #FFD7F1;
-    -monet-tertiary-fixed-dim: #E6BAD9;
-    -monet-on-tertiary-fixed: #2D1228;
-    -monet-on-tertiary-fixed-variant: #5D3C54;
-
-    -monet-error: #FFB4AB;
-    -monet-on-error: #690005;
-    -monet-error-container: #93000A;
-    -monet-on-error-container: #FFDAD6;
-
-    -monet-surface: #131318;
-    -monet-on-surface: #E4E1E9;
-    -monet-surface-dim: #131318;
-    -monet-surface-bright: #39383F;
-    -monet-surface-container-lowest: #0E0E13;
-    -monet-surface-container-low: #1B1B21;
-    -monet-surface-container: #1F1F25;
-    -monet-surface-container-high: #2A2A30;
-    -monet-surface-container-highest: #35343B;
-    -monet-surface-variant: #45464F;
-    -monet-on-surface-variant: #C6C5D0;
-    -monet-background: #131318;
-    -monet-on-background: #E4E1E9;
-    -monet-surface-tint: #BAC3FF;
-    -monet-surface-transparent-50: #13131880;
-    -monet-surface-transparent-80: #131318CC;
-    -monet-surface-container-low-transparent-80: #1B1B21CC;
-    -monet-on-surface-variant-transparent-38: #C6C5D061;
-
-    -monet-outline: #90909A;
-    -monet-outline-variant: #45464F;
-    -monet-shadow: #000000;
-    -monet-scrim: #000000;
-    -monet-inverse-surface: #E4E1E9;
-    -monet-inverse-on-surface: #303036;
-    -monet-inverse-primary: #4352A5;
-    -monet-inverse-surface-transparent-80: #E4E1E9CC;
-
-    -monet-depth-color: rgba(0, 0, 0, 0.66);
+    -azur-depth-color: rgba(0, 0, 0, 0.45);
 }
 
 .window-root {
-    -fx-background-color: -monet-surface;
+    -fx-background-color: linear-gradient(to bottom, #2c5aa8 0%, #1b3a78 45%, #0f2147 100%);
     -fx-background-radius: 8;
-    -fx-border-color: -monet-outline-variant;
+    -fx-border-color: -azur-outline;
     -fx-border-radius: 8;
     -fx-border-width: 1;
-    -fx-effect: dropshadow(gaussian, -monet-depth-color, 18, 0.16, 0, 6);
+    -fx-effect: dropshadow(gaussian, -azur-depth-color, 18, 0.16, 0, 6);
 }
 
 .title-bar {
@@ -162,24 +66,28 @@
     -fx-max-height: 40;
     -fx-padding: 0 0 0 14;
     -fx-spacing: 10;
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface;
     -fx-background-radius: 8 8 0 0;
+    -fx-border-color: -azur-outline;
+    -fx-border-width: 0 0 1 0;
     -fx-cursor: default;
 }
 
 .app-logo {
-    -fx-min-width: 16;
-    -fx-min-height: 16;
-    -fx-max-width: 16;
-    -fx-max-height: 16;
-    -fx-background-color: -monet-primary;
-    -fx-background-radius: 4;
+    -fx-min-width: 22;
+    -fx-min-height: 22;
+    -fx-max-width: 22;
+    -fx-max-height: 22;
+    -fx-background-image: url("img/logo.png");
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
 }
 
 .title-bar-title {
-    -fx-text-fill: -monet-on-surface;
-    -fx-font-size: 13px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -azur-primary;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 16px;
 }
 
 .window-button {
@@ -195,19 +103,19 @@
 }
 
 .window-button .icon {
-    -fx-background-color: -monet-on-surface-variant;
+    -fx-background-color: -azur-on-surface-variant;
 }
 
 .window-button:hover {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: -azur-surface-container-high;
 }
 
 .window-close:hover {
-    -fx-background-color: -monet-error-container;
+    -fx-background-color: -azur-error-container;
 }
 
 .window-close:hover .icon {
-    -fx-background-color: -monet-on-error-container;
+    -fx-background-color: -azur-on-error-container;
 }
 
 .nav-drawer {
@@ -216,7 +124,9 @@
     -fx-max-width: 196;
     -fx-padding: 10 8 8 8;
     -fx-spacing: 2;
-    -fx-background-color: -monet-surface-container-low;
+    -fx-background-color: -azur-surface-container-low;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-width: 0 1 0 0;
 }
 
 .nav-item {
@@ -228,39 +138,39 @@
 }
 
 .nav-item > .label {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 14px;
 }
 
 .nav-item .icon {
-    -fx-background-color: -monet-on-surface-variant;
+    -fx-background-color: -azur-on-surface-variant;
 }
 
 .nav-item:hover {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: -azur-surface-container-high;
 }
 
 .nav-item.selected {
-    -fx-background-color: -monet-secondary-container-transparent-50;
+    -fx-background-color: -azur-secondary-container-transparent-50;
 }
 
 .nav-item.selected > .label {
-    -fx-text-fill: -monet-on-secondary-container;
+    -fx-text-fill: -azur-on-secondary-container;
     -fx-font-weight: bold;
 }
 
 .nav-item.selected .icon {
-    -fx-background-color: -monet-on-secondary-container;
+    -fx-background-color: -azur-on-secondary-container;
 }
 
 .nav-footer-label {
-    -fx-text-fill: -monet-on-surface-variant-transparent-38;
+    -fx-text-fill: -azur-on-surface-variant-transparent-38;
     -fx-font-size: 11px;
     -fx-padding: 6 12 6 12;
 }
 
 .content-area {
-    -fx-background-color: -monet-surface;
+    -fx-background-color: transparent;
 }
 
 .page {
@@ -279,47 +189,50 @@
 }
 
 .page-title {
-    -fx-text-fill: -monet-on-surface;
-    -fx-font-size: 22px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 26px;
 }
 
 .page-subtitle {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
 }
 
 .card {
-    -fx-background-color: -monet-surface-container-low;
+    -fx-background-color: -azur-surface-container-low;
     -fx-background-radius: 6;
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
     -fx-padding: 12;
-    -fx-effect: dropshadow(gaussian, -monet-depth-color, 8, 0.10, -1, 2);
+    -fx-effect: dropshadow(gaussian, -azur-depth-color, 8, 0.10, -1, 2);
 }
 
 .card-title {
-    -fx-text-fill: -monet-on-surface;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 17px;
 }
 
 .card-subtitle {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
 }
 
 .two-line-title {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-font-size: 14px;
 }
 
 .two-line-subtitle {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
 }
 
 .tag {
-    -fx-background-color: -monet-secondary-container;
-    -fx-text-fill: -monet-on-secondary-container;
+    -fx-background-color: -azur-secondary-container;
+    -fx-text-fill: -azur-on-secondary-container;
     -fx-background-radius: 3;
     -fx-padding: 1 6 1 6;
     -fx-font-size: 11px;
@@ -334,17 +247,17 @@
 }
 
 .hint.info {
-    -fx-background-color: -monet-primary-fixed-dim;
-    -fx-border-color: -monet-outline;
+    -fx-background-color: -azur-primary-fixed-dim;
+    -fx-border-color: -azur-outline;
 }
 
 .hint.info > .label {
-    -fx-text-fill: -monet-on-primary-fixed;
+    -fx-text-fill: -azur-on-primary-fixed;
     -fx-font-size: 12px;
 }
 
 .hint.info .icon {
-    -fx-background-color: -monet-on-primary-fixed;
+    -fx-background-color: -azur-on-primary-fixed;
 }
 
 .log-card {
@@ -359,45 +272,46 @@
     -fx-padding: 0;
     -fx-alignment: center;
     -fx-graphic-text-gap: 10;
-    -fx-background-color: -monet-primary-container;
+    -fx-background-color: linear-gradient(to bottom, #f3dc9c, #c9a227);
     -fx-background-radius: 4 0 0 4;
-    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -monet-on-primary-container 20%, -monet-on-primary-container 80%, transparent 80%, transparent 100%);
+    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -azur-on-primary-container 20%, -azur-on-primary-container 80%, transparent 80%, transparent 100%);
     -fx-border-width: 0 3 0 0;
-    -fx-text-fill: -monet-on-primary-container;
-    -fx-font-size: 14px;
+    -fx-text-fill: -azur-on-primary-container;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 17px;
     -fx-cursor: hand;
 }
 
 .launch-button .icon {
-    -fx-background-color: -monet-on-primary-container;
+    -fx-background-color: -azur-on-primary-container;
 }
 
 .launch-button:hover {
-    -fx-background-color: -monet-primary-fixed-dim;
-    -fx-text-fill: -monet-on-primary-fixed;
+    -fx-background-color: linear-gradient(to bottom, #fbeab8, #e0b93a);
+    -fx-text-fill: -azur-on-primary-fixed;
 }
 
 .launch-button:hover .icon {
-    -fx-background-color: -monet-on-primary-fixed;
+    -fx-background-color: -azur-on-primary-fixed;
 }
 
 .launch-button.stopping {
-    -fx-background-color: -monet-error-container;
-    -fx-text-fill: -monet-on-error-container;
-    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -monet-on-error-container 20%, -monet-on-error-container 80%, transparent 80%, transparent 100%);
+    -fx-background-color: -azur-error-container;
+    -fx-text-fill: -azur-on-error-container;
+    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -azur-on-error-container 20%, -azur-on-error-container 80%, transparent 80%, transparent 100%);
 }
 
 .launch-button.stopping .icon {
-    -fx-background-color: -monet-on-error-container;
+    -fx-background-color: -azur-on-error-container;
 }
 
 .launch-button.stopping:hover {
-    -fx-background-color: -monet-error;
-    -fx-text-fill: -monet-on-error;
+    -fx-background-color: -azur-error;
+    -fx-text-fill: -azur-on-error;
 }
 
 .launch-button.stopping:hover .icon {
-    -fx-background-color: -monet-on-error;
+    -fx-background-color: -azur-on-error;
 }
 
 .button {
@@ -405,75 +319,82 @@
     -fx-background-radius: 4;
     -fx-padding: 6 14 6 14;
     -fx-background-color: transparent;
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-border-width: 0;
 }
 
 .button-raised {
-    -fx-background-color: -monet-primary;
-    -fx-text-fill: -monet-on-primary;
+    -fx-background-color: -azur-primary;
+    -fx-text-fill: -azur-on-primary;
     -fx-font-weight: bold;
 }
 
 .button-raised:hover {
-    -fx-background-color: -monet-primary-fixed-dim;
-    -fx-text-fill: -monet-on-primary-fixed;
+    -fx-background-color: -azur-primary-fixed-dim;
+    -fx-text-fill: -azur-on-primary-fixed;
 }
 
 .button-border {
     -fx-background-color: transparent;
-    -fx-border-color: -monet-outline;
+    -fx-border-color: -azur-outline;
     -fx-border-radius: 4;
     -fx-border-width: 1;
-    -fx-text-fill: -monet-primary;
+    -fx-text-fill: -azur-primary;
     -fx-graphic-text-gap: 6;
 }
 
 .button-border .icon {
-    -fx-background-color: -monet-primary;
+    -fx-background-color: -azur-primary;
 }
 
 .button-border:hover {
-    -fx-background-color: -monet-primary-transparent-50;
+    -fx-background-color: -azur-primary-transparent-50;
 }
 
 .button-text {
     -fx-background-color: transparent;
-    -fx-text-fill: -monet-primary;
+    -fx-text-fill: -azur-primary;
     -fx-padding: 4 8 4 8;
     -fx-border-width: 0;
 }
 
 .button-text:hover {
-    -fx-background-color: -monet-primary-transparent-50;
+    -fx-background-color: -azur-primary-transparent-50;
 }
 
 .text-field {
-    -fx-background-color: -monet-surface-container-highest;
+    -fx-background-color: -azur-surface-container-highest;
     -fx-background-radius: 4;
-    -fx-text-fill: -monet-on-surface;
-    -fx-prompt-text-fill: -monet-on-surface-variant-transparent-38;
+    -fx-text-fill: -azur-on-surface;
+    -fx-prompt-text-fill: -azur-on-surface-variant-transparent-38;
     -fx-padding: 7 10 7 10;
     -fx-border-width: 0;
 }
 
 .text-field:focused {
-    -fx-background-color: -monet-surface-container-high;
-    -fx-border-color: -monet-primary;
+    -fx-background-color: -azur-surface-container-high;
+    -fx-border-color: -azur-primary;
     -fx-border-radius: 4;
     -fx-border-width: 1;
 }
 
 .combo-box {
-    -fx-background-color: -monet-surface-container-highest;
+    -fx-background-color: -azur-surface-container-highest;
     -fx-background-radius: 4;
     -fx-padding: 0;
-    -fx-border-width: 0;
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 4;
+    -fx-border-width: 1;
+}
+
+.combo-box:hover,
+.combo-box:showing {
+    -fx-border-color: -azur-primary;
 }
 
 .combo-box .list-cell {
     -fx-background-color: transparent;
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-padding: 7 10 7 10;
 }
 
@@ -482,29 +403,31 @@
 }
 
 .combo-box .arrow {
-    -fx-background-color: -monet-on-surface-variant;
+    -fx-background-color: -azur-primary;
 }
 
 .combo-box-popup .list-view {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: -azur-surface-container;
     -fx-background-radius: 4;
-    -fx-effect: dropshadow(gaussian, -monet-depth-color, 10, 0.14, 0, 3);
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 4;
+    -fx-effect: dropshadow(gaussian, -azur-depth-color, 10, 0.3, 0, 3);
 }
 
 .combo-box-popup .list-view .list-cell {
     -fx-background-color: transparent;
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-padding: 8 12 8 12;
 }
 
 .combo-box-popup .list-view .list-cell:filled:hover {
-    -fx-background-color: -monet-secondary-container-transparent-50;
-    -fx-text-fill: -monet-on-secondary-container;
+    -fx-background-color: -azur-secondary-container-transparent-50;
+    -fx-text-fill: -azur-on-secondary-container;
 }
 
 .combo-box-popup .list-view .list-cell:filled:selected {
-    -fx-background-color: -monet-secondary-container;
-    -fx-text-fill: -monet-on-secondary-container;
+    -fx-background-color: -azur-secondary-container;
+    -fx-text-fill: -azur-on-secondary-container;
 }
 
 .slider {
@@ -512,13 +435,13 @@
 }
 
 .slider .track {
-    -fx-background-color: -monet-secondary-container;
+    -fx-background-color: -azur-secondary-container;
     -fx-background-radius: 4;
     -fx-pref-height: 6;
 }
 
 .slider .thumb {
-    -fx-background-color: -monet-primary;
+    -fx-background-color: -azur-primary;
     -fx-background-radius: 20;
     -fx-pref-width: 16;
     -fx-pref-height: 16;
@@ -534,21 +457,21 @@
 }
 
 .progress-bar > .track {
-    -fx-background-color: -monet-secondary-container;
+    -fx-background-color: -azur-secondary-container;
     -fx-background-radius: 4;
     -fx-background-insets: 0;
 }
 
 .progress-bar > .bar {
-    -fx-background-color: -monet-primary;
+    -fx-background-color: linear-gradient(to right, -azur-azure, -azur-primary);
     -fx-background-radius: 4;
     -fx-background-insets: 0;
     -fx-padding: 3;
 }
 
 .options-list-item {
-    -fx-background-color: -monet-surface-container-low;
-    -fx-border-color: -monet-outline-variant;
+    -fx-background-color: -azur-surface-container-low;
+    -fx-border-color: -azur-outline-variant;
     -fx-border-width: 1 0 0 0;
     -fx-padding: 12 16 12 16;
     -fx-spacing: 12;
@@ -569,17 +492,17 @@
 }
 
 .option-title {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-font-size: 14px;
 }
 
 .option-subtitle {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
 }
 
 .value-label {
-    -fx-text-fill: -monet-primary;
+    -fx-text-fill: -azur-primary;
     -fx-font-size: 13px;
     -fx-min-width: 74;
     -fx-alignment: center-right;
@@ -588,25 +511,25 @@
 .log-area {
     -fx-font-family: "Cascadia Mono", "Consolas", "JetBrains Mono", monospace;
     -fx-font-size: 12px;
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface-container;
     -fx-background-radius: 4;
-    -fx-text-fill: -monet-on-surface;
-    -fx-highlight-fill: -monet-primary-container;
-    -fx-highlight-text-fill: -monet-on-primary-container;
+    -fx-text-fill: -azur-on-surface;
+    -fx-highlight-fill: -azur-primary-container;
+    -fx-highlight-text-fill: -azur-on-primary-container;
     -fx-border-width: 0;
 }
 
 .log-area .content {
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface-container;
     -fx-background-radius: 4;
 }
 
 .log-area:focused .content {
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface-container;
 }
 
 .log-area .text {
-    -fx-fill: -monet-on-surface;
+    -fx-fill: -azur-on-surface;
 }
 
 .status-bar {
@@ -614,12 +537,14 @@
     -fx-padding: 7 16 7 16;
     -fx-spacing: 12;
     -fx-alignment: center-left;
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface;
     -fx-background-radius: 0 0 8 8;
+    -fx-border-color: -azur-outline;
+    -fx-border-width: 1 0 0 0;
 }
 
 .status-text {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
 }
 
@@ -628,10 +553,10 @@
 }
 
 .context-menu {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: -azur-surface-container-high;
     -fx-background-radius: 4;
     -fx-padding: 4;
-    -fx-effect: dropshadow(gaussian, -monet-depth-color, 12, 0.16, 0, 4);
+    -fx-effect: dropshadow(gaussian, -azur-depth-color, 12, 0.16, 0, 4);
 }
 
 .context-menu .menu-item {
@@ -641,16 +566,16 @@
 }
 
 .context-menu .menu-item .label {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-font-size: 13px;
 }
 
 .context-menu .menu-item:focused {
-    -fx-background-color: -monet-secondary-container-transparent-50;
+    -fx-background-color: -azur-secondary-container-transparent-50;
 }
 
 .context-menu .menu-item:focused .label {
-    -fx-text-fill: -monet-on-secondary-container;
+    -fx-text-fill: -azur-on-secondary-container;
 }
 
 .context-menu .separator {
@@ -658,7 +583,7 @@
 }
 
 .context-menu .separator .line {
-    -fx-border-color: -monet-outline-variant;
+    -fx-border-color: -azur-outline-variant;
     -fx-border-width: 1 0 0 0;
 }
 
@@ -683,7 +608,7 @@
 }
 
 .scroll-bar .thumb {
-    -fx-background-color: -monet-surface-tint;
+    -fx-background-color: -azur-surface-tint;
     -fx-background-radius: 6;
     -fx-opacity: 0.55;
 }
@@ -701,7 +626,7 @@
 }
 
 .icon {
-    -fx-background-color: -monet-on-surface-variant;
+    -fx-background-color: -azur-on-surface-variant;
     -fx-background-insets: 0;
     -fx-scale-shape: true;
 }
@@ -738,6 +663,10 @@
     -fx-shape: "M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z";
 }
 
+.icon-info {
+    -fx-shape: "M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z";
+}
+
 .icon-java {
     -fx-shape: "M12 2 3 7v10l9 5 9-5V7zm0 2.3 6.7 3.7L12 11.7 5.3 8zM5 9.6l6 3.3v7.5l-6-3.3zm14 0v7.5l-6 3.3v-7.5z";
 }
@@ -759,71 +688,73 @@
 }
 
 .tag-installed {
-    -fx-background-color: -monet-primary-container;
-    -fx-text-fill: -monet-on-primary-container;
+    -fx-background-color: -azur-primary-container;
+    -fx-text-fill: -azur-on-primary-container;
 }
 
 .dialog-pane {
-    -fx-background-color: -monet-surface-container-high;
+    -fx-background-color: -azur-surface-container-high;
 }
 
 .dialog-pane > .content.label,
 .dialog-pane .label {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
 }
 
 .dialog-pane .header-panel {
-    -fx-background-color: -monet-surface-container;
+    -fx-background-color: -azur-surface-container;
 }
 
 .dialog-pane .header-panel .label {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-font-size: 15px;
     -fx-font-weight: bold;
 }
 
 .dialog-pane .button {
-    -fx-background-color: -monet-surface-container-highest;
-    -fx-text-fill: -monet-on-surface;
+    -fx-background-color: -azur-surface-container-highest;
+    -fx-text-fill: -azur-on-surface;
 }
 
 .dialog-pane .button:hover {
-    -fx-background-color: -monet-surface-variant;
+    -fx-background-color: -azur-surface-variant;
 }
 
 .dialog-pane .button:default {
-    -fx-background-color: -monet-primary;
-    -fx-text-fill: -monet-on-primary;
+    -fx-background-color: -azur-primary;
+    -fx-text-fill: -azur-on-primary;
 }
 
 .dialog-pane .button:default:hover {
-    -fx-background-color: -monet-primary-fixed-dim;
-    -fx-text-fill: -monet-on-primary-fixed;
+    -fx-background-color: -azur-primary-fixed-dim;
+    -fx-text-fill: -azur-on-primary-fixed;
 }
 
 .path-value {
-    -fx-text-fill: -monet-on-surface;
-    -fx-font-family: "Consolas", "Microsoft YaHei UI", monospace;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Menlo", "Consolas", monospace;
     -fx-font-size: 12px;
 }
 
 .greeting {
-    -fx-text-fill: -monet-on-surface;
-    -fx-font-size: 26px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 28px;
 }
 
 .greeting-sub {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 13px;
 }
 
 .hero-card {
-    -fx-background-color: linear-gradient(to bottom right, -monet-primary-container, -monet-secondary-container);
+    -fx-background-color: linear-gradient(to bottom right, #1a2d5c, #22407f);
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 10;
     -fx-background-radius: 10;
     -fx-padding: 20;
     -fx-spacing: 16;
-    -fx-effect: dropshadow(gaussian, -monet-depth-color, 12, 0.12, 0, 3);
+    -fx-effect: dropshadow(gaussian, -azur-depth-color, 12, 0.12, 0, 3);
 }
 
 .hero-avatar {
@@ -831,34 +762,33 @@
     -fx-min-height: 64;
     -fx-max-width: 64;
     -fx-max-height: 64;
-    -fx-background-color: -monet-primary;
+    -fx-background-color: -azur-primary;
     -fx-background-radius: 14;
     -fx-alignment: center;
 }
 
 .hero-avatar > .label {
-    -fx-text-fill: -monet-on-primary;
+    -fx-text-fill: -azur-on-primary;
     -fx-font-size: 28px;
     -fx-font-weight: bold;
 }
 
 .hero-title {
-    -fx-text-fill: -monet-on-primary-container;
-    -fx-font-size: 21px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -azur-primary;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 24px;
 }
 
 .hero-subtitle {
-    -fx-text-fill: -monet-on-primary-container;
-    -fx-font-size: 12px;
-    -fx-opacity: 0.78;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-size: 13px;
 }
 
 .account-card {
-    -fx-background-color: -monet-surface-container-low;
+    -fx-background-color: -azur-surface-container-low;
     -fx-background-radius: 8;
     -fx-border-radius: 8;
-    -fx-border-color: -monet-outline-variant;
+    -fx-border-color: -azur-outline-variant;
     -fx-border-width: 1;
     -fx-padding: 14;
     -fx-spacing: 12;
@@ -872,39 +802,124 @@
     -fx-max-height: 44;
     -fx-background-radius: 22;
     -fx-alignment: center;
-    -fx-background-color: -monet-primary-container;
+    -fx-background-color: -azur-primary-container;
 }
 
 .list-avatar-text {
-    -fx-text-fill: -monet-on-primary-container;
+    -fx-text-fill: -azur-on-primary-container;
     -fx-font-size: 19px;
     -fx-font-weight: bold;
 }
 
 .empty-hint {
-    -fx-text-fill: -monet-on-surface-variant;
+    -fx-text-fill: -azur-on-surface-variant;
     -fx-font-size: 12px;
     -fx-padding: 18;
 }
 
 .check-box {
-    -fx-text-fill: -monet-on-surface;
+    -fx-text-fill: -azur-on-surface;
     -fx-font-size: 13px;
 }
 
 .check-box .box {
-    -fx-background-color: -monet-surface-container-highest;
+    -fx-background-color: -azur-surface-container-highest;
     -fx-background-radius: 3;
-    -fx-border-color: -monet-outline;
+    -fx-border-color: -azur-outline;
     -fx-border-radius: 3;
     -fx-border-width: 1;
 }
 
 .check-box:selected .box {
-    -fx-background-color: -monet-primary;
-    -fx-border-color: -monet-primary;
+    -fx-background-color: -azur-primary;
+    -fx-border-color: -azur-primary;
 }
 
 .check-box:selected .mark {
-    -fx-background-color: -monet-on-primary;
+    -fx-background-color: -azur-on-primary;
+}
+
+/* ---- server list, detail, about ---- */
+
+.server-row {
+    -fx-background-color: -azur-surface-container-low;
+    -fx-background-radius: 6;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: 6;
+    -fx-padding: 10 12 10 12;
+    -fx-spacing: 10;
+    -fx-alignment: center-left;
+    -fx-cursor: hand;
+}
+
+.server-row:hover {
+    -fx-background-color: -azur-surface-container;
+}
+
+.server-row.selected {
+    -fx-background-color: -azur-surface-container;
+    -fx-border-color: -azur-primary;
+}
+
+.server-name {
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 16px;
+}
+
+.status-dot {
+    -fx-min-width: 10;
+    -fx-min-height: 10;
+    -fx-max-width: 10;
+    -fx-max-height: 10;
+    -fx-background-radius: 5;
+    -fx-background-color: -azur-on-surface-variant-transparent-38;
+}
+
+.status-dot.online {
+    -fx-background-color: -azur-online;
+}
+
+.status-dot.offline {
+    -fx-background-color: -azur-error;
+}
+
+.kv-key {
+    -fx-text-fill: -azur-on-surface-variant;
+    -fx-font-size: 12px;
+    -fx-min-width: 130;
+}
+
+.kv-value {
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-size: 13px;
+}
+
+.banner-warn {
+    -fx-background-color: -azur-error-container;
+    -fx-background-radius: 5;
+    -fx-padding: 8 12 8 12;
+    -fx-text-fill: -azur-on-error-container;
+    -fx-font-size: 12px;
+}
+
+.about-text {
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-size: 13px;
+}
+
+.about-small {
+    -fx-text-fill: -azur-on-surface-variant;
+    -fx-font-size: 12px;
+}
+
+.about-logo {
+    -fx-min-width: 64;
+    -fx-min-height: 64;
+    -fx-max-width: 64;
+    -fx-max-height: 64;
+    -fx-background-image: url("img/logo.png");
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
 }

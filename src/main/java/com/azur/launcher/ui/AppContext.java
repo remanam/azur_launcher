@@ -4,6 +4,7 @@ import com.azur.launcher.auth.AccountStore;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
+import com.azur.launcher.config.PackSettings;
 import com.azur.launcher.game.GamePaths;
 
 import javafx.application.HostServices;
@@ -30,6 +31,8 @@ final class AppContext {
     final AccountStore accounts;
     final HostServices host;
     final Stage stage;
+    /** Server list and pack sync settings (invite, servers.json address, updater path). */
+    final PackSettings pack;
     /** Background work (network, disk). Daemon threads, so they never block exit. */
     final ExecutorService io = Executors.newCachedThreadPool(runnable -> {
         Thread thread = new Thread(runnable, "azur-io");
@@ -51,6 +54,15 @@ final class AppContext {
         this.accounts = accounts;
         this.host = host;
         this.stage = stage;
+        this.pack = PackSettings.load(dirs.packSettingsFile());
+    }
+
+    void savePack() {
+        try {
+            pack.save(dirs.packSettingsFile());
+        } catch (Exception e) {
+            log("Cannot save pack settings: " + e.getMessage());
+        }
     }
 
     GamePaths gamePaths() {

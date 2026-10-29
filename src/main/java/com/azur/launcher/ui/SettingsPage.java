@@ -6,7 +6,6 @@ import com.azur.launcher.i18n.I18n;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
@@ -15,7 +14,7 @@ import javafx.scene.layout.VBox;
 
 import java.util.List;
 
-/** Settings: memory, Java, download threads, JVM arguments, language and theme. Every change is saved at once. */
+/** Settings: memory, Java, download threads, JVM arguments, language, server list and pack sync. Every change is saved at once. */
 final class SettingsPage {
 
     private static final int MEMORY_MIN_MB = 512;
@@ -25,20 +24,18 @@ final class SettingsPage {
 
     private final AppContext ctx;
     private final Runnable onLanguageChanged;
-    private final Runnable onThemeChanged;
     private final VBox root = new VBox(0);
     private final ComboBox<String> javaBox = new ComboBox<>();
     private List<JavaDetector.JavaInfo> detected = List.of();
 
-    SettingsPage(AppContext ctx, Runnable onLanguageChanged, Runnable onThemeChanged) {
+    SettingsPage(AppContext ctx, Runnable onLanguageChanged) {
         this.ctx = ctx;
         this.onLanguageChanged = onLanguageChanged;
-        this.onThemeChanged = onThemeChanged;
 
         VBox header = new VBox(3, UiKit.label(I18n.tr("settings.title"), "page-title"),
                 UiKit.label(I18n.tr("settings.subtitle"), "page-subtitle"));
-        VBox options = new VBox(0, memoryRow(), javaRow(), threadsRow(), jvmArgsRow(), languageRow(), themeRow(),
-                folderRow());
+        VBox options = new VBox(0, memoryRow(), javaRow(), threadsRow(), jvmArgsRow(), languageRow(),
+                serversUrlRow(), inviteRow(), updaterRow(), folderRow());
         VBox page = new VBox(14, header, UiKit.card(options));
         page.getStyleClass().add("page");
         root.getChildren().add(page);
@@ -126,15 +123,26 @@ final class SettingsPage {
         return UiKit.optionItem(I18n.tr("settings.language"), I18n.tr("settings.language_hint"), box);
     }
 
-    private Node themeRow() {
-        CheckBox dark = new CheckBox();
-        dark.setSelected(ctx.config.isDarkMode());
-        dark.setOnAction(event -> {
-            ctx.config.setDarkMode(dark.isSelected());
-            ctx.saveConfig();
-            onThemeChanged.run();
+    private Node serversUrlRow() {
+        return textRow("settings.servers_url", "settings.servers_url_hint", ctx.pack.getServersUrl(), ctx.pack::setServersUrl);
+    }
+
+    private Node inviteRow() {
+        return textRow("settings.invite", "settings.invite_hint", ctx.pack.getInvite(), ctx.pack::setInvite);
+    }
+
+    private Node updaterRow() {
+        return textRow("settings.updater", "settings.updater_hint", ctx.pack.getUpdaterPath(), ctx.pack::setUpdaterPath);
+    }
+
+    private Node textRow(String titleKey, String hintKey, String value, java.util.function.Consumer<String> setter) {
+        TextField field = new TextField(value);
+        field.setPrefWidth(320);
+        field.textProperty().addListener((obs, old, text) -> {
+            setter.accept(text);
+            ctx.savePack();
         });
-        return UiKit.optionItem(I18n.tr("settings.dark"), I18n.tr("settings.dark_hint"), dark);
+        return UiKit.optionItem(I18n.tr(titleKey), I18n.tr(hintKey), field);
     }
 
     private Node folderRow() {
