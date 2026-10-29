@@ -43,17 +43,19 @@ public class NeoForgeInstaller {
     }
 
     /**
-     * Installs the bundled pin when the request matches it; any other version has no pinned hash and is refused.
-     * Kept for the existing install button.
+     * Installs any NeoForge build. The bundled pin is also checked against its pinned SHA-256 and recorded as
+     * installed; other builds are checked against the SHA-1 published on the same Maven only.
      */
     public InstallResult install(String mcVersion, String neoForgeVersion, Path gameDir) {
         try {
-            Profile pin = InstanceStore.bundledProfile();
-            if (!pin.minecraft().equals(mcVersion) || !pin.neoforge().equals(neoForgeVersion)) {
-                return fail(I18n.tr("neoforge.not_pinned", neoForgeVersion));
+            if (!InstallEntries.isValidNeoForge(neoForgeVersion)) {
+                return fail(I18n.tr("neoforge.bad_version", String.valueOf(neoForgeVersion)));
             }
-            InstallResult result = install(mcVersion, neoForgeVersion, pin.neoforgeInstallerSha256(), gameDir);
-            if (result.success()) {
+            Profile pin = InstanceStore.bundledProfile();
+            boolean isPin = pin.minecraft().equals(mcVersion) && pin.neoforge().equals(neoForgeVersion);
+            InstallResult result = install(mcVersion, neoForgeVersion,
+                    isPin ? pin.neoforgeInstallerSha256() : null, gameDir);
+            if (result.success() && isPin) {
                 new InstalledState(mcVersion, neoForgeVersion, pin.neoforgeInstallerSha256())
                         .write(dirs.instancesDir().resolve(pin.serverId()).resolve("installed.json"));
             }

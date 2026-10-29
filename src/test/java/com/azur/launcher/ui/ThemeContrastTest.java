@@ -87,6 +87,22 @@ class ThemeContrastTest {
     }
 
     @Test
+    void inputsAreFilledAndBordered() throws IOException {
+        String css = css();
+        String fill = color(css, "surface-container-highest");
+        // field border against its own fill, and the fill against the card it sits on (WCAG 1.4.11 asks 3:1 for borders)
+        assertTrue(ratio(color(css, "outline-variant"), fill) >= 3.0, "field border");
+        assertTrue(ratio(color(css, "primary"), fill) >= 3.0, "focus border");
+        assertTrue(ratio(fill, color(css, "surface-container-low")) >= 1.3, "field fill vs card");
+    }
+
+    @Test
+    void panelsAreLighterThanTheOldDarkTheme() throws IOException {
+        String css = css();
+        assertTrue(luminance(color(css, "surface-container")) > luminance("#13234a") * 2);
+    }
+
+    @Test
     void noFontBelow13px() throws IOException {
         Matcher m = Pattern.compile("-fx-font-size:\\s*(\\d+)px").matcher(css());
         while (m.find()) {

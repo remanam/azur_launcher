@@ -5,11 +5,18 @@ import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.loader.InstallEntries;
 import com.azur.launcher.loader.NeoForgeCatalog;
+import com.azur.launcher.loader.NeoForgeList;
+import com.azur.launcher.profile.InstanceStore;
+import com.azur.launcher.profile.Profile;
 import com.azur.launcher.loader.NeoForgeInstaller;
 import com.azur.launcher.model.VersionManifest;
 
 import javafx.application.Platform;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
@@ -18,6 +25,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -28,8 +36,6 @@ import java.util.List;
 /** Home page: pick an installed version, install new ones (vanilla or NeoForge), launch and watch the log. */
 final class HomePage {
 
-    private static final String DEFAULT_MC = "1.21.1";
-
     private final AppContext ctx;
     private final VersionManager versionManager;
     private final VBox root = new VBox(14);
@@ -38,8 +44,14 @@ final class HomePage {
     private final Label heroSubtitle = UiKit.label("", "hero-subtitle");
     private final Label greeting = UiKit.label("", "greeting");
     private final ComboBox<LocalVersion> installedBox = new ComboBox<>();
-    private final ComboBox<String> mcBox = new ComboBox<>();
-    private final ComboBox<String> loaderBox = new ComboBox<>();
+    private final ObservableList<InstallEntries.Entry> entries = FXCollections.observableArrayList();
+    private final FilteredList<InstallEntries.Entry> visibleEntries = new FilteredList<>(entries);
+    private final ComboBox<InstallEntries.Entry> entryBox = new ComboBox<>(visibleEntries);
+    private final TextField searchField = new TextField();
+    private final TextField manualField = new TextField();
+    private final Label installNote = UiKit.label("", "banner-warn");
+    private List<String> vanillaReleases = List.of();
+    private List<String> neoForgeBuilds = List.of();
     private final Button installButton;
     private final Button launchButton;
     private final TextArea logArea = new TextArea();
@@ -107,16 +119,29 @@ final class HomePage {
     }
 
     private VBox installCard() {
-        mcBox.setPrefWidth(160);
-        mcBox.valueProperty().addListener((obs, old, value) -> loadLoaders(value));
-        loaderBox.setMaxWidth(Double.MAX_VALUE);
-        loaderBox.getItems().setAll(I18n.tr("home.loader_vanilla"));
-        loaderBox.getSelectionModel().selectFirst();
-        HBox row = new HBox(8, mcBox, loaderBox, installButton);
-        HBox.setHgrow(loaderBox, Priority.ALWAYS);
-        row.setAlignment(Pos.CENTER_LEFT);
+        searchField.setPromptText(I18n.tr("home.search"));
+        searchField.textProperty().addListener((obs, old, text) -> {
+            visibleEntries.setPredicate(entry -> InstallEntries.matches(entry, text));
+            entryBox.getSelectionModel().selectFirst();
+        });
+        HBox.setHgrow(searchField, Priority.ALWAYS);
+        entryBox.setMaxWidth(Double.MAX_VALUE);
+        entryBox.setPromptText(I18n.tr("home.versions_unavailable"));
+        entryBox.setCellFactory(list -> new EntryCell());
+        entryBox.setButtonCell(new EntryCell());
+        HBox.setHgrow(entryBox, Priority.ALWAYS);
+        HBox pick = new HBox(8, searchField, entryBox);
+        pick.setAlignment(Pos.CENTER_LEFT);
+        manualField.setPromptText(I18n.tr("home.neoforge_manual_hint"));
+        manualField.setPrefWidth(300);
+        Label manualLabel = UiKit.label(I18n.tr("home.neoforge_manual"), "option-title");
+        HBox manual = new HBox(8, manualLabel, manualField, installButton);
+        manual.setAlignment(Pos.CENTER_LEFT);
+        installNote.setWrapText(true);
+        installNote.setVisible(false);
+        installNote.setManaged(false);
         return UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("home.install_title")),
-                UiKit.label(I18n.tr("home.install_hint"), "card-subtitle"), row);
+                UiKit.label(I18n.tr("home.install_hint"), "card-subtitle"), pick, installNote, manual);
     }
 
     private VBox logCard() {
@@ -167,45 +192,84 @@ final class HomePage {
                         .filter(entry -> "release".equals(entry.getType()))
                         .map(VersionManifest.VersionEntry::getId).toList();
                 Platform.runLater(() -> {
-                    mcBox.getItems().setAll(releases);
-                    mcBox.setValue(releases.contains(DEFAULT_MC) ? DEFAULT_MC : releases.get(0));
+                    vanillaReleases = releases;
+                    rebuildEntries();
                 });
             } catch (Exception e) {
                 ctx.log("Version list unavailable: " + e.getMessage());
                 ctx.setStatus(I18n.tr("home.versions_unavailable"));
             }
         });
+        loadNeoForge();
     }
 
-    private void loadLoaders(String mcVersion) {
-        loaderBox.getItems().setAll(I18n.tr("home.loader_vanilla"));
-        loaderBox.getSelectionModel().selectFirst();
-        if (mcVersion == null || NeoForgeCatalog.versionPrefix(mcVersion) == null) {
-            return;
-        }
+    /** NeoForge builds with a timeout; on failure the last saved list is used and the reason is shown in the page. */
+    private void loadNeoForge() {
         ctx.io.submit(() -> {
-            try {
-                List<String> builds = NeoForgeCatalog.versions(mcVersion);
-                Platform.runLater(() -> {
-                    if (mcVersion.equals(mcBox.getValue())) {
-                        loaderBox.getItems().addAll(builds.stream().map(v -> "NeoForge " + v).toList());
-                    }
-                });
-            } catch (Exception e) {
-                ctx.log("NeoForge list unavailable: " + e.getMessage());
+            NeoForgeList.Result result = new NeoForgeList(ctx.dirs.cacheDir().resolve("neoforge-versions.txt"))
+                    .load(NeoForgeCatalog::allVersions);
+            if (!result.fresh()) {
+                ctx.log("NeoForge list unavailable: " + result.error());
             }
+            Platform.runLater(() -> {
+                neoForgeBuilds = result.versions();
+                showNote(result.fresh() ? null : I18n.tr(
+                        result.versions().isEmpty() ? "home.neoforge_unavailable" : "home.neoforge_cached",
+                        result.error()));
+                rebuildEntries();
+            });
         });
+    }
+
+    private void rebuildEntries() {
+        InstallEntries.Entry keep = entryBox.getValue();
+        String pinnedMc = null;
+        String pinnedNeoForge = null;
+        try {
+            Profile pin = InstanceStore.bundledProfile();
+            pinnedMc = pin.minecraft();
+            pinnedNeoForge = pin.neoforge();
+        } catch (java.io.IOException e) {
+            ctx.log("Pinned profile unreadable: " + e.getMessage());
+        }
+        entries.setAll(InstallEntries.build(vanillaReleases, neoForgeBuilds, pinnedMc, pinnedNeoForge));
+        if (keep != null && entries.contains(keep)) {
+            entryBox.setValue(keep);
+        } else {
+            entryBox.getSelectionModel().selectFirst();
+        }
+    }
+
+    private void showNote(String text) {
+        installNote.setText(text == null ? "" : text);
+        installNote.setVisible(text != null);
+        installNote.setManaged(text != null);
     }
 
     // ------------------------------------------------------------------ install
 
     private void install() {
-        String mc = mcBox.getValue();
-        int loaderIndex = loaderBox.getSelectionModel().getSelectedIndex();
-        if (mc == null || busy) {
+        if (busy) {
             return;
         }
-        String neoForge = loaderIndex > 0 ? loaderBox.getValue().substring("NeoForge ".length()) : null;
+        String mc;
+        String neoForge;
+        String manual = manualField.getText().trim();
+        if (!manual.isEmpty()) {
+            if (!InstallEntries.isValidNeoForge(manual)) {
+                showNote(I18n.tr("home.neoforge_manual_bad"));
+                return;
+            }
+            neoForge = manual;
+            mc = InstallEntries.mcFor(manual);
+        } else {
+            InstallEntries.Entry entry = entryBox.getValue();
+            if (entry == null) {
+                return;
+            }
+            mc = entry.mc();
+            neoForge = entry.neoforge();
+        }
         setBusy(true);
         ctx.setStatus(I18n.tr("home.installing"));
         ctx.io.submit(() -> {
@@ -264,6 +328,21 @@ final class HomePage {
         alert.setContentText(message);
         UiKit.styleDialog(alert.getDialogPane(), ctx.config.isDarkMode());
         alert.showAndWait();
+    }
+
+    /** One row in the install list. */
+    private static final class EntryCell extends ListCell<InstallEntries.Entry> {
+        @Override
+        protected void updateItem(InstallEntries.Entry entry, boolean empty) {
+            super.updateItem(entry, empty);
+            if (empty || entry == null) {
+                setText(null);
+                return;
+            }
+            String text = entry.isVanilla() ? I18n.tr("home.entry_vanilla", entry.mc())
+                    : I18n.tr("home.entry_neoforge", entry.neoforge(), entry.mc());
+            setText(entry.pinned() ? I18n.tr("home.entry_pinned", text) : text);
+        }
     }
 
     /** One row in the installed-version combo. */

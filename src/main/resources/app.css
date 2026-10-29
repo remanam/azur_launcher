@@ -6,53 +6,44 @@
 
 .root {
     -fx-font-family: "PT Sans", "Segoe UI", sans-serif;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 
-    /* type scale (px): nothing below 13 */
-    -azur-fs-small: 13px;
-    -azur-fs-body: 14px;
-    -azur-fs-card-title: 18px;
-    -azur-fs-title: 28px;
-    -azur-fs-display: 30px;
+    /* type scale (px, literal because JavaFX cannot use looked-up sizes for fonts or radii): small 13, body 14, card title 18, title 28, display 30 */
 
-    /* shape and rhythm */
-    -azur-radius: 6px;
-    -azur-radius-card: 8px;
-    -azur-control-height: 38px;
 
     /* panels */
-    -azur-surface: #0b1630;
-    -azur-surface-container-low: #0e1a38;
-    -azur-surface-container: #13234a;
-    -azur-surface-container-high: #1a2d5c;
-    -azur-surface-container-highest: #0a1430;
-    -azur-surface-variant: #22366b;
+    -azur-surface: #1d3869;
+    -azur-surface-container-low: #25437c;
+    -azur-surface-container: #2b4d8e;
+    -azur-surface-container-high: #33589c;
+    -azur-surface-container-highest: #162b58;
+    -azur-surface-variant: #2f5296;
 
     /* text */
-    -azur-on-surface: #e9e4d4;
-    -azur-on-surface-variant: #d3d8ea;
+    -azur-on-surface: #f6f1e2;
+    -azur-on-surface-variant: #e4e9f6;
     -azur-on-surface-variant-transparent-38: #b9bccd80;
-    -azur-muted: #a9b4d4;
+    -azur-muted: #d0d8ee;
 
     /* gold */
-    -azur-primary: #e8c877;
-    -azur-on-primary: #0b1630;
+    -azur-primary: #f2d58f;
+    -azur-on-primary: #14274f;
     -azur-primary-container: #c9a227;
-    -azur-on-primary-container: #0b1630;
+    -azur-on-primary-container: #14274f;
     -azur-primary-fixed-dim: #f3dc9c;
-    -azur-on-primary-fixed: #0b1630;
-    -azur-primary-transparent-50: #e8c87733;
+    -azur-on-primary-fixed: #14274f;
+    -azur-primary-transparent-50: #f2d58f66;
     -azur-surface-tint: #e8c877;
 
     /* azure */
-    -azur-secondary-container: #22407f;
-    -azur-on-secondary-container: #e9e4d4;
+    -azur-secondary-container: #2f5aa6;
+    -azur-on-secondary-container: #f6f1e2;
     -azur-secondary-container-transparent-50: #3b82e040;
     -azur-azure: #3b82e0;
 
     /* borders */
-    -azur-outline: #8a6a30;
-    -azur-outline-variant: #2b3f73;
+    -azur-outline: #b8903f;
+    -azur-outline-variant: #6f93d4;
 
     /* errors, status */
     -azur-error: #ff8a80;
@@ -69,7 +60,7 @@
 }
 
 .window-root {
-    -fx-background-color: linear-gradient(to bottom, #1e4286 0%, #17316a 45%, #0f2147 100%);
+    -fx-background-color: linear-gradient(to bottom, #2c5aa8 0%, #2450a0 45%, #1d4288 100%);
     -fx-background-radius: 8;
     -fx-border-color: -azur-outline;
     -fx-border-radius: 8;
@@ -104,7 +95,7 @@
 .title-bar-title {
     -fx-text-fill: -azur-primary;
     -fx-font-family: "Philosopher";
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .window-button {
@@ -149,14 +140,14 @@
 .nav-item {
     -fx-padding: 11 14 11 14;
     -fx-spacing: 12;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-cursor: hand;
     -fx-alignment: center-left;
 }
 
 .nav-item > .label {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .nav-item .icon {
@@ -183,7 +174,7 @@
 
 .nav-footer-label {
     -fx-text-fill: -azur-muted;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
     -fx-padding: 6 12 6 12;
 }
 
@@ -209,19 +200,19 @@
 .page-title {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: -azur-fs-title;
+    -fx-font-size: 28px;
 }
 
 .page-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .card {
     -fx-background-color: -azur-surface-container-low;
-    -fx-background-radius: -azur-radius-card;
+    -fx-background-radius: 8;
     -fx-border-color: -azur-outline-variant;
-    -fx-border-radius: -azur-radius-card;
+    -fx-border-radius: 8;
     -fx-border-width: 1;
     -fx-padding: 16;
 }
@@ -229,22 +220,22 @@
 .card-title {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: -azur-fs-card-title;
+    -fx-font-size: 18px;
 }
 
 .card-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .two-line-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .two-line-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .tag {
@@ -252,7 +243,7 @@
     -fx-text-fill: -azur-on-secondary-container;
     -fx-background-radius: 3;
     -fx-padding: 1 6 1 6;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .hint {
@@ -270,7 +261,7 @@
 
 .hint.info > .label {
     -fx-text-fill: -azur-on-primary-fixed;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .hint.info .icon {
@@ -333,8 +324,8 @@
 
 .button {
     -fx-cursor: hand;
-    -fx-background-radius: -azur-radius;
-    -fx-min-height: -azur-control-height;
+    -fx-background-radius: 6;
+    -fx-min-height: 38;
     -fx-padding: 8 18 8 18;
     -fx-background-color: transparent;
     -fx-text-fill: -azur-on-surface;
@@ -349,7 +340,7 @@
 
 .button-raised:focused {
     -fx-border-color: -azur-on-surface;
-    -fx-border-radius: -azur-radius;
+    -fx-border-radius: 6;
     -fx-border-width: 2;
 }
 
@@ -361,7 +352,7 @@
 .button-border {
     -fx-background-color: transparent;
     -fx-border-color: -azur-primary-container;
-    -fx-border-radius: -azur-radius;
+    -fx-border-radius: 6;
     -fx-border-width: 1;
     -fx-text-fill: -azur-primary;
     -fx-graphic-text-gap: 6;
@@ -388,30 +379,71 @@
     -fx-background-color: -azur-primary-transparent-50;
 }
 
-.text-field {
+.text-field,
+.password-field,
+.spinner .text-field {
     -fx-background-color: -azur-surface-container-highest;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
     -fx-text-fill: -azur-on-surface;
     -fx-prompt-text-fill: -azur-muted;
-    -fx-padding: 9 12 9 12;
-    -fx-min-height: -azur-control-height;
-    -fx-border-width: 0;
+    -fx-highlight-fill: -azur-azure;
+    -fx-highlight-text-fill: #ffffff;
+    -fx-font-size: 14px;
+    -fx-padding: 0 12 0 12;
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
 }
 
-.text-field:focused {
-    -fx-background-color: -azur-surface-container-high;
+.text-field:hover,
+.password-field:hover {
     -fx-border-color: -azur-primary;
-    -fx-border-radius: -azur-radius;
+}
+
+.text-field:focused,
+.password-field:focused,
+.spinner:focused .text-field {
+    -fx-border-color: -azur-primary;
     -fx-border-width: 1;
+    -fx-effect: dropshadow(gaussian, -azur-primary-transparent-50, 7, 0.6, 0, 0);
+}
+
+.text-field:disabled,
+.password-field:disabled,
+.combo-box:disabled,
+.spinner:disabled {
+    -fx-opacity: 0.55;
+}
+
+.spinner {
+    -fx-background-color: transparent;
+    -fx-pref-height: 38;
+}
+
+.spinner .increment-arrow-button,
+.spinner .decrement-arrow-button {
+    -fx-background-color: -azur-surface-container-high;
+    -fx-background-radius: 0;
+}
+
+.spinner .increment-arrow,
+.spinner .decrement-arrow {
+    -fx-background-color: -azur-primary;
 }
 
 .combo-box {
     -fx-background-color: -azur-surface-container-highest;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
+    -fx-background-insets: 0;
     -fx-padding: 0;
-    -fx-border-color: -azur-outline;
-    -fx-border-radius: -azur-radius;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: 6;
     -fx-border-width: 1;
+    -fx-min-height: 38;
+    -fx-pref-height: 38;
 }
 
 .combo-box:hover,
@@ -419,14 +451,21 @@
     -fx-border-color: -azur-primary;
 }
 
+.combo-box:focused {
+    -fx-border-color: -azur-primary;
+    -fx-effect: dropshadow(gaussian, -azur-primary-transparent-50, 7, 0.6, 0, 0);
+}
+
 .combo-box .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -azur-on-surface;
-    -fx-padding: 7 10 7 10;
+    -fx-font-size: 14px;
+    -fx-padding: 0 10 0 12;
 }
 
 .combo-box .arrow-button {
     -fx-background-color: transparent;
+    -fx-padding: 0 12 0 8;
 }
 
 .combo-box .arrow {
@@ -435,9 +474,9 @@
 
 .combo-box-popup .list-view {
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-border-color: -azur-outline;
-    -fx-border-radius: -azur-radius;
+    -fx-border-radius: 6;
     -fx-effect: dropshadow(gaussian, -azur-depth-color, 10, 0.3, 0, 3);
 }
 
@@ -463,7 +502,7 @@
 
 .slider .track {
     -fx-background-color: -azur-secondary-container;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-pref-height: 6;
 }
 
@@ -485,13 +524,13 @@
 
 .progress-bar > .track {
     -fx-background-color: -azur-secondary-container;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-background-insets: 0;
 }
 
 .progress-bar > .bar {
     -fx-background-color: linear-gradient(to right, -azur-azure, -azur-primary);
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-background-insets: 0;
     -fx-padding: 3;
 }
@@ -520,26 +559,26 @@
 
 .option-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .option-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .value-label {
     -fx-text-fill: -azur-primary;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
     -fx-min-width: 74;
     -fx-alignment: center-right;
 }
 
 .log-area {
     -fx-font-family: "Cascadia Mono", "Consolas", "JetBrains Mono", monospace;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-text-fill: -azur-on-surface;
     -fx-highlight-fill: -azur-primary-container;
     -fx-highlight-text-fill: -azur-on-primary-container;
@@ -548,7 +587,7 @@
 
 .log-area .content {
     -fx-background-color: -azur-surface-container;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
 }
 
 .log-area:focused .content {
@@ -572,7 +611,7 @@
 
 .status-text {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .download-progress {
@@ -581,7 +620,7 @@
 
 .context-menu {
     -fx-background-color: -azur-surface-container-high;
-    -fx-background-radius: -azur-radius;
+    -fx-background-radius: 6;
     -fx-padding: 4;
     -fx-effect: dropshadow(gaussian, -azur-depth-color, 12, 0.16, 0, 4);
 }
@@ -594,7 +633,7 @@
 
 .context-menu .menu-item .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .context-menu .menu-item:focused {
@@ -734,7 +773,7 @@
 
 .dialog-pane .header-panel .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
     -fx-font-weight: bold;
 }
 
@@ -760,22 +799,22 @@
 .path-value {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Menlo", "Consolas", monospace;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .greeting {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: -azur-fs-display;
+    -fx-font-size: 30px;
 }
 
 .greeting-sub {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .hero-card {
-    -fx-background-color: linear-gradient(to bottom right, #1a2d5c, #22407f);
+    -fx-background-color: linear-gradient(to bottom right, #2a4f95, #2f58a2);
     -fx-border-color: -azur-outline;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
@@ -808,7 +847,7 @@
 
 .hero-subtitle {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .account-card {
@@ -840,21 +879,32 @@
 
 .empty-hint {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
     -fx-padding: 18;
 }
 
 .check-box {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .check-box .box {
     -fx-background-color: -azur-surface-container-highest;
-    -fx-background-radius: 3;
-    -fx-border-color: -azur-outline;
-    -fx-border-radius: 3;
+    -fx-background-radius: 4;
+    -fx-background-insets: 0;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: 4;
     -fx-border-width: 1;
+    -fx-padding: 4;
+}
+
+.check-box:hover .box,
+.check-box:focused .box {
+    -fx-border-color: -azur-primary;
+}
+
+.check-box:disabled {
+    -fx-opacity: 0.55;
 }
 
 .check-box:selected .box {
@@ -870,9 +920,9 @@
 
 .server-row {
     -fx-background-color: -azur-surface-container-low;
-    -fx-background-radius: -azur-radius-card;
+    -fx-background-radius: 8;
     -fx-border-color: -azur-outline-variant;
-    -fx-border-radius: -azur-radius-card;
+    -fx-border-radius: 8;
     -fx-padding: 12 14 12 14;
     -fx-spacing: 10;
     -fx-alignment: center-left;
@@ -892,7 +942,7 @@
 .server-name {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Philosopher";
-    -fx-font-size: -azur-fs-card-title;
+    -fx-font-size: 18px;
 }
 
 .status-dot {
@@ -914,13 +964,13 @@
 
 .kv-key {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
     -fx-min-width: 130;
 }
 
 .kv-value {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .banner-warn {
@@ -928,17 +978,17 @@
     -fx-background-radius: 5;
     -fx-padding: 8 12 8 12;
     -fx-text-fill: -azur-on-error-container;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .about-text {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: -azur-fs-body;
+    -fx-font-size: 14px;
 }
 
 .about-small {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: -azur-fs-small;
+    -fx-font-size: 13px;
 }
 
 .about-logo {

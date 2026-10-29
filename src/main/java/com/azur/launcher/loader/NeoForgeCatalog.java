@@ -18,6 +18,7 @@ public final class NeoForgeCatalog {
 
     private static final Pattern XML_VERSION = Pattern.compile("<version>([^<]+)</version>");
     private static final int LIMIT = 200;
+    private static final long FETCH_TIMEOUT_SECONDS = 20;
 
     private NeoForgeCatalog() {
     }
@@ -29,6 +30,39 @@ public final class NeoForgeCatalog {
             throw new IOException("NeoForge does not support Minecraft " + mcVersion);
         }
         return filter(HttpUtils.getString(METADATA_URL), prefix);
+    }
+
+    /** Every NeoForge build, fetched with a timeout so a blocked network fails visibly instead of hanging. */
+    public static List<String> allVersions() throws IOException {
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "azur-neoforge-list");
+            t.setDaemon(true);
+            return t;
+        });
+        try {
+            String xml = pool.submit(() -> HttpUtils.getString(METADATA_URL))
+                    .get(FETCH_TIMEOUT_SECONDS, java.util.concurrent.TimeUnit.SECONDS);
+            return parseAll(xml);
+        } catch (java.util.concurrent.TimeoutException e) {
+            throw new IOException("timeout after " + FETCH_TIMEOUT_SECONDS + " s", e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw new IOException(e.getCause() == null ? e.getMessage() : e.getCause().getMessage(), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("interrupted", e);
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    /** Pure part of {@link #allVersions}: all {@code <version>} values of the maven-metadata XML. */
+    static List<String> parseAll(String metadataXml) {
+        Matcher matcher = XML_VERSION.matcher(metadataXml);
+        List<String> all = new ArrayList<>();
+        while (matcher.find()) {
+            all.add(matcher.group(1).trim());
+        }
+        return all;
     }
 
     /** Pure part of {@link #versions}: picks builds with the prefix from the maven-metadata XML. */
