@@ -26,7 +26,7 @@ final class AboutPage {
         Region logo = new Region();
         logo.getStyleClass().add("about-logo");
         HBox title = new HBox(14, logo, new VBox(3, UiKit.label(I18n.tr("app.title"), "page-title"),
-                UiKit.label(I18n.tr("about.version", LauncherApp.VERSION), "page-subtitle")));
+                UiKit.label(I18n.tr("app.version", LauncherApp.VERSION), "page-subtitle")));
         title.setAlignment(Pos.CENTER_LEFT);
 
         TextArea legalText = new TextArea();

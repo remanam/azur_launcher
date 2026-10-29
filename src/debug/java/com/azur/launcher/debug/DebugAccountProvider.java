@@ -8,12 +8,7 @@ public final class DebugAccountProvider implements AccountProvider {
 
     @Override
     public String buttonLabel() {
-        return "DEBUG: offline account";
-    }
-
-    @Override
-    public String banner() {
-        return "DEBUG BUILD: OFFLINE ACCOUNT ACTIVE";
+        return "Local test account";
     }
 
     @Override

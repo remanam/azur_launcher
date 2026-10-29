@@ -1,9 +1,7 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.auth.AccountProvider;
 import com.azur.launcher.auth.AccountStore;
 import com.azur.launcher.auth.AuthSettings;
-import com.azur.launcher.auth.DebugAccounts;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
@@ -80,31 +78,11 @@ public class LauncherApp extends Application {
         stage().setTitle(I18n.tr("app.title"));
         BorderPane window = new BorderPane();
         window.getStyleClass().add("window-root");
-        window.setTop(new VBox(debugBanner(), new TitleBar(stage(), I18n.tr("app.title"), this::shutdown)));
+        window.setTop(new TitleBar(stage(), I18n.tr("app.title"), this::shutdown));
         window.setLeft(navigation());
         window.setBottom(statusBar());
         window.setCenter(content());
         sceneRoot.getChildren().setAll(window);
-    }
-
-    /** Red strip above the title bar while a debug-only account is active; never shown in release. */
-    private Label debugBanner() {
-        Label banner = new Label();
-        banner.setMaxWidth(Double.MAX_VALUE);
-        banner.setAlignment(Pos.CENTER);
-        banner.setStyle("-fx-background-color: #c62828; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3;");
-        Runnable update = () -> {
-            boolean active = ctx.debugAccount != null;
-            banner.setVisible(active);
-            banner.setManaged(active);
-            if (active) {
-                banner.setText(DebugAccounts.provider().map(AccountProvider::banner).orElse(""));
-            }
-            stage().setTitle((active ? banner.getText() + " | " : "") + I18n.tr("app.title"));
-        };
-        ctx.onAccountsChanged(update);
-        update.run();
-        return banner;
     }
 
     private Stage stage() {
@@ -177,7 +155,7 @@ public class LauncherApp extends Application {
             progress.setVisible(fraction >= 0);
             progress.setProgress(fraction);
         });
-        HBox bar = new HBox(12, status, UiKit.spacer(), progress, UiKit.label("Azur " + VERSION, "status-text"));
+        HBox bar = new HBox(12, status, UiKit.spacer(), progress, UiKit.label(I18n.tr("app.version", VERSION), "status-text"));
         bar.getStyleClass().add("status-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
         return bar;

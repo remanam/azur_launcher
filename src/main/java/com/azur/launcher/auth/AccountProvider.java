@@ -9,9 +9,6 @@ public interface AccountProvider {
     /** Text of the button on the login screen. */
     String buttonLabel();
 
-    /** Text of the banner shown in the window while such an account is active. */
-    String banner();
-
     String defaultName();
 
     AuthAccount create(String name);

@@ -100,7 +100,6 @@ final class AccountsPage {
                 ctx.fireAccountsChanged();
             });
         });
-        button.setStyle("-fx-background-color: #c62828; -fx-text-fill: white;");
         return button;
     }
 

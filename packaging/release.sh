@@ -12,6 +12,6 @@ sh packaging/jpackage.sh "$VERSION" "$@"
 "$MVN" ${MVN_FLAGS:-} -Pdist surefire:test@image-guard
 rm -rf dist-release
 mkdir -p dist-release
-cp target/azur-launcher-all.jar "dist-release/azur-launcher-$VERSION.jar"
+cp target/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
 cp -R target/dist/out/. dist-release/
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"

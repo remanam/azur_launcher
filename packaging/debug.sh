@@ -1,5 +1,5 @@
 #!/bin/sh
-# Owner-only DEBUG build (offline account, red banner). Never ship. Output: dist-debug/azur-launcher-debug.jar (+ run.sh).
+# Owner-only DEBUG build (offline account only; UI identical to release). Never ship. Output: dist-debug/azur-launcher-debug.jar (+ run.sh).
 # Builds in target-debug/ and writes to dist-debug/: release.sh (`mvn clean` of target/, dist-release/) never touches them and vice versa.
 set -eu
 cd "$(dirname "$0")/.."
