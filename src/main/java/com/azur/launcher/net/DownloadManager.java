@@ -2,14 +2,16 @@ package com.azur.launcher.net;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
+/** Bounded parallel downloads; tasks with the same target are merged so two workers never share a temp file. */
 public class DownloadManager {
 
     public static class Task {
@@ -33,15 +35,23 @@ public class DownloadManager {
         };
     }
 
+    private static final int MAX_THREADS = 32;
+
     private final int threads;
     private final Consumer<String> logger;
     private final ProgressListener progress;
+    private final Downloader downloader;
 
     public DownloadManager(int threads, Consumer<String> logger, ProgressListener progress) {
-        this.threads = Math.max(1, threads);
+        this(threads, logger, progress, null);
+    }
+
+    public DownloadManager(int threads, Consumer<String> logger, ProgressListener progress, Downloader downloader) {
+        this.threads = Math.min(MAX_THREADS, Math.max(1, threads));
         this.logger = logger == null ? msg -> {
         } : logger;
         this.progress = progress == null ? ProgressListener.NOOP : progress;
+        this.downloader = downloader;
     }
 
     public DownloadManager(Consumer<String> logger) {
@@ -50,32 +60,36 @@ public class DownloadManager {
 
     public static int defaultThreads() {
         int cores = Runtime.getRuntime().availableProcessors();
-        return Math.min(32, Math.max(4, cores * 2));
+        return Math.min(MAX_THREADS, Math.max(4, cores * 2));
     }
 
-    public boolean downloadAll(List<Task> tasks) {
-        if (tasks == null || tasks.isEmpty()) {
+    /** @return true when every task succeeded */
+    public boolean downloadAll(List<Task> allTasks) {
+        if (allTasks == null || allTasks.isEmpty()) {
             return true;
         }
+        Map<Path, Task> unique = new LinkedHashMap<>();
+        for (Task task : allTasks) {
+            unique.putIfAbsent(task.target.toAbsolutePath().normalize(), task);
+        }
+        List<Task> tasks = new ArrayList<>(unique.values());
+        Downloader engine = downloader != null ? downloader : HttpUtils.downloader();
 
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(threads, tasks.size()));
         AtomicInteger done = new AtomicInteger();
         AtomicInteger failed = new AtomicInteger();
-        List<Future<?>> futures = new ArrayList<>(tasks.size());
-
         for (Task task : tasks) {
-            futures.add(pool.submit(() -> {
+            pool.submit(() -> {
                 try {
-                    HttpUtils.download(task.url, task.target, task.sha1, task.size);
+                    engine.download(task.url, task.target, Checks.of(task.sha1, task.size));
                 } catch (Exception e) {
                     failed.incrementAndGet();
                     logger.accept("Download failed: " + task.url + " -> " + e.getMessage());
                 } finally {
                     progress.onProgress(done.incrementAndGet(), tasks.size(), task.target.getFileName().toString());
                 }
-            }));
+            });
         }
-
         pool.shutdown();
         try {
             if (!pool.awaitTermination(2, TimeUnit.HOURS)) {

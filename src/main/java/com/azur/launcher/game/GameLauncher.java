@@ -4,24 +4,24 @@ import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.i18n.I18n;
-import com.azur.launcher.model.AssetObjects;
-import com.azur.launcher.model.DownloadInfo;
+import com.azur.launcher.config.AppDirs;
+import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.profile.Instance;
+import com.azur.launcher.profile.InstanceStore;
+import com.azur.launcher.profile.Profile;
 import com.azur.launcher.model.VersionMeta;
 import com.azur.launcher.net.DownloadManager;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 /**
  * Launch orchestration: prepare files (client jar, libraries, assets, natives), build the command line,
@@ -47,6 +47,7 @@ public class GameLauncher {
     private final List<LogSink> logSinks = new CopyOnWriteArrayList<>();
     private final List<ExitSink> exitSinks = new CopyOnWriteArrayList<>();
 
+    private Instance fixedInstance;
     private volatile Process process;
     private volatile boolean preparing;
 
@@ -55,6 +56,12 @@ public class GameLauncher {
         this.internalLogger = logger == null ? m -> {
         } : logger;
         this.progressListener = progressListener == null ? DownloadManager.ProgressListener.NOOP : progressListener;
+    }
+
+    /** Uses {@code instance} instead of the default one from {@link AppDirs}. */
+    public GameLauncher withInstance(Instance instance) {
+        this.fixedInstance = instance;
+        return this;
     }
 
     public void addLogSink(LogSink sink) {
@@ -91,63 +98,23 @@ public class GameLauncher {
                 : OfflineAccount.of(config.getUsername(), config.getUuid());
         preparing = true;
         try {
-            String versionId = config.getVersionId();
-            Path contentRoot = paths.contentRoot(versionId);
+            // stage 2B: everything below the account lines is driven by the pinned profile
+            Instance instance = resolveInstance();
+            Profile pin = instance.profile();
+            HttpUtils.useMirror(pin.mirrorBase());
+            String versionId = pin.neoforgeVersionId();
+            new PinService(AppDirs.system(), paths, internalLogger).requirePinned(instance);
+            Path contentRoot = instance.gameDir();
             Files.createDirectories(contentRoot);
 
-            Path javaExecutable = resolveJava(config);
+            Path javaExecutable = resolveJava(config, versionId);
             log("Java: " + javaExecutable);
 
             VersionMeta meta = new VersionManager(paths, internalLogger).getVersionMeta(versionId, false);
             log("Resolved version: " + meta.getId());
-
-            List<DownloadManager.Task> tasks = new ArrayList<>();
-            String jarId = (meta.getJar() != null && !meta.getJar().isBlank()) ? meta.getJar() : versionId;
-            Path clientJar = paths.clientJar(jarId);
-            DownloadInfo client = meta.getClientDownload();
-            if (client != null && client.getUrl() != null && !client.getUrl().isBlank()) {
-                tasks.add(new DownloadManager.Task(client.getUrl(), clientJar, client.getSha1(), client.getSize()));
-            } else if (!Files.isRegularFile(clientJar)) {
-                throw new IOException(I18n.tr("launch.no_client", clientJar));
-            }
-
-            LibraryManager libraryManager = new LibraryManager(paths, internalLogger);
-            tasks.addAll(libraryManager.buildDownloadTasks(meta.getLibraries()));
-
-            AssetManager assetManager = new AssetManager(paths, internalLogger);
-            String assetIndexName = meta.getAssets();
-            if (meta.getAssetIndex() != null) {
-                assetManager.ensureIndex(meta.getAssetIndex());
-                AssetObjects assetIndex = assetManager.readIndex(meta.getAssetIndex());
-                tasks.addAll(assetManager.buildDownloadTasks(assetIndex));
-                if (assetIndexName == null || assetIndexName.isBlank()) {
-                    assetIndexName = meta.getAssetIndex().getId();
-                }
-            } else if (assetIndexName == null) {
-                assetIndexName = "legacy";
-            }
-
-            log(tasks.size() + " files to process (existing ones are skipped), " + config.getDownloadThreads()
-                    + " threads");
-            DownloadManager downloadManager = new DownloadManager(
-                    config.getDownloadThreads(), internalLogger, progressListener);
-            if (!downloadManager.downloadAll(tasks)) {
-                throw new IOException(I18n.tr("launch.download_failed"));
-            }
-
-            Path nativesDir = paths.nativesDir(versionId);
-            Files.createDirectories(nativesDir);
-            int extracted = 0;
-            for (LibraryManager.NativeEntry entry : libraryManager.collectNatives(meta.getLibraries())) {
-                extracted += NativeExtractor.extract(entry.zip, nativesDir, entry.exclude);
-            }
-            log("Natives extracted: " + extracted + " files -> " + nativesDir);
-
-            List<Path> classpathEntries = new ArrayList<>(libraryManager.buildClasspath(meta.getLibraries()));
-            classpathEntries.add(clientJar);
-            String classpath = classpathEntries.stream()
-                    .map(Path::toString)
-                    .collect(Collectors.joining(File.pathSeparator));
+            GamePreparer.Prepared prepared = new GamePreparer(
+                    paths, internalLogger, progressListener, config.getDownloadThreads())
+                    .prepare(versionId, meta, false);
 
             LaunchProfile profile = new LaunchProfile();
             profile.setVersionId(versionId);
@@ -156,16 +123,16 @@ public class GameLauncher {
             profile.setGameDir(contentRoot);
             profile.setAssetsDir(paths.assetsDir());
             profile.setLibrariesDir(paths.librariesDir());
-            profile.setNativesDir(nativesDir);
-            profile.setClientJar(clientJar);
-            profile.setClasspath(classpath);
-            profile.setAssetIndexName(assetIndexName);
-            profile.setMaxMemoryMb(config.getMaxMemoryMb());
-            profile.setMinMemoryMb(config.getMinMemoryMb());
-            profile.setExtraJvmArgs(config.getJvmArgs());
+            profile.setNativesDir(prepared.nativesDir());
+            profile.setClientJar(prepared.clientJar());
+            profile.setClasspath(prepared.classpath());
+            profile.setAssetIndexName(prepared.assetIndexName());
+            profile.setMaxMemoryMb(pin.ramMaxMb());
+            profile.setMinMemoryMb(pin.ramMinMb());
+            profile.setExtraJvmArgs(pin.jvmArgs());
             profile.setWindowWidth(config.getWindowWidth());
             profile.setWindowHeight(config.getWindowHeight());
-            profile.setAccount(effectiveAccount);
+            profile.setAccount(LaunchContext.from(effectiveAccount));
             log("Account: " + effectiveAccount.getUsername() + " (" + effectiveAccount.getUserType() + ")");
 
             PlatformRules.setFeature("has_custom_resolution",
@@ -173,6 +140,7 @@ public class GameLauncher {
 
             List<String> command = CommandBuilder.build(profile, meta);
             log("Command: " + maskSecrets(command));
+            long startedAt = System.currentTimeMillis();
 
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.directory(contentRoot.toFile());
@@ -195,6 +163,10 @@ public class GameLauncher {
                     code = -1;
                 }
                 log("Game process exited with code " + code);
+                if (code != 0) {
+                    CrashReports.newestSince(instance.crashReportsDir(), startedAt)
+                            .ifPresent(report -> log("Crash report: " + report));
+                }
                 for (ExitSink sink : exitSinks) {
                     try {
                         sink.onExit(code);
@@ -275,8 +247,7 @@ public class GameLauncher {
      * Java choice: a configured path wins when its major version matches; otherwise the best detected runtime
      * for the version's requirement, then the closest other one.
      */
-    private Path resolveJava(LauncherConfig config) throws IOException {
-        String versionId = config.getVersionId();
+    private Path resolveJava(LauncherConfig config, String versionId) throws IOException {
         int required = JavaRequirement.requiredMajor(versionId, versionJsonOrNull(versionId));
 
         List<JavaDetector.JavaInfo> candidates = JavaDetector.detectAll();
@@ -315,6 +286,11 @@ public class GameLauncher {
             return manual.getJavaExecutable();
         }
         throw new IOException(I18n.tr("launch.no_java", required));
+    }
+
+    /** The single instance of this install; tests and the UI may inject another through the constructor. */
+    private Instance resolveInstance() throws IOException {
+        return fixedInstance != null ? fixedInstance : new InstanceStore(AppDirs.system()).loadDefault();
     }
 
     private Path versionJsonOrNull(String versionId) {

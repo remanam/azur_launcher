@@ -49,6 +49,11 @@ public class AssetManager {
     }
 
     public List<DownloadManager.Task> buildDownloadTasks(AssetObjects index) {
+        return buildDownloadTasks(index, false);
+    }
+
+    /** @param verifyExisting when true, present files are re-hashed (repair) instead of trusted */
+    public List<DownloadManager.Task> buildDownloadTasks(AssetObjects index, boolean verifyExisting) {
         List<DownloadManager.Task> tasks = new ArrayList<>();
         int skipped = 0;
         for (Map.Entry<String, AssetObjects.ObjectEntry> entry : index.getObjects().entrySet()) {
@@ -58,7 +63,7 @@ public class AssetManager {
                 continue;
             }
             Path target = paths.assetObject(hash);
-            if (Files.exists(target)) {
+            if (!verifyExisting && Files.exists(target)) {
                 skipped++;
                 continue;
             }

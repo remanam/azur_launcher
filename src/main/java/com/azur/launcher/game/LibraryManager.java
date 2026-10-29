@@ -44,9 +44,7 @@ public class LibraryManager {
             } else if (lib.getUrl() != null && !lib.getUrl().isBlank()) {
                 String base = lib.getUrl().endsWith("/") ? lib.getUrl() : lib.getUrl() + "/";
                 String url = base + lib.getDirectoryPath() + "/" + lib.getArtifactFileName();
-                Path target = paths.librariesDir()
-                        .resolve(lib.getDirectoryPath())
-                        .resolve(lib.getArtifactFileName());
+                Path target = libPath(lib.getDirectoryPath() + "/" + lib.getArtifactFileName());
                 tasks.add(new DownloadManager.Task(url, target, null, 0));
             }
 
@@ -93,11 +91,9 @@ public class LibraryManager {
     public Path resolveArtifactPath(Library lib) {
         DownloadInfo artifact = lib.getDownloads() == null ? null : lib.getDownloads().getArtifact();
         if (artifact != null && artifact.getPath() != null && !artifact.getPath().isBlank()) {
-            return paths.librariesDir().resolve(artifact.getPath().replace('\\', '/'));
+            return libPath(artifact.getPath());
         }
-        return paths.librariesDir()
-                .resolve(lib.getDirectoryPath())
-                .resolve(lib.getArtifactFileName());
+        return libPath(lib.getDirectoryPath() + "/" + lib.getArtifactFileName());
     }
 
     public Path resolveClassifierPath(Library lib, String classifier) {
@@ -105,10 +101,19 @@ public class LibraryManager {
                 ? null
                 : lib.getDownloads().getClassifiers().get(classifier);
         if (info != null && info.getPath() != null && !info.getPath().isBlank()) {
-            return paths.librariesDir().resolve(info.getPath().replace('\\', '/'));
+            return libPath(info.getPath());
         }
         String fileName = lib.getArtifactId() + "-" + lib.getVersion() + "-" + classifier + ".jar";
-        return paths.librariesDir().resolve(lib.getDirectoryPath()).resolve(fileName);
+        return libPath(lib.getDirectoryPath() + "/" + fileName);
+    }
+
+    /** Manifest-supplied relative path, checked against traversal. */
+    private Path libPath(String relative) {
+        try {
+            return paths.libraryFile(relative);
+        } catch (java.io.IOException e) {
+            throw new java.io.UncheckedIOException(e);
+        }
     }
 
     public static class NativeEntry {

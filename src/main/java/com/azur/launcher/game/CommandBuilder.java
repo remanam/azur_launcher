@@ -32,7 +32,7 @@ public final class CommandBuilder {
         }
         command.addAll(jvmArgs);
 
-        command.addAll(splitPlain(profile.getExtraJvmArgs()));
+        command.addAll(profile.getExtraJvmArgs());
 
         String mainClass = meta.getMainClass();
         if (mainClass == null || mainClass.isBlank()) {

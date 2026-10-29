@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "serverId": "azur-main",
+  "minecraft": "1.21.1",
+  "neoforge": "21.1.264",
+  "neoforgeInstallerSha256": "d7c035dd5436a7c524dfbad6df191b0ef34179fd3edfee9dc99262af3b80239b",
+  "java": 21,
+  "jvmArgs": ["-XX:+UseG1GC", "-XX:+ParallelRefProcEnabled"],
+  "ramMinMb": 2048,
+  "ramMaxMb": 6144,
+  "packChannel": "stable",
+  "mirrorBase": ""
+}

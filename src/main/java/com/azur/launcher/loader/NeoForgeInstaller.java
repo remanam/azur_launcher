@@ -4,7 +4,11 @@ import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.game.JavaDetector;
 import com.azur.launcher.game.JavaRequirement;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.net.Checks;
 import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.profile.InstalledState;
+import com.azur.launcher.profile.InstanceStore;
+import com.azur.launcher.profile.Profile;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,8 +23,8 @@ import java.util.function.Consumer;
 
 /**
  * Installs NeoForge by running the official installer ({@code java -jar installer --installClient <dir>}).
- * The installer jar is downloaded from the NeoForged Maven and checked against the SHA-1 published next to it.
- * Stage 2 replaces this with a pinned version and a pinned hash.
+ * The installer jar is downloaded from the NeoForged Maven and checked against the SHA-1 published next to it
+ * and against the SHA-256 pinned in the profile.
  */
 public class NeoForgeInstaller {
 
@@ -38,19 +42,43 @@ public class NeoForgeInstaller {
     public record InstallResult(boolean success, String versionId, String message) {
     }
 
-    /** Installs NeoForge {@code neoForgeVersion} into {@code gameDir}; blocking, call off the UI thread. */
+    /**
+     * Installs the bundled pin when the request matches it; any other version has no pinned hash and is refused.
+     * Kept for the existing install button.
+     */
     public InstallResult install(String mcVersion, String neoForgeVersion, Path gameDir) {
+        try {
+            Profile pin = InstanceStore.bundledProfile();
+            if (!pin.minecraft().equals(mcVersion) || !pin.neoforge().equals(neoForgeVersion)) {
+                return fail(I18n.tr("neoforge.not_pinned", neoForgeVersion));
+            }
+            InstallResult result = install(mcVersion, neoForgeVersion, pin.neoforgeInstallerSha256(), gameDir);
+            if (result.success()) {
+                new InstalledState(mcVersion, neoForgeVersion, pin.neoforgeInstallerSha256())
+                        .write(dirs.instancesDir().resolve(pin.serverId()).resolve("installed.json"));
+            }
+            return result;
+        } catch (IOException e) {
+            return fail(I18n.tr("neoforge.failed", e.getMessage()));
+        }
+    }
+
+    /**
+     * Installs NeoForge {@code neoForgeVersion} into {@code gameDir}; the installer must match both the checksum
+     * published in the Maven repository and {@code pinnedSha256}. Blocking, call off the UI thread.
+     */
+    public InstallResult install(String mcVersion, String neoForgeVersion, String pinnedSha256, Path gameDir) {
         try {
             Files.createDirectories(gameDir);
             logger.accept("Installing NeoForge " + neoForgeVersion + " (Minecraft " + mcVersion + ")");
             ensureLauncherProfiles(gameDir);
 
-            Path cache = dirs.root().resolve("cache");
+            Path cache = dirs.cacheDir();
             Files.createDirectories(cache);
             Path installerJar = cache.resolve("neoforge-" + neoForgeVersion + "-installer.jar");
             String url = NeoForgeCatalog.installerUrl(neoForgeVersion);
             String sha1 = HttpUtils.getString(url + ".sha1").trim();
-            HttpUtils.download(url, installerJar, sha1, -1);
+            HttpUtils.downloader().download(url, installerJar, new Checks(sha1, pinnedSha256, 0));
 
             JavaDetector.JavaInfo java = pickJava(mcVersion);
             if (java == null) {

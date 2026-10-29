@@ -86,13 +86,15 @@ public class VersionManager {
 
     private VersionMeta loadRaw(String versionId, boolean forceDownload) throws IOException {
         Path jsonFile = paths.versionJson(versionId);
-        if (forceDownload || !Files.exists(jsonFile)) {
-            String url = findUrl(getManifest(false), versionId);
-            if (url == null || url.isBlank()) {
+        boolean missing = !Files.exists(jsonFile);
+        if (forceDownload || missing) {
+            VersionManifest.VersionEntry entry = findEntry(getManifest(false), versionId);
+            if (entry != null && entry.getUrl() != null && !entry.getUrl().isBlank()) {
+                logger.accept("Fetching version JSON: " + versionId);
+                HttpUtils.download(entry.getUrl(), jsonFile, entry.getSha1(), 0);
+            } else if (missing) {
                 throw new IOException("Version is not in the manifest: " + versionId);
             }
-            logger.accept("Fetching version JSON: " + versionId);
-            HttpUtils.download(url, jsonFile, null, 0);
         }
         VersionMeta meta = GSON.fromJson(Files.readString(jsonFile, StandardCharsets.UTF_8), VersionMeta.class);
         if (meta == null) {
@@ -101,13 +103,13 @@ public class VersionManager {
         return meta;
     }
 
-    private static String findUrl(VersionManifest manifest, String versionId) {
+    private static VersionManifest.VersionEntry findEntry(VersionManifest manifest, String versionId) {
         if (manifest == null || manifest.getVersions() == null) {
             return null;
         }
         for (VersionManifest.VersionEntry entry : manifest.getVersions()) {
             if (versionId.equals(entry.getId())) {
-                return entry.getUrl();
+                return entry;
             }
         }
         return null;

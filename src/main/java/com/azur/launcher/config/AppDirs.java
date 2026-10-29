@@ -75,6 +75,16 @@ public final class AppDirs {
         return root.resolve("game");
     }
 
+    /** Shared download cache (installers); safe to delete. */
+    public Path cacheDir() {
+        return root.resolve("cache");
+    }
+
+    /** One folder per server instance: pinned profile, installed state, game directory. */
+    public Path instancesDir() {
+        return root.resolve("instances");
+    }
+
     public Path logsDir() {
         return root.resolve("logs");
     }

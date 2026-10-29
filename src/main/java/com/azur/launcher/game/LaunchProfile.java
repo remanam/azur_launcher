@@ -1,6 +1,5 @@
 package com.azur.launcher.game;
 
-import com.azur.launcher.auth.AuthAccount;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -27,34 +26,34 @@ public class LaunchProfile {
 
     private int maxMemoryMb = 4096;
     private int minMemoryMb = 512;
-    private String extraJvmArgs = "";
+    private java.util.List<String> extraJvmArgs = java.util.List.of();
 
     private int windowWidth;
     private int windowHeight;
 
-    private AuthAccount account;
+    private LaunchContext account;
 
     public Map<String, String> toPlaceholders() {
         Map<String, String> ph = new LinkedHashMap<>();
-        ph.put("${auth_player_name}", account == null ? "Player" : account.getUsername());
+        ph.put("${auth_player_name}", account == null ? "Player" : account.username());
         ph.put("${version_name}", versionId);
         ph.put("${version_type}", versionType);
         ph.put("${game_directory}", str(gameDir));
         ph.put("${assets_root}", str(assetsDir));
         ph.put("${assets_index_name}", assetIndexName);
-        ph.put("${auth_uuid}", account == null ? "" : account.getUuid());
-        ph.put("${auth_access_token}", account == null ? "0" : account.getAccessToken());
-        ph.put("${auth_session}", account == null ? "0" : account.getAccessToken());
-        ph.put("${user_type}", account == null ? "legacy" : account.getUserType());
+        ph.put("${auth_uuid}", account == null ? "" : account.uuid());
+        ph.put("${auth_access_token}", account == null ? "0" : account.accessToken());
+        ph.put("${auth_session}", account == null ? "0" : account.accessToken());
+        ph.put("${user_type}", account == null ? "legacy" : account.userType());
         ph.put("${natives_directory}", str(nativesDir));
         ph.put("${library_directory}", str(librariesDir));
         ph.put("${classpath}", classpath);
         ph.put("${classpath_separator}", File.pathSeparator);
         ph.put("${launcher_name}", LAUNCHER_NAME);
         ph.put("${launcher_version}", LAUNCHER_VERSION);
-        ph.put("${clientid}", account == null ? "" : blankToEmpty(account.getClientId()));
-        ph.put("${auth_xuid}", account == null ? "" : blankToEmpty(account.getXuid()));
-        ph.put("${user_properties}", account == null ? "{}" : blankToDefault(account.getUserProperties(), "{}"));
+        ph.put("${clientid}", account == null ? "" : blankToEmpty(account.clientId()));
+        ph.put("${auth_xuid}", account == null ? "" : blankToEmpty(account.xuid()));
+        ph.put("${user_properties}", account == null ? "{}" : blankToDefault(account.userProperties(), "{}"));
         ph.put("${resolution_width}", String.valueOf(windowWidth));
         ph.put("${resolution_height}", String.valueOf(windowHeight));
         ph.put("${quickPlayPath}", "");
@@ -174,11 +173,11 @@ public class LaunchProfile {
         this.minMemoryMb = minMemoryMb;
     }
 
-    public String getExtraJvmArgs() {
+    public java.util.List<String> getExtraJvmArgs() {
         return extraJvmArgs;
     }
 
-    public void setExtraJvmArgs(String extraJvmArgs) {
+    public void setExtraJvmArgs(java.util.List<String> extraJvmArgs) {
         this.extraJvmArgs = extraJvmArgs;
     }
 
@@ -198,11 +197,11 @@ public class LaunchProfile {
         this.windowHeight = windowHeight;
     }
 
-    public AuthAccount getAccount() {
+    public LaunchContext getAccount() {
         return account;
     }
 
-    public void setAccount(AuthAccount account) {
+    public void setAccount(LaunchContext account) {
         this.account = account;
     }
 }

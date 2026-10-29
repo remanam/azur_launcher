@@ -1,7 +1,8 @@
 package com.azur.launcher.game;
 
+import com.azur.launcher.net.SafePaths;
+
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,10 +37,7 @@ public final class NativeExtractor {
                 if (isExcluded(name, excludes)) {
                     continue;
                 }
-                Path out = dest.resolve(name).normalize();
-                if (!out.startsWith(dest)) {
-                    continue;
-                }
+                Path out = SafePaths.resolve(dest, name);
                 Path parent = out.getParent();
                 if (parent != null) {
                     Files.createDirectories(parent);
@@ -47,7 +45,7 @@ public final class NativeExtractor {
                 try (OutputStream os = Files.newOutputStream(out,
                         StandardOpenOption.CREATE, StandardOpenOption.WRITE,
                         StandardOpenOption.TRUNCATE_EXISTING)) {
-                    copy(zis, os);
+                    zis.transferTo(os);
                 }
                 count++;
             }
@@ -67,11 +65,4 @@ public final class NativeExtractor {
         return false;
     }
 
-    private static void copy(InputStream in, OutputStream out) throws IOException {
-        byte[] buf = new byte[16384];
-        int n;
-        while ((n = in.read(buf)) != -1) {
-            out.write(buf, 0, n);
-        }
-    }
 }
