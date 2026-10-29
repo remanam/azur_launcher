@@ -5,21 +5,19 @@ import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
 public final class AccountStore {
 
     private static final Gson GSON = new GsonBuilder()
-            .setPrettyPrinting()
             .disableHtmlEscaping()
             .create();
 
-    private final Path file;
+    private final Path legacyFile;
+    private final Vault vault;
     private Data data = new Data();
 
     public static final class Data {
@@ -43,48 +41,68 @@ public final class AccountStore {
         }
     }
 
-    public AccountStore(Path file) {
-        this.file = file;
+    /** The store for this machine: keychain key when the OS has one, derived key otherwise. */
+    public static AccountStore system(Path legacyJsonFile) {
+        Path dir = legacyJsonFile.getParent();
+        return new AccountStore(legacyJsonFile, OsKeychain.forCurrentOs(dir).orElse(null),
+                MachineMaterial.current());
+    }
+
+    /**
+     * @param legacyJsonFile the old plain {@code accounts.json}; read once for migration, then deleted
+     * @param keychain       OS secret store or null
+     */
+    AccountStore(Path legacyJsonFile, SecretStore keychain, String machineMaterial) {
+        this.legacyFile = legacyJsonFile;
+        this.vault = new Vault(legacyJsonFile.resolveSibling("accounts.vault"), keychain, machineMaterial);
         load();
     }
 
-    public Path getFile() {
-        return file;
+    public synchronized void load() {
+        Data loaded = vault.read().map(b -> parse(new String(b, StandardCharsets.UTF_8))).orElse(null);
+        boolean migrate = false;
+        if (loaded == null && !vault.exists() && Files.isRegularFile(legacyFile)) {
+            try {
+                loaded = parse(Files.readString(legacyFile, StandardCharsets.UTF_8));
+                migrate = loaded != null;
+            } catch (IOException ignored) {
+                // unreadable legacy file: start empty
+            }
+        }
+        data = loaded == null ? new Data() : loaded;
+        if (data.getMicrosoft() == null) {
+            data.setMicrosoft(new ArrayList<>());
+        }
+        if (data.getSelectedUuid() == null) {
+            data.setSelectedUuid("");
+        }
+        if (migrate) {
+            migrateLegacy();
+        }
     }
 
-    public synchronized void load() {
-        Data loaded = null;
+    private static Data parse(String json) {
         try {
-            if (Files.exists(file)) {
-                String json = Files.readString(file, StandardCharsets.UTF_8);
-                loaded = GSON.fromJson(json, Data.class);
+            return GSON.fromJson(json, Data.class);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
+
+    /** Writes the encrypted vault, checks it reads back, then removes the plain file. */
+    private void migrateLegacy() {
+        try {
+            save();
+            if (vault.read().isPresent()) {
+                Files.deleteIfExists(legacyFile);
             }
-        } catch (Exception ignored) {
+        } catch (IOException ignored) {
+            // the plain file stays; migration is retried at the next start
         }
-        if (loaded == null) {
-            loaded = new Data();
-        }
-        if (loaded.getMicrosoft() == null) {
-            loaded.setMicrosoft(new ArrayList<>());
-        }
-        if (loaded.getSelectedUuid() == null) {
-            loaded.setSelectedUuid("");
-        }
-        data = loaded;
     }
 
     public synchronized void save() throws IOException {
-        Path parent = file.getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        Path tmp = file.resolveSibling("accounts.json.tmp");
-        Files.writeString(tmp, GSON.toJson(data), StandardCharsets.UTF_8);
-        try {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (AtomicMoveNotSupportedException e) {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        }
+        vault.write(GSON.toJson(data).getBytes(StandardCharsets.UTF_8));
     }
 
     public synchronized List<MicrosoftAccount> microsoftAccounts() {

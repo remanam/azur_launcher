@@ -6,6 +6,9 @@ public class MicrosoftAccount implements AuthAccount {
 
     public static final long REFRESH_AHEAD_MS = 12L * 60L * 60L * 1000L;
 
+    /** A token that dies sooner than this is not started with: the game would lose its session while loading. */
+    public static final long LAUNCH_MARGIN_MS = 2L * 60L * 1000L;
+
     private String name = "";
     private String uuid = "";
     private String accessToken = "";
@@ -14,6 +17,8 @@ public class MicrosoftAccount implements AuthAccount {
     private String clientId = "";
     private long notAfter = 0L;
     private String userProperties = "{}";
+    /** Epoch ms of the last successful licence check; 0 means the licence was never verified. */
+    private long ownershipVerifiedAt = 0L;
 
     public MicrosoftAccount() {
     }
@@ -69,6 +74,20 @@ public class MicrosoftAccount implements AuthAccount {
         return notAfter <= System.currentTimeMillis() + REFRESH_AHEAD_MS;
     }
 
+    @Override
+    public boolean launchPermitted() {
+        return ownershipVerifiedAt > 0L && !accessToken.isBlank()
+                && notAfter > System.currentTimeMillis() + LAUNCH_MARGIN_MS;
+    }
+
+    public long getOwnershipVerifiedAt() {
+        return ownershipVerifiedAt;
+    }
+
+    public void setOwnershipVerifiedAt(long ownershipVerifiedAt) {
+        this.ownershipVerifiedAt = ownershipVerifiedAt;
+    }
+
     public boolean isExpired() {
         return notAfter <= System.currentTimeMillis();
     }
@@ -93,6 +112,9 @@ public class MicrosoftAccount implements AuthAccount {
         this.xuid = blankOr(other.xuid, this.xuid);
         this.clientId = blankOr(other.clientId, this.clientId);
         this.userProperties = blankOr(other.userProperties, this.userProperties);
+        if (other.ownershipVerifiedAt > 0L) {
+            this.ownershipVerifiedAt = other.ownershipVerifiedAt;
+        }
         if (other.notAfter > 0L) {
             this.notAfter = other.notAfter;
         }

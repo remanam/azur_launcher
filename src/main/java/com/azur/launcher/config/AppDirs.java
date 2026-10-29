@@ -66,10 +66,6 @@ public final class AppDirs {
         return root.resolve("accounts").resolve("accounts.json");
     }
 
-    public Path offlineFile() {
-        return root.resolve("accounts").resolve("offline.json");
-    }
-
     /** Default game directory (versions, libraries, assets). */
     public Path gameDir() {
         return root.resolve("game");

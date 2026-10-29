@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
@@ -20,30 +19,26 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MicrosoftAuthService {
 
-    public static final String DEFAULT_CLIENT_ID = "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb";
-
     public static final String SCOPE = "XboxLive.signin offline_access";
-
-    private static final String DEVICE_CODE_URL =
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";
-    private static final String TOKEN_URL =
-            "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
-    private static final String XBOX_USER_AUTH_URL = "https://user.auth.xboxlive.com/user/authenticate";
-    private static final String XSTS_URL = "https://xsts.auth.xboxlive.com/xsts/authorize";
-    private static final String MC_LOGIN_URL = "https://api.minecraftservices.com/authentication/login_with_xbox";
-    private static final String MC_ENTITLEMENTS_URL = "https://api.minecraftservices.com/entitlements/mcstore";
-    private static final String MC_LICENSE_URL = "https://api.minecraftservices.com/entitlements/license";
-    private static final String MC_PROFILE_URL = "https://api.minecraftservices.com/minecraft/profile";
 
     private static final String DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
     private static final long DEVICE_CODE_MAX_WAIT_SECONDS = 900L;
 
-    private static final int CONNECT_TIMEOUT_MS = 15_000;
-    private static final int READ_TIMEOUT_MS = 30_000;
-    private static final String USER_AGENT = "Azur-Launcher/1.0.0";
-
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
+    private final AuthEndpoints endpoints;
+    private final AuthNetwork network;
+    private final long retryDelayMs;
+
+    public MicrosoftAuthService(AuthNetwork network) {
+        this(AuthEndpoints.PRODUCTION, network, 1_000L);
+    }
+
+    MicrosoftAuthService(AuthEndpoints endpoints, AuthNetwork network, long retryDelayMs) {
+        this.endpoints = endpoints;
+        this.network = network;
+        this.retryDelayMs = retryDelayMs;
+    }
 
     public interface StageListener {
         void onStage(String message);
@@ -102,10 +97,10 @@ public class MicrosoftAuthService {
 
     public DeviceCode requestDeviceCode(String clientId) throws AuthException {
         Map<String, String> form = new LinkedHashMap<>();
-        form.put("client_id", normalizeClientId(clientId));
+        form.put("client_id", requireClientId(clientId));
         form.put("scope", SCOPE);
 
-        HttpResult result = sendFormWithRetry(DEVICE_CODE_URL, form, null);
+        HttpResult result = sendFormWithRetry(endpoints.deviceCode(), form, null);
         if (result.code != 200) {
             throw new AuthException("devicecode_failed",
                     I18n.tr("auth.devicecode_http", result.code, errorDescription(parse(result.body))));
@@ -124,7 +119,7 @@ public class MicrosoftAuthService {
 
     public MicrosoftAccount login(DeviceCode deviceCode, String clientId, StageListener listener)
             throws AuthException {
-        String cid = normalizeClientId(clientId);
+        String cid = requireClientId(clientId);
         notify(listener, I18n.tr("auth.wait_browser"));
 
         long waitSeconds = Math.max(60L, Math.min(deviceCode.getExpiresIn(), DEVICE_CODE_MAX_WAIT_SECONDS));
@@ -151,7 +146,7 @@ public class MicrosoftAuthService {
                 form.put("client_id", cid);
                 form.put("grant_type", DEVICE_CODE_GRANT);
                 form.put("device_code", deviceCode.getDeviceCode());
-                result = sendForm(TOKEN_URL, form);
+                result = sendForm(endpoints.token(), form);
             } catch (AuthException e) {
                 interval = Math.min(interval * 2L, 30_000L);
                 notify(listener, I18n.tr("auth.net_unstable"));
@@ -210,7 +205,7 @@ public class MicrosoftAuthService {
         if (account.getRefreshToken() == null || account.getRefreshToken().isBlank()) {
             throw new AuthException("no_refresh_token", I18n.tr("auth.session_invalid"));
         }
-        String cid = normalizeClientId(account.getClientId());
+        String cid = requireClientId(account.getClientId());
         notify(listener, I18n.tr("auth.refreshing"));
 
         Map<String, String> form = new LinkedHashMap<>();
@@ -219,7 +214,7 @@ public class MicrosoftAuthService {
         form.put("refresh_token", account.getRefreshToken());
         form.put("scope", SCOPE);
 
-        HttpResult result = sendFormWithRetry(TOKEN_URL, form, listener);
+        HttpResult result = sendFormWithRetry(endpoints.token(), form, listener);
         if (result.code != 200) {
             JsonObject error = parse(result.body);
             String code = str(error, "error");
@@ -257,7 +252,7 @@ public class MicrosoftAuthService {
         xboxBody.addProperty("RelyingParty", "http://auth.xboxlive.com");
         xboxBody.addProperty("TokenType", "JWT");
 
-        HttpResult xboxResult = sendJson(XBOX_USER_AUTH_URL, xboxBody, null);
+        HttpResult xboxResult = sendJson(endpoints.xboxUser(), xboxBody, Map.of("x-xbl-contract-version", "1"));
         if (xboxResult.code != 200) {
             throw new AuthException("xbox_auth_failed",
                     I18n.tr("auth.xbox_http", xboxResult.code));
@@ -281,10 +276,10 @@ public class MicrosoftAuthService {
         xstsBody.addProperty("RelyingParty", "rp://api.minecraftservices.com/");
         xstsBody.addProperty("TokenType", "JWT");
 
-        HttpResult xstsResult = sendJson(XSTS_URL, xstsBody, null);
+        HttpResult xstsResult = sendJson(endpoints.xsts(), xstsBody, null);
         if (xstsResult.code == 401) {
             JsonObject error = parse(xstsResult.body);
-            throw xstsError(xstsResult.body, error);
+            throw xstsError(error);
         }
         if (xstsResult.code != 200) {
             throw new AuthException("xsts_failed", I18n.tr("auth.xsts_http", xstsResult.code));
@@ -304,7 +299,7 @@ public class MicrosoftAuthService {
         notify(listener, I18n.tr("auth.stage_mc"));
         JsonObject loginBody = new JsonObject();
         loginBody.addProperty("identityToken", "XBL3.0 x=" + uhs + ";" + xstsToken);
-        HttpResult loginResult = sendJson(MC_LOGIN_URL, loginBody, null);
+        HttpResult loginResult = sendJson(endpoints.mcLogin(), loginBody, null);
         if (loginResult.code != 200) {
             if (loginResult.code == 401) {
                 throw new AuthException("mc_login_failed", I18n.tr("auth.mc_denied"));
@@ -320,7 +315,7 @@ public class MicrosoftAuthService {
         long notAfter = System.currentTimeMillis() + expiresIn * 1000L;
 
         notify(listener, I18n.tr("auth.stage_license"));
-        HttpResult storeResult = sendGetWithRetry(MC_ENTITLEMENTS_URL, mcToken);
+        HttpResult storeResult = sendGetWithRetry(endpoints.mcEntitlements(), mcToken);
         if (storeResult.code != 200) {
             throw new AuthException("no_entitlement",
                     I18n.tr("auth.license_http", storeResult.code));
@@ -330,7 +325,7 @@ public class MicrosoftAuthService {
         }
 
         notify(listener, I18n.tr("auth.stage_profile"));
-        HttpResult profileResult = sendGetWithRetry(MC_PROFILE_URL, mcToken);
+        HttpResult profileResult = sendGetWithRetry(endpoints.mcProfile(), mcToken);
         String profileId;
         String profileName;
         if (profileResult.code == 200) {
@@ -356,6 +351,7 @@ public class MicrosoftAuthService {
         account.setClientId(clientId);
         account.setNotAfter(notAfter);
         account.setUserProperties("{}");
+        account.setOwnershipVerifiedAt(System.currentTimeMillis());
         notify(listener, I18n.tr("auth.done", profileName));
         return account;
     }
@@ -363,7 +359,7 @@ public class MicrosoftAuthService {
     private AuthException profileMissingError(String mcToken) {
         HttpResult license;
         try {
-            license = sendGetWithRetry(MC_LICENSE_URL, mcToken);
+            license = sendGetWithRetry(endpoints.mcLicense(), mcToken);
         } catch (AuthException e) {
             return new AuthException("no_profile", I18n.tr("auth.no_profile"));
         }
@@ -374,7 +370,7 @@ public class MicrosoftAuthService {
         return new AuthException("no_profile", I18n.tr("auth.no_profile"));
     }
 
-    private AuthException xstsError(String body, JsonObject error) {
+    private AuthException xstsError(JsonObject error) {
         long xerr = (long) num(error, "XErr", 0);
         String redirect = str(error, "Redirect");
         String suffix = redirect.isBlank() ? "" : " (" + redirect + ")";
@@ -460,7 +456,7 @@ public class MicrosoftAuthService {
             if (attempt > 0) {
                 notify(listener, I18n.tr("auth.ms_retry", attempt));
                 try {
-                    Thread.sleep(1_000L * attempt);
+                    Thread.sleep(retryDelayMs * attempt);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
@@ -505,7 +501,7 @@ public class MicrosoftAuthService {
         for (int attempt = 0; attempt < 3; attempt++) {
             if (attempt > 0) {
                 try {
-                    Thread.sleep(800L * attempt);
+                    Thread.sleep(retryDelayMs * attempt);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                     throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
@@ -538,13 +534,7 @@ public class MicrosoftAuthService {
                             Map<String, String> headers) throws AuthException {
         HttpURLConnection conn = null;
         try {
-            conn = (HttpURLConnection) new URL(url).openConnection();
-            conn.setRequestMethod(method);
-            conn.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            conn.setReadTimeout(READ_TIMEOUT_MS);
-            conn.setInstanceFollowRedirects(true);
-            conn.setRequestProperty("User-Agent", USER_AGENT);
-            conn.setRequestProperty("Accept", "application/json");
+            conn = network.open(url, method);
             if (contentType != null) {
                 conn.setRequestProperty("Content-Type", contentType);
             }
@@ -648,8 +638,12 @@ public class MicrosoftAuthService {
         return code.isBlank() ? I18n.tr("auth.unknown_error") : code;
     }
 
-    public static String normalizeClientId(String clientId) {
-        return (clientId == null || clientId.isBlank()) ? DEFAULT_CLIENT_ID : clientId.trim();
+    /** A blank id is an error: the launcher ships no Azure application id of its own. */
+    static String requireClientId(String clientId) throws AuthException {
+        if (clientId == null || clientId.isBlank()) {
+            throw new AuthException("no_client_id", I18n.tr("auth.no_client_id"));
+        }
+        return clientId.trim();
     }
 
     public static String formatUuid(String id) {

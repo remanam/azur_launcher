@@ -1,6 +1,9 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.auth.AccountProvider;
 import com.azur.launcher.auth.AccountStore;
+import com.azur.launcher.auth.AuthSettings;
+import com.azur.launcher.auth.DebugAccounts;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
@@ -41,7 +44,8 @@ public class LauncherApp extends Application {
         ConfigManager configManager = new ConfigManager(dirs);
         LauncherConfig config = configManager.load();
         I18n.setLanguage(config.getLanguage());
-        ctx = new AppContext(dirs, configManager, config, new AccountStore(dirs.accountsFile()),
+        ctx = new AppContext(dirs, configManager, config, AccountStore.system(dirs.accountsFile()),
+                new AuthSettings(dirs.accountsFile().resolveSibling("auth-settings.json")),
                 getHostServices(), stage);
 
         sceneRoot = new StackPane();
@@ -67,12 +71,32 @@ public class LauncherApp extends Application {
         stage().setTitle(I18n.tr("app.title"));
         BorderPane window = new BorderPane();
         window.getStyleClass().add("window-root");
-        window.setTop(new TitleBar(stage(), I18n.tr("app.title"), this::shutdown));
+        window.setTop(new VBox(debugBanner(), new TitleBar(stage(), I18n.tr("app.title"), this::shutdown)));
         window.setLeft(navigation());
         window.setBottom(statusBar());
         window.setCenter(content());
         sceneRoot.getChildren().setAll(window);
         applyTheme();
+    }
+
+    /** Red strip above the title bar while a debug-only account is active; never shown in release. */
+    private Label debugBanner() {
+        Label banner = new Label();
+        banner.setMaxWidth(Double.MAX_VALUE);
+        banner.setAlignment(Pos.CENTER);
+        banner.setStyle("-fx-background-color: #c62828; -fx-text-fill: white; -fx-font-weight: bold; -fx-padding: 3;");
+        Runnable update = () -> {
+            boolean active = ctx.debugAccount != null;
+            banner.setVisible(active);
+            banner.setManaged(active);
+            if (active) {
+                banner.setText(DebugAccounts.provider().map(AccountProvider::banner).orElse(""));
+            }
+            stage().setTitle((active ? banner.getText() + " | " : "") + I18n.tr("app.title"));
+        };
+        ctx.onAccountsChanged(update);
+        update.run();
+        return banner;
     }
 
     private Stage stage() {
