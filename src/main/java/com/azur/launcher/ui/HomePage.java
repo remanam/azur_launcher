@@ -1,6 +1,9 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.AuthException;
+import com.azur.launcher.auth.AuthNetwork;
+import com.azur.launcher.auth.SessionManager;
 import com.azur.launcher.auth.MicrosoftAccount;
 import com.azur.launcher.auth.MicrosoftAuthService;
 import com.azur.launcher.game.GameLauncher;
@@ -175,7 +178,7 @@ final class HomePage {
                 });
             } catch (Exception e) {
                 ctx.log("Version list unavailable: " + e.getMessage());
-                ctx.setStatus(I18n.tr("home.offline"));
+                ctx.setStatus(I18n.tr("home.versions_unavailable"));
             }
         });
     }
@@ -257,7 +260,7 @@ final class HomePage {
     }
 
     private void startGame() {
-        MicrosoftAccount account = ctx.accounts.selectedAccount();
+        AuthAccount account = ctx.debugAccount != null ? ctx.debugAccount : ctx.accounts.selectedAccount();
         if (account == null) {
             error(I18n.tr("home.sign_in_needed"));
             return;
@@ -293,10 +296,19 @@ final class HomePage {
         });
     }
 
-    private void refreshAccountIfNeeded(MicrosoftAccount account) throws AuthException {
-        if (account.needsRefresh() && !gameSessionActive) {
-            ctx.log("Refreshing the account session");
-            account.refresh(new MicrosoftAuthService());
+    /** Verifies/refreshes a Microsoft session before launch; a still-valid cached one is used if auth is unreachable. */
+    private void refreshAccountIfNeeded(AuthAccount account) throws AuthException {
+        if (!(account instanceof MicrosoftAccount microsoft) || gameSessionActive) {
+            return;
+        }
+        SessionManager.State state = SessionManager.prepare(microsoft,
+                new MicrosoftAuthService(AuthNetwork.quick(ctx.authSettings)), ctx.authSettings.clientId(),
+                ctx::setStatus);
+        if (state == SessionManager.State.CACHED_UNREACHABLE) {
+            ctx.setStatus(I18n.tr("auth.using_cached_session"));
+            ctx.log("Auth hosts unreachable, launching with the cached session");
+        }
+        if (state != SessionManager.State.VALID) {
             try {
                 ctx.accounts.save();
             } catch (Exception e) {

@@ -17,9 +17,6 @@ public class LauncherConfig {
     private String jvmArgs = "";
     private boolean darkMode = false;
     private String language = "auto";
-    private String username = "Steve";
-    private String uuid = "";
-    private String clientId = "";
 
     public String getVersionId() {
         return versionId;
@@ -116,31 +113,6 @@ public class LauncherConfig {
 
     public void setLanguage(String language) {
         this.language = language;
-    }
-
-    /** Name of the offline account (stage 2 moves this into the debug-only source set). */
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getUuid() {
-        return uuid;
-    }
-
-    public void setUuid(String uuid) {
-        this.uuid = uuid;
-    }
-
-    public String getClientId() {
-        return clientId;
-    }
-
-    public void setClientId(String clientId) {
-        this.clientId = clientId;
     }
 
     public Path gameDirOrNull() {

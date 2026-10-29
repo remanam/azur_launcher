@@ -22,6 +22,9 @@ public interface AuthAccount {
         return "{}";
     }
 
+    /** True only when the account may start the game right now (verified licence, usable token). */
+    boolean launchPermitted();
+
     default boolean needsRefresh() {
         return false;
     }

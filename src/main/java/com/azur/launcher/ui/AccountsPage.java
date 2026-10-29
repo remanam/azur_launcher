@@ -1,6 +1,10 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.auth.AccountProvider;
 import com.azur.launcher.auth.AuthException;
+import com.azur.launcher.auth.AuthNetwork;
+import com.azur.launcher.auth.AuthSettings;
+import com.azur.launcher.auth.DebugAccounts;
 import com.azur.launcher.auth.MicrosoftAccount;
 import com.azur.launcher.auth.MicrosoftAuthService;
 import com.azur.launcher.i18n.I18n;
@@ -14,6 +18,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.DialogPane;
+import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.Label;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
@@ -39,9 +45,63 @@ final class AccountsPage {
         root.getChildren().addAll(
                 UiKit.label(I18n.tr("accounts.title"), "page-title"),
                 UiKit.label(I18n.tr("accounts.subtitle"), "page-subtitle"),
-                hint, signInButton, accountList);
+                hint, signInButton, accountList, settingsBox());
+        DebugAccounts.provider().ifPresent(provider -> root.getChildren().add(debugButton(provider)));
         ctx.onAccountsChanged(this::render);
         render();
+    }
+
+    /** Azure client id and auth proxy fields. */
+    private VBox settingsBox() {
+        AuthSettings settings = ctx.authSettings;
+        TextField clientId = new TextField(settings.clientId());
+        TextField host = new TextField(settings.proxyHost());
+        host.setPromptText(I18n.tr("accounts.proxy_host"));
+        TextField port = new TextField(settings.proxyPort() > 0 ? Integer.toString(settings.proxyPort()) : "");
+        port.setPromptText(I18n.tr("accounts.proxy_port"));
+        Label message = UiKit.label("", "hint");
+        message.setWrapText(true);
+        Button save = UiKit.button(I18n.tr("accounts.save_settings"), null, "button-border", () -> {
+            if (!clientId.getText().isBlank() && !AuthSettings.isValidClientId(clientId.getText())) {
+                message.setText(I18n.tr("accounts.bad_client_id"));
+                return;
+            }
+            settings.setClientId(clientId.getText());
+            settings.setProxy(host.getText(), parsePort(port.getText()));
+            try {
+                settings.save();
+                message.setText(I18n.tr("accounts.settings_saved"));
+            } catch (Exception e) {
+                message.setText(e.getMessage());
+            }
+        });
+        return new VBox(6, UiKit.label(I18n.tr("accounts.network_title"), "page-subtitle"),
+                UiKit.label(I18n.tr("accounts.client_id"), "hint"), clientId,
+                new HBox(8, host, port), save, message);
+    }
+
+    private static int parsePort(String text) {
+        try {
+            int value = Integer.parseInt(text.trim());
+            return value > 0 && value < 65536 ? value : 0;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** Debug build only: signs in with an account that needs no Microsoft check. */
+    private Button debugButton(AccountProvider provider) {
+        Button button = UiKit.button(provider.buttonLabel(), null, "button-border", () -> {
+            TextInputDialog dialog = new TextInputDialog(provider.defaultName());
+            dialog.initOwner(ctx.stage);
+            dialog.setHeaderText(provider.buttonLabel());
+            dialog.showAndWait().ifPresent(name -> {
+                ctx.debugAccount = provider.create(name);
+                ctx.fireAccountsChanged();
+            });
+        });
+        button.setStyle("-fx-background-color: #c62828; -fx-text-fill: white;");
+        return button;
     }
 
     Node node() {
@@ -113,7 +173,7 @@ final class AccountsPage {
         signingIn = true;
         signInButton.setDisable(true);
 
-        MicrosoftAuthService service = new MicrosoftAuthService();
+        MicrosoftAuthService service = new MicrosoftAuthService(AuthNetwork.standard(ctx.authSettings));
         Label code = new Label("---- ----");
         code.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
         Label uri = new Label(I18n.tr("signin.requesting"));
@@ -163,7 +223,7 @@ final class AccountsPage {
         });
         alert.show();
 
-        String clientId = ctx.config.getClientId();
+        String clientId = ctx.authSettings.clientId();
         ctx.io.submit(() -> {
             try {
                 MicrosoftAuthService.DeviceCode device = service.requestDeviceCode(clientId);

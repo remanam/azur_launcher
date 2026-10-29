@@ -1,7 +1,6 @@
 package com.azur.launcher.game;
 
 import com.azur.launcher.auth.AuthAccount;
-import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.config.AppDirs;
@@ -85,17 +84,17 @@ public class GameLauncher {
      * Prepares and starts the game; returns once the process exists (it keeps running in the background).
      * Blocking network and disk work: call from a background thread.
      *
-     * @param account the signed-in account; when null the offline account from the config is used
-     *                (stage 2 removes that fallback from release builds)
+     * @param account the signed-in account; it must be {@link AuthAccount#launchPermitted()}, there is no
+     *                fallback account
      */
     public synchronized void launch(LauncherConfig config, AuthAccount account) throws Exception {
         if (isRunning()) {
             log("The game is already running, ignoring the launch request");
             return;
         }
-        AuthAccount effectiveAccount = account != null
-                ? account
-                : OfflineAccount.of(config.getUsername(), config.getUuid());
+        if (account == null || !account.launchPermitted()) {
+            throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
+        }
         preparing = true;
         try {
             // stage 2B: everything below the account lines is driven by the pinned profile
@@ -132,8 +131,8 @@ public class GameLauncher {
             profile.setExtraJvmArgs(pin.jvmArgs());
             profile.setWindowWidth(config.getWindowWidth());
             profile.setWindowHeight(config.getWindowHeight());
-            profile.setAccount(LaunchContext.from(effectiveAccount));
-            log("Account: " + effectiveAccount.getUsername() + " (" + effectiveAccount.getUserType() + ")");
+            profile.setAccount(LaunchContext.from(account));
+            log("Account: " + account.getUsername() + " (" + account.getUserType() + ")");
 
             PlatformRules.setFeature("has_custom_resolution",
                     config.getWindowWidth() > 0 && config.getWindowHeight() > 0);

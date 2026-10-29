@@ -1,6 +1,8 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AccountStore;
+import com.azur.launcher.auth.AuthAccount;
+import com.azur.launcher.auth.AuthSettings;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
@@ -28,6 +30,9 @@ final class AppContext {
     final ConfigManager configManager;
     final LauncherConfig config;
     final AccountStore accounts;
+    final AuthSettings authSettings;
+    /** Set only by the debug build's account provider; always null in release. */
+    AuthAccount debugAccount;
     final HostServices host;
     final Stage stage;
     /** Background work (network, disk). Daemon threads, so they never block exit. */
@@ -44,11 +49,13 @@ final class AppContext {
     private DoubleConsumer progressView = value -> { };
 
     AppContext(AppDirs dirs, ConfigManager configManager, LauncherConfig config, AccountStore accounts,
+               AuthSettings authSettings,
                HostServices host, Stage stage) {
         this.dirs = dirs;
         this.configManager = configManager;
         this.config = config;
         this.accounts = accounts;
+        this.authSettings = authSettings;
         this.host = host;
         this.stage = stage;
     }
