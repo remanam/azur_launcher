@@ -36,7 +36,9 @@ class ReleaseJarGuardIT {
 
     @Test
     void releaseJarHasNoPlainHttpOrMirrors() throws Exception {
-        List<String> hits = ReleaseJarScanner.findPattern(releaseJar(), FORBIDDEN_ENDPOINTS);
+        // third-party binaries (JavaFX natives, PNG metadata, Windows runtime DLLs) carry vendor URLs; our code and text are scanned
+        List<String> hits = ReleaseJarScanner.findPattern(releaseJar(), FORBIDDEN_ENDPOINTS).stream()
+                .filter(hit -> !hit.startsWith("natives/") && !hit.contains(".png:")).toList();
         assertTrue(hits.isEmpty(), "Plain http or mirror hosts in the release jar: " + hits);
     }
 
@@ -57,6 +59,19 @@ class ReleaseJarGuardIT {
             }
             assertTrue(files.stream().noneMatch(f -> f.getFileName().toString().contains("debug")),
                     "a debug artifact is in the image");
+        }
+    }
+
+    /** Runs only when the cross-platform jar is guarded (profile fat): natives of all four targets are inside. */
+    @Test
+    void fatJarCarriesNativesForEveryPlatform() throws Exception {
+        assumeTrue(Boolean.getBoolean("azur.fat"), "not the fat jar");
+        try (java.util.jar.JarFile file = new java.util.jar.JarFile(releaseJar().toFile())) {
+            List<String> names = java.util.Collections.list(file.entries()).stream().map(java.util.jar.JarEntry::getName).toList();
+            for (String entry : List.of("natives/win/glass.dll", "natives/mac-aarch64/libglass.dylib",
+                    "natives/mac/libglass.dylib", "natives/linux/libglass.so")) {
+                assertTrue(names.contains(entry), "missing " + entry);
+            }
         }
     }
 }

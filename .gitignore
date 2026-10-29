@@ -12,3 +12,8 @@ out/
 
 # Maven wrapper jar (we build with a verified Maven, not the wrapper)
 .mvn/wrapper/maven-wrapper.jar
+
+# Separate outputs: debug build and release artifacts (release.sh / debug.sh each clean only their own)
+target-debug/
+dist-debug/
+dist-release/

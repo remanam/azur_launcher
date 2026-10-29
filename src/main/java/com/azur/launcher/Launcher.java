@@ -9,6 +9,7 @@ public final class Launcher {
     }
 
     public static void main(String[] args) {
+        FxNatives.prepare();
         Application.launch(LauncherApp.class, args);
     }
 }
