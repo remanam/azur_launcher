@@ -17,3 +17,4 @@ project owner (разрешение автора на форк есть, ори�
 Not imported from upstream: the GitHub Pages site (docs/) and the Maven wrapper jar.
 Third-party dependencies: JavaFX (GPL-2.0 + Classpath Exception), Gson (Apache-2.0).
 Identifier rename log: tools/rename_stage0.py, tools/rename_stage0.log.
+Bundled fonts: Philosopher (Jovanny Lemonad) and PT Sans (ParaType), SIL Open Font License 1.1, texts in src/main/resources/fonts/OFL-*.txt.

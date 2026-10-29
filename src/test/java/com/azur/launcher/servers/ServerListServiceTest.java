@@ -1,0 +1,101 @@
+package com.azur.launcher.servers;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyPair;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+class ServerListServiceTest {
+
+    @TempDir
+    Path dir;
+
+    private final KeyPair key = key();
+
+    private static KeyPair key() {
+        try {
+            return ServerListVerifierTest.newKey();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    private ServerListService service(ServerListService.Fetcher fetcher, String now) {
+        return new ServerListService(dir.resolve("cache/servers.json"), key.getPublic(), "https://x.example/servers.json",
+                fetcher, Clock.fixed(Instant.parse(now), ZoneOffset.UTC), line -> { });
+    }
+
+    private byte[] good() throws Exception {
+        return ServerListVerifierTest.envelope(ServerListVerifierTest.PAYLOAD, key);
+    }
+
+    @Test
+    void networkListIsCachedAndUsedWhenOffline() throws Exception {
+        byte[] file = good();
+        var online = service(url -> file, "2026-10-29T00:00:00Z").load();
+        assertEquals(ServerListService.Source.NETWORK, online.source());
+        var offline = service(url -> {
+            throw new IOException("no network");
+        }, "2026-10-29T00:00:00Z").load();
+        assertEquals(ServerListService.Source.CACHE, offline.source());
+        assertEquals(2, offline.list().servers().size());
+    }
+
+    @Test
+    void badSignatureFromTheNetworkFallsBackToTheCacheAndIsNotCached() throws Exception {
+        byte[] file = good();
+        service(url -> file, "2026-10-29T00:00:00Z").load();
+        byte[] forged = ServerListVerifierTest.envelope(ServerListVerifierTest.PAYLOAD.replace("a.example", "evil"),
+                ServerListVerifierTest.newKey());
+        var loaded = service(url -> forged, "2026-10-29T00:00:00Z").load();
+        assertEquals(ServerListService.Source.CACHE, loaded.source());
+        assertEquals("a.example", loaded.list().servers().get(0).address());
+        assertTrue(Files.readString(dir.resolve("cache/servers.json")).equals(new String(file, StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void expiredCacheIsShownAsStale() throws Exception {
+        byte[] file = good();
+        service(url -> file, "2026-10-29T00:00:00Z").load();
+        var stale = service(url -> {
+            throw new IOException("offline");
+        }, "2028-01-01T00:00:00Z").load();
+        assertEquals(ServerListService.Source.CACHE_STALE, stale.source());
+    }
+
+    @Test
+    void expiredListFromTheNetworkIsNotCached() throws Exception {
+        byte[] file = good();
+        assertThrows(IOException.class, () -> service(url -> file, "2028-01-01T00:00:00Z").load());
+        assertTrue(Files.notExists(dir.resolve("cache/servers.json")));
+    }
+
+    @Test
+    void tamperedCacheIsRejected() throws Exception {
+        byte[] file = good();
+        service(url -> file, "2026-10-29T00:00:00Z").load();
+        Path cache = dir.resolve("cache/servers.json");
+        Files.writeString(cache, Files.readString(cache).replace("\"sig\":\"", "\"sig\":\"AAAA"));
+        assertThrows(IOException.class, () -> service(url -> {
+            throw new IOException("offline");
+        }, "2026-10-29T00:00:00Z").load());
+    }
+
+    @Test
+    void noNetworkAndNoCacheFails() {
+        assertThrows(IOException.class, () -> service(url -> {
+            throw new IOException("offline");
+        }, "2026-10-29T00:00:00Z").load());
+    }
+}

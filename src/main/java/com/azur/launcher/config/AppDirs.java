@@ -84,4 +84,29 @@ public final class AppDirs {
     public Path logsDir() {
         return root.resolve("logs");
     }
+
+    /** Server list and pack sync settings. */
+    public Path packSettingsFile() {
+        return root.resolve("pack.json");
+    }
+
+    /** Last verified servers.json. */
+    public Path serversCacheFile() {
+        return root.resolve("cache").resolve("servers.json");
+    }
+
+    /** Optional override of the embedded servers.json public key (a file with the base64 key). */
+    public Path serversKeyFile() {
+        return root.resolve("servers_pubkey.txt");
+    }
+
+    /** Where the azur-updater executable is looked for or extracted to. */
+    public Path binDir() {
+        return root.resolve("bin");
+    }
+
+    /** The updater's own state (backups, journals); separate from the launcher config. */
+    public Path updaterHome() {
+        return root.resolve("updater");
+    }
 }

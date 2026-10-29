@@ -16,6 +16,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -24,19 +25,23 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import java.net.URL;
 
-/** Main window: title bar, navigation (Home, Accounts, Settings), the active page and the status bar. */
+/** Main window: title bar, navigation (Servers, Game, Accounts, Settings, About), the active page and the status bar. */
 public class LauncherApp extends Application {
 
-    private enum Page { HOME, ACCOUNTS, SETTINGS }
+    static final String VERSION = "1.0.0";
+    private static final String[] FONTS = {"philosopher_bold", "pt_sans_web_regular", "pt_sans_web_bold"};
+
+    private enum Page { SERVERS, HOME, ACCOUNTS, SETTINGS, ABOUT }
 
     private AppContext ctx;
     private StackPane sceneRoot;
-    private Page current = Page.HOME;
+    private Page current = Page.SERVERS;
 
     @Override
     public void start(Stage stage) {
@@ -48,6 +53,9 @@ public class LauncherApp extends Application {
                 new AuthSettings(dirs.accountsFile().resolveSibling("auth-settings.json")),
                 getHostServices(), stage);
 
+        for (String font : FONTS) {
+            Font.loadFont(getClass().getResource("/fonts/" + font + ".ttf").toExternalForm(), 14);
+        }
         sceneRoot = new StackPane();
         sceneRoot.setPadding(new Insets(10));
         Scene scene = new Scene(sceneRoot, 1040, 720, Color.TRANSPARENT);
@@ -57,8 +65,9 @@ public class LauncherApp extends Application {
         }
         stage.initStyle(StageStyle.TRANSPARENT);
         stage.setTitle(I18n.tr("app.title"));
+        stage.getIcons().add(new Image(getClass().getResource("/img/logo.png").toExternalForm()));
         stage.setScene(scene);
-        stage.setMinWidth(900);
+        stage.setMinWidth(960);
         stage.setMinHeight(600);
         stage.setOnCloseRequest(event -> ctx.saveConfig());
         build();
@@ -76,7 +85,6 @@ public class LauncherApp extends Application {
         window.setBottom(statusBar());
         window.setCenter(content());
         sceneRoot.getChildren().setAll(window);
-        applyTheme();
     }
 
     /** Red strip above the title bar while a debug-only account is active; never shown in release. */
@@ -106,10 +114,9 @@ public class LauncherApp extends Application {
     private Node content() {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
-        Node home = new HomePage(ctx).node();
-        Node accounts = new AccountsPage(ctx).node();
-        Node settings = new SettingsPage(ctx, this::build, this::applyTheme).node();
-        area.getChildren().addAll(home, accounts, settings);
+        HomePage homePage = new HomePage(ctx);
+        area.getChildren().addAll(new ServersPage(ctx, homePage::start).node(), homePage.node(),
+                new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build).node(), new AboutPage().node());
         showPage(area, current);
         return area;
     }
@@ -127,9 +134,11 @@ public class LauncherApp extends Application {
         VBox drawer = new VBox(2);
         drawer.getStyleClass().add("nav-drawer");
         HBox[] items = new HBox[Page.values().length];
-        items[0] = navItem("icon-home", I18n.tr("nav.home"));
-        items[1] = navItem("icon-account", I18n.tr("nav.accounts"));
-        items[2] = navItem("icon-settings", I18n.tr("nav.settings"));
+        items[Page.SERVERS.ordinal()] = navItem("icon-versions", I18n.tr("nav.servers"));
+        items[Page.HOME.ordinal()] = navItem("icon-home", I18n.tr("nav.home"));
+        items[Page.ACCOUNTS.ordinal()] = navItem("icon-account", I18n.tr("nav.accounts"));
+        items[Page.SETTINGS.ordinal()] = navItem("icon-settings", I18n.tr("nav.settings"));
+        items[Page.ABOUT.ordinal()] = navItem("icon-info", I18n.tr("nav.about"));
         for (Page page : Page.values()) {
             HBox item = items[page.ordinal()];
             item.setOnMouseClicked(event -> {
@@ -144,7 +153,7 @@ public class LauncherApp extends Application {
         items[current.ordinal()].getStyleClass().add("selected");
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
-        Label footer = UiKit.label("Java 21 / JavaFX", "nav-footer-label");
+        Label footer = UiKit.label("Java " + Runtime.version().feature() + " / JavaFX", "nav-footer-label");
         drawer.getChildren().addAll(items);
         drawer.getChildren().addAll(spacer, footer);
         return drawer;
@@ -167,20 +176,10 @@ public class LauncherApp extends Application {
             progress.setVisible(fraction >= 0);
             progress.setProgress(fraction);
         });
-        HBox bar = new HBox(12, status, UiKit.spacer(), progress, UiKit.label("Azur 1.0.0", "status-text"));
+        HBox bar = new HBox(12, status, UiKit.spacer(), progress, UiKit.label("Azur " + VERSION, "status-text"));
         bar.getStyleClass().add("status-bar");
         bar.setAlignment(Pos.CENTER_LEFT);
         return bar;
-    }
-
-    private void applyTheme() {
-        if (ctx.config.isDarkMode()) {
-            if (!sceneRoot.getStyleClass().contains("dark")) {
-                sceneRoot.getStyleClass().add("dark");
-            }
-        } else {
-            sceneRoot.getStyleClass().remove("dark");
-        }
     }
 
     private void shutdown() {

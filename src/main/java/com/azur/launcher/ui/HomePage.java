@@ -11,6 +11,9 @@ import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.launch.GameStarter;
+import com.azur.launcher.launch.LaunchRequest;
+import com.azur.launcher.launch.VersionPicker;
 import com.azur.launcher.loader.NeoForgeCatalog;
 import com.azur.launcher.loader.NeoForgeInstaller;
 import com.azur.launcher.model.VersionManifest;
@@ -76,6 +79,17 @@ final class HomePage {
 
     Node node() {
         return UiKit.pageScroll(root);
+    }
+
+    /** {@link GameStarter}: selects the installed version of the requested server and starts or stops the game. */
+    void start(LaunchRequest request) {
+        var version = VersionPicker.pick(installedBox.getItems(), request.server(), ctx.config.getVersionId());
+        if (version.isEmpty()) {
+            error(I18n.tr("sync.no_version", request.server().neoforge()));
+            return;
+        }
+        installedBox.setValue(version.get());
+        onLaunchPressed();
     }
 
     // ------------------------------------------------------------------ layout
