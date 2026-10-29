@@ -27,7 +27,7 @@ import java.util.regex.Pattern;
  *   <li>{@code PATH} 中的<b>每一个</b> java 可执行文件；</li>
  *   <li>Windows 注册表（JavaSoft / Eclipse Adoptium / Zulu / Liberica / Corretto / Semeru / SapMachine 等，含 WOW6432Node 与 HKCU）；</li>
  *   <li>常见安装目录（Program Files 下各发行版、用户目录 {@code .jdks} / {@code .gradle\\jdks} 等）；</li>
- *   <li>启动器内置 / 随包的 runtime（jpackage app 目录、jar 同级 runtime、{@code Azur_HOME}）；</li>
+ *   <li>启动器内置 / 随包的 runtime（jpackage app 目录、jar 同级 runtime、{@code AZUR_HOME}）；</li>
  *   <li>官方启动器 {@code .minecraft\\runtime} 下的 java-runtime-* 目录。</li>
  * </ol>
  * 优先读取 &lt;home&gt;/release 文件，避免启动子进程，速度更快。</p>
@@ -134,7 +134,7 @@ public final class JavaDetector {
         // 1) 环境变量
         addEnvHome(unique, "JAVA_HOME");
         addEnvHome(unique, "JDK_HOME");
-        addEnvHome(unique, "Azur_JAVA_HOME");
+        addEnvHome(unique, "AZUR_JAVA_HOME");
 
         // 2) 当前运行的 JVM
         addCurrentJvm(unique);
@@ -419,7 +419,7 @@ public final class JavaDetector {
 
     // ------------------------------------------------------------------ 内置 / 官方 runtime
 
-    /** 启动器自带 runtime：jpackage app 目录、jar 同级 runtime/jre、Azur_HOME、工作目录。 */
+    /** 启动器自带 runtime：jpackage app 目录、jar 同级 runtime/jre、AZUR_HOME、工作目录。 */
     private static void scanBundledRuntimes(Map<String, JavaInfo> unique) {
         List<Path> bases = new ArrayList<>();
         String appPath = System.getProperty("jpackage.app-path");
@@ -444,7 +444,7 @@ public final class JavaDetector {
         } catch (Exception ignored) {
             // 无法定位 jar 位置时忽略
         }
-        String azurHome = System.getenv("Azur_HOME");
+        String azurHome = System.getenv("AZUR_HOME");
         if (azurHome != null && !azurHome.isBlank()) {
             bases.add(Paths.get(azurHome));
         }

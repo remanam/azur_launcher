@@ -326,7 +326,7 @@ public class LauncherApp extends Application {
         }
 
         stage.initStyle(StageStyle.TRANSPARENT);
-        stage.setTitle("Azur Launcher");
+        stage.setTitle("Азур Лаунчер");
         stage.setScene(scene);
         stage.setMinWidth(900);
         stage.setMinHeight(600);

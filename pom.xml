@@ -9,8 +9,8 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>Azur Launcher</name>
-    <description>基于 Java 21 + JavaFX 的 Minecraft 启动器（版本清单解析 / 多线程下载校验 / Java 检测 / 参数拼接 / 离线登录 / JavaFX 界面 / 配置持久化）</description>
+    <name>Azur Launcher (Азур Лаунчер)</name>
+    <description>Azur Launcher: Minecraft launcher for the Azur Launcher modpack (fork of Azur, GPL-3.0)</description>
 
     <licenses>
         <license>
