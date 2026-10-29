@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.azur.launcher.model.AssetIndex;
 import com.azur.launcher.model.AssetObjects;
 import com.azur.launcher.net.DownloadManager;
-import com.azur.launcher.net.DownloadSource;
 import com.azur.launcher.net.HttpUtils;
 
 import java.io.IOException;
@@ -16,14 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
-/**
- * 资源（assets）处理：索引下载 + 散列对象下载任务生成。
- * 官方资源对象文件名即其 SHA1，因此「文件存在」等价于「校验通过」。
- */
 public class AssetManager {
 
-    /** 官方资源对象 CDN 前缀 */
-    public static final String RESOURCES_BASE = DownloadSource.OFFICIAL_ASSETS_BASE;
+    public static final String RESOURCES_BASE = "https://resources.download.minecraft.net/";
 
     private static final Gson GSON = new Gson();
 
@@ -36,13 +30,12 @@ public class AssetManager {
         } : logger;
     }
 
-    /** 下载（或复用）资源索引文件。 */
     public void ensureIndex(AssetIndex index) throws IOException {
         if (index == null || index.getUrl() == null) {
-            throw new IOException("版本 JSON 缺少 assetIndex 信息");
+            throw new IOException("Version JSON has no assetIndex");
         }
         Path file = paths.assetIndexFile(index.getId());
-        logger.accept("正在获取资源索引: " + index.getId());
+        logger.accept("Fetching asset index: " + index.getId());
         HttpUtils.download(index.getUrl(), file, index.getSha1(), index.getSize());
     }
 
@@ -50,12 +43,11 @@ public class AssetManager {
         Path file = paths.assetIndexFile(index.getId());
         AssetObjects objects = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), AssetObjects.class);
         if (objects == null || objects.getObjects() == null) {
-            throw new IOException("资源索引解析失败: " + file);
+            throw new IOException("Cannot parse asset index: " + file);
         }
         return objects;
     }
 
-    /** 生成缺失资源对象的下载任务（已存在的直接跳过）。 */
     public List<DownloadManager.Task> buildDownloadTasks(AssetObjects index) {
         List<DownloadManager.Task> tasks = new ArrayList<>();
         int skipped = 0;
@@ -70,13 +62,11 @@ public class AssetManager {
                 skipped++;
                 continue;
             }
-            // 先生成官方 CDN 地址，再按当前下载源重写（rawUrl 保留官方地址用于兜底）
-            String official = DownloadSource.OFFICIAL_ASSETS_BASE + hash.substring(0, 2) + "/" + hash;
-            String url = DownloadSource.rewrite(official);
-            tasks.add(new DownloadManager.Task(url, official, target, hash, obj.getSize()));
+            String url = RESOURCES_BASE + hash.substring(0, 2) + "/" + hash;
+            tasks.add(new DownloadManager.Task(url, target, hash, obj.getSize()));
         }
         if (skipped > 0) {
-            logger.accept("资源文件已存在 " + skipped + " 个，本次需下载 " + tasks.size() + " 个");
+            logger.accept(skipped + " assets already present, " + tasks.size() + " to download");
         }
         return tasks;
     }

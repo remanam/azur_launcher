@@ -12,17 +12,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * 正版账户持久化。
- *
- * <p>落盘位置：{@code D:\Azur\SA\STEV\accounts.json}（见 {@link AuthPaths#msaFile()}）。结构为
- * 「msa 账户列表 + 当前选中的 UUID」，与离线账户文件（{@code D:\Azur\SA\offline.json}）物理隔离，
- * 正版令牌不会污染非正版账户。</p>
- *
- * <p>切回离线账户只清空 selectedUuid，已保存的 msa 记录保留（不参与启动）。</p>
- *
- * <p>安全约束：本类不打印文件内容，也不在异常信息中携带令牌。</p>
- */
 public final class AccountStore {
 
     private static final Gson GSON = new GsonBuilder()
@@ -33,10 +22,8 @@ public final class AccountStore {
     private final Path file;
     private Data data = new Data();
 
-    /** accounts.json 的内存结构。 */
     public static final class Data {
         private List<MicrosoftAccount> microsoft = new ArrayList<>();
-        /** 当前选中的正版账户 UUID；空串表示使用离线账户 */
         private String selectedUuid = "";
 
         public List<MicrosoftAccount> getMicrosoft() {
@@ -56,13 +43,8 @@ public final class AccountStore {
         }
     }
 
-    /** 使用默认位置：D:\Azur\SA\STEV\accounts.json。 */
-    public AccountStore() {
-        this(AuthPaths.msaDir());
-    }
-
-    public AccountStore(Path configDir) {
-        this.file = configDir.resolve("accounts.json");
+    public AccountStore(Path file) {
+        this.file = file;
         load();
     }
 
@@ -70,7 +52,6 @@ public final class AccountStore {
         return file;
     }
 
-    /** 读取账户文件；文件缺失或损坏时回退为空列表（不抛异常）。 */
     public synchronized void load() {
         Data loaded = null;
         try {
@@ -79,7 +60,6 @@ public final class AccountStore {
                 loaded = GSON.fromJson(json, Data.class);
             }
         } catch (Exception ignored) {
-            // 账户文件损坏时静默回退，避免启动失败
         }
         if (loaded == null) {
             loaded = new Data();
@@ -93,7 +73,6 @@ public final class AccountStore {
         data = loaded;
     }
 
-    /** 原子写入 accounts.json（先写临时文件再移动，避免中断导致文件损坏）。 */
     public synchronized void save() throws IOException {
         Path parent = file.getParent();
         if (parent != null) {
@@ -112,7 +91,6 @@ public final class AccountStore {
         return new ArrayList<>(data.getMicrosoft());
     }
 
-    /** 当前选中的正版账户；未选中时返回 null（表示使用离线账户）。 */
     public synchronized MicrosoftAccount selectedAccount() {
         String selected = data.getSelectedUuid();
         if (selected == null || selected.isBlank()) {
@@ -130,7 +108,6 @@ public final class AccountStore {
         return data.getSelectedUuid();
     }
 
-    /** 以 UUID 为键新增或更新账户。 */
     public synchronized void upsert(MicrosoftAccount account) {
         if (account == null || account.getUuid() == null || account.getUuid().isBlank()) {
             return;
@@ -146,7 +123,6 @@ public final class AccountStore {
         list.add(account);
     }
 
-    /** 选中某个正版账户（不存在时先入库）。 */
     public synchronized void select(MicrosoftAccount account) {
         if (account == null) {
             return;
@@ -155,12 +131,10 @@ public final class AccountStore {
         data.setSelectedUuid(account.getUuid());
     }
 
-    /** 切回离线账户：保留 msa 记录，仅清空选中项。 */
     public synchronized void clearSelection() {
         data.setSelectedUuid("");
     }
 
-    /** 删除某个正版账户（退出登录时可选调用）；同时清理选中状态。 */
     public synchronized void remove(String uuid) {
         if (uuid == null || uuid.isBlank()) {
             return;

@@ -7,9 +7,6 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * 启动上下文：承载参数拼接所需的一切路径与账户信息，并负责生成占位符映射表。
- */
 public class LaunchProfile {
 
     public static final String LAUNCHER_NAME = "Azur";
@@ -37,7 +34,6 @@ public class LaunchProfile {
 
     private AuthAccount account;
 
-    /** 占位符映射，供 ${...} 替换使用。 */
     public Map<String, String> toPlaceholders() {
         Map<String, String> ph = new LinkedHashMap<>();
         ph.put("${auth_player_name}", account == null ? "Player" : account.getUsername());

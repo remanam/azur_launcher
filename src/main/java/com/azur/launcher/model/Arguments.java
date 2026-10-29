@@ -10,11 +10,6 @@ import com.google.gson.reflect.TypeToken;
 import java.lang.reflect.Type;
 import java.util.List;
 
-/**
- * 1.13+ 版本的 arguments 节点。
- * 数组元素可能是纯字符串，也可能是 {"rules": [...], "value": "x" | ["x", "y"]}。
- * 因此 value 用 {@link JsonElement} 承载，由参数构建器在运行时展开。
- */
 public class Arguments {
 
     private List<Entry> game;
@@ -42,10 +37,6 @@ public class Arguments {
         }
     }
 
-    /**
-     * 兼容 1.13+ 的两种写法：arguments 数组元素既可能是纯字符串（{@code "-Xmx2G"}），
-     * 也可能是带 rules 的对象（{@code {"rules":[...],"value":"..."}}）。
-     */
     public static class EntryDeserializer implements JsonDeserializer<Entry> {
         @Override
         public Entry deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {

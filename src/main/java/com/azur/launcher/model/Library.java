@@ -3,10 +3,6 @@ package com.azur.launcher.model;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 依赖库条目。name 采用 Maven 坐标 group:artifact:version[:classifier][@ext]。
- * 支持新式 downloads 字段与旧式 url 字段（Mojang 早期版本）。
- */
 public class Library {
 
     private String name;
@@ -44,8 +40,6 @@ public class Library {
         this.name = name;
     }
 
-    // ---------- 坐标解析 ----------
-
     private String[] coords() {
         return name == null ? new String[0] : name.split(":");
     }
@@ -65,12 +59,10 @@ public class Library {
         return c.length > 2 ? c[2] : "";
     }
 
-    /** 形如 org/lwjgl/lwjgl/3.3.1 */
     public String getDirectoryPath() {
         return getGroupId().replace('.', '/') + "/" + getArtifactId() + "/" + getVersion();
     }
 
-    /** 普通 artifact 文件名，形如 lwjgl-3.3.1.jar */
     public String getArtifactFileName() {
         String version = getVersion();
         String[] c = coords();
@@ -82,7 +74,6 @@ public class Library {
         return getArtifactId() + "-" + version + "." + extension;
     }
 
-    /** 判断是否为「当前平台需要解压的 natives」类型的 library */
     public boolean hasNatives() {
         return natives != null && !natives.isEmpty();
     }

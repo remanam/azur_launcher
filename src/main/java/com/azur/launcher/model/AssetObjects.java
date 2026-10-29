@@ -2,10 +2,6 @@ package com.azur.launcher.model;
 
 import java.util.Map;
 
-/**
- * assets/indexes/&lt;index&gt;.json 资源索引。
- * objects 形如 {"icons/icon_16x16.png": {"hash": "bdf48ef...", "size": 143}}
- */
 public class AssetObjects {
 
     private Map<String, ObjectEntry> objects;

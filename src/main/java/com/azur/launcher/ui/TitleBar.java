@@ -10,11 +10,6 @@ import javafx.scene.layout.Region;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 
-/**
- * 自绘窗口标题栏（对应 HMCL 的 Decorator / jfx-tool-bar）。
- * <p>高度 40px：左侧应用标识与标题，右侧最小化 / 最大化 / 关闭三个窗口按钮；
- * 支持按住标题栏拖动窗口、双击切换最大化。</p>
- */
 public class TitleBar extends HBox {
 
     private final Stage stage;
@@ -78,7 +73,6 @@ public class TitleBar extends HBox {
         return button;
     }
 
-    /** 无边框窗口下手动实现最大化 / 还原。 */
     private void toggleMaximize() {
         if (maximized) {
             stage.setX(restoreX);

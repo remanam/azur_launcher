@@ -1,8 +1,5 @@
 package com.azur.launcher.model;
 
-/**
- * 版本 JSON 中的 assetIndex 节点。
- */
 public class AssetIndex {
 
     private String id;

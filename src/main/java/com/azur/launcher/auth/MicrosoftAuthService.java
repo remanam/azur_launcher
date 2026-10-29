@@ -1,5 +1,6 @@
 package com.azur.launcher.auth;
 
+import com.azur.launcher.i18n.I18n;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -17,31 +18,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * Microsoft 正版登录（OAuth 2.0 设备码流程）。
- *
- * <p>实现参照 HMCL 的 {@code MicrosoftService} / {@code OAuth.MICROSOFT} 与
- * Prism Launcher 的 {@code MSADeviceCodeStep}：</p>
- * <ol>
- *   <li>POST consumers/oauth2/v2.0/devicecode 申请设备码（client_id + scope）；</li>
- *   <li>按 RFC 8628 轮询 token 端点：authorization_pending 继续、slow_down 间隔 +5s、
- *       网络抖动则间隔翻倍；</li>
- *   <li>拿到 MSA access_token 后依次完成 Xbox Live 用户认证 → XSTS 授权 →
- *       Minecraft 登录 → 授权校验 → 档案获取；</li>
- *   <li>refresh_token 走 token 端点刷新后重走同一条链路。</li>
- * </ol>
- *
- * <p>线程模型：所有方法均为阻塞式 IO，必须在后台线程调用；{@link #cancel()} 可从任意线程
- * 中断轮询，用于用户取消登录。</p>
- *
- * <p>安全约束：本类不打印、不记录任何 token；异常信息只包含错误码与中文描述。</p>
- */
 public class MicrosoftAuthService {
 
-    /** Prism Launcher 使用的公开 client_id，可在设置页覆盖为用户自行注册的 Azure 应用 ID。 */
     public static final String DEFAULT_CLIENT_ID = "c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb";
 
-    /** 与 HMCL 一致：Xbox Live 登录 + 离线访问（离线访问才能拿到 refresh_token）。 */
     public static final String SCOPE = "XboxLive.signin offline_access";
 
     private static final String DEVICE_CODE_URL =
@@ -57,12 +37,6 @@ public class MicrosoftAuthService {
 
     private static final String DEVICE_CODE_GRANT = "urn:ietf:params:oauth:grant-type:device_code";
 
-    /**
-     * 设备码整体等待上限（秒）。
-     *
-     * <p>Microsoft 的 expires_in 通常为 900 秒，服务端异常时可能返回更大值；
-     * 本地等待时间取 min(expires_in, 900) 并保底 60 秒，避免线程被异常值长时间占用。</p>
-     */
     private static final long DEVICE_CODE_MAX_WAIT_SECONDS = 900L;
 
     private static final int CONNECT_TIMEOUT_MS = 15_000;
@@ -71,12 +45,10 @@ public class MicrosoftAuthService {
 
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
 
-    /** 阶段提示回调（在调用线程触发，UI 侧需自行切回 JavaFX 线程）。 */
     public interface StageListener {
         void onStage(String message);
     }
 
-    /** 设备码信息（仅用于界面展示与轮询，deviceCode 不参与日志输出）。 */
     public static class DeviceCode {
         private final String deviceCode;
         private final String userCode;
@@ -120,9 +92,6 @@ public class MicrosoftAuthService {
         }
     }
 
-    // ------------------------------------------------------------------ 取消
-
-    /** 请求取消当前轮询（线程安全，可从 JavaFX 线程调用）。 */
     public void cancel() {
         cancelled.set(true);
     }
@@ -131,13 +100,6 @@ public class MicrosoftAuthService {
         return cancelled.get();
     }
 
-    // ------------------------------------------------------------------ 设备码
-
-    /**
-     * 申请设备码。
-     *
-     * @param clientId Azure 应用 ID；为空时使用 {@link #DEFAULT_CLIENT_ID}
-     */
     public DeviceCode requestDeviceCode(String clientId) throws AuthException {
         Map<String, String> form = new LinkedHashMap<>();
         form.put("client_id", normalizeClientId(clientId));
@@ -146,50 +108,41 @@ public class MicrosoftAuthService {
         HttpResult result = sendFormWithRetry(DEVICE_CODE_URL, form, null);
         if (result.code != 200) {
             throw new AuthException("devicecode_failed",
-                    "申请设备码失败（HTTP " + result.code + "）：" + errorDescription(parse(result.body)));
+                    I18n.tr("auth.devicecode_http", result.code, errorDescription(parse(result.body))));
         }
         JsonObject json = parse(result.body);
         String deviceCode = str(json, "device_code");
         String userCode = str(json, "user_code");
         String verificationUri = str(json, "verification_uri");
         if (deviceCode.isBlank() || userCode.isBlank() || verificationUri.isBlank()) {
-            throw new AuthException("devicecode_failed", "设备码响应缺少必要字段（device_code / user_code / verification_uri）");
+            throw new AuthException("devicecode_failed", I18n.tr("auth.devicecode_fields"));
         }
         int expiresIn = (int) num(json, "expires_in", 900);
         int interval = (int) num(json, "interval", 5);
         return new DeviceCode(deviceCode, userCode, verificationUri, expiresIn, interval, str(json, "message"));
     }
 
-    // ------------------------------------------------------------------ 轮询登录
-
-    /**
-     * 按设备码轮询授权结果，成功后自动完成 Xbox → XSTS → Minecraft 全链路。
-     *
-     * @return 已完成登录的微软账户（已含 Minecraft access token、uuid、xuid 等）
-     */
     public MicrosoftAccount login(DeviceCode deviceCode, String clientId, StageListener listener)
             throws AuthException {
         String cid = normalizeClientId(clientId);
-        notify(listener, "等待在浏览器中完成 Microsoft 授权 ...");
+        notify(listener, I18n.tr("auth.wait_browser"));
 
-        // 设备码整体等待上限：min(expires_in, 900) 秒，同时保留 60 秒下限防止服务端返回异常值
         long waitSeconds = Math.max(60L, Math.min(deviceCode.getExpiresIn(), DEVICE_CODE_MAX_WAIT_SECONDS));
         long deadline = System.currentTimeMillis() + waitSeconds * 1000L;
         long interval = Math.max(1, deviceCode.getInterval()) * 1000L;
 
         while (true) {
             if (cancelled.get()) {
-                throw new AuthException("cancelled", "已取消登录");
+                throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
             }
             if (System.currentTimeMillis() >= deadline) {
-                throw new AuthException("expired_token", "设备码已过期，请重新发起登录");
+                throw new AuthException("expired_token", I18n.tr("auth.code_expired"));
             }
-            // 分片休眠，保证取消可以及时生效
             if (!sleepInterruptible(interval)) {
-                throw new AuthException("cancelled", "已取消登录");
+                throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
             }
             if (System.currentTimeMillis() >= deadline) {
-                throw new AuthException("expired_token", "设备码已过期，请重新发起登录");
+                throw new AuthException("expired_token", I18n.tr("auth.code_expired"));
             }
 
             HttpResult result;
@@ -197,13 +150,11 @@ public class MicrosoftAuthService {
                 Map<String, String> form = new LinkedHashMap<>();
                 form.put("client_id", cid);
                 form.put("grant_type", DEVICE_CODE_GRANT);
-                // 严格按 RFC 8628 / Microsoft 文档只下发 device_code，避免多余参数触发 invalid_request
                 form.put("device_code", deviceCode.getDeviceCode());
                 result = sendForm(TOKEN_URL, form);
             } catch (AuthException e) {
-                // 连接异常：按 Prism 的策略把轮询间隔翻倍后继续，直到设备码过期
                 interval = Math.min(interval * 2L, 30_000L);
-                notify(listener, "网络不稳定，稍后用更长间隔重试 ...");
+                notify(listener, I18n.tr("auth.net_unstable"));
                 continue;
             }
 
@@ -212,21 +163,19 @@ public class MicrosoftAuthService {
                 String msaToken = str(token, "access_token");
                 String refreshToken = str(token, "refresh_token");
                 if (msaToken.isBlank()) {
-                    throw new AuthException("invalid_response", "Microsoft 未返回 access_token");
+                    throw new AuthException("invalid_response", I18n.tr("auth.no_access_token"));
                 }
                 return completeChain(msaToken, refreshToken, cid, listener);
             }
 
-            // 429 / 5xx 属服务端临时故障：按 RFC 8628 拉长间隔继续轮询，绝不直接中断登录
             if (result.code == 429 || result.code >= 500) {
                 interval = Math.min(interval + 5_000L, 60_000L);
-                notify(listener, "Microsoft 服务暂时不可用（HTTP " + result.code + "），稍后自动重试 ...");
+                notify(listener, I18n.tr("auth.ms_unavailable_retry", result.code));
                 continue;
             }
-            // 请求被网关截断/超时等无响应体情况，同样退避重试
             if (result.body == null || result.body.isBlank()) {
                 interval = Math.min(interval + 5_000L, 60_000L);
-                notify(listener, "授权服务返回空响应（HTTP " + result.code + "），稍后自动重试 ...");
+                notify(listener, I18n.tr("auth.empty_response_retry", result.code));
                 continue;
             }
 
@@ -234,39 +183,35 @@ public class MicrosoftAuthService {
             String code = str(error, "error");
             switch (code) {
                 case "authorization_pending" -> {
-                    // 用户尚未完成授权，继续轮询
                 }
                 case "slow_down" -> interval = Math.min(interval + 5_000L, 60_000L);
-                case "expired_token" -> throw new AuthException("expired_token", "设备码已过期，请重新发起登录");
+                case "expired_token" -> throw new AuthException("expired_token", I18n.tr("auth.code_expired"));
                 case "authorization_declined" -> throw new AuthException("authorization_declined",
-                        "授权已被拒绝，请重新登录");
+                        I18n.tr("auth.declined"));
                 case "bad_verification_code" -> throw new AuthException("bad_verification_code",
-                        "验证码无效，请重新发起登录");
+                        I18n.tr("auth.bad_code"));
                 case "invalid_grant" -> throw new AuthException("invalid_grant",
-                        "授权已失效，请重新发起登录");
+                        I18n.tr("auth.grant_invalid"));
                 default -> throw new AuthException(
                         code.isBlank() ? "http_" + result.code : code,
-                        "授权失败：" + errorDescription(error));
+                        I18n.tr("auth.failed", errorDescription(error)));
             }
         }
     }
 
-    // ------------------------------------------------------------------ 刷新
-
-    /** 用 refresh_token 刷新账户凭据（令牌到期前 12 小时内由界面调用；游戏运行中不得调用）。 */
     public MicrosoftAccount refresh(MicrosoftAccount account) throws AuthException {
         return refresh(account, null);
     }
 
     public MicrosoftAccount refresh(MicrosoftAccount account, StageListener listener) throws AuthException {
         if (account == null) {
-            throw new AuthException("no_account", "没有可刷新的正版账户");
+            throw new AuthException("no_account", I18n.tr("auth.no_account"));
         }
         if (account.getRefreshToken() == null || account.getRefreshToken().isBlank()) {
-            throw new AuthException("no_refresh_token", "登录已失效，请重新登录");
+            throw new AuthException("no_refresh_token", I18n.tr("auth.session_invalid"));
         }
         String cid = normalizeClientId(account.getClientId());
-        notify(listener, "正在刷新 Microsoft 登录凭据 ...");
+        notify(listener, I18n.tr("auth.refreshing"));
 
         Map<String, String> form = new LinkedHashMap<>();
         form.put("client_id", cid);
@@ -280,16 +225,16 @@ public class MicrosoftAuthService {
             String code = str(error, "error");
             if ("invalid_grant".equals(code) || "interaction_required".equals(code)
                     || "invalid_request".equals(code) || "unauthorized_client".equals(code)) {
-                throw new AuthException("invalid_grant", "登录已失效，请重新登录");
+                throw new AuthException("invalid_grant", I18n.tr("auth.session_invalid"));
             }
             throw new AuthException(code.isBlank() ? "http_" + result.code : code,
-                    "刷新登录凭据失败：" + errorDescription(error));
+                    I18n.tr("auth.refresh_failed", errorDescription(error)));
         }
         JsonObject token = parse(result.body);
         String msaToken = str(token, "access_token");
         String refreshToken = str(token, "refresh_token");
         if (msaToken.isBlank()) {
-            throw new AuthException("invalid_response", "Microsoft 未返回 access_token");
+            throw new AuthException("invalid_response", I18n.tr("auth.no_access_token"));
         }
         if (refreshToken.isBlank()) {
             refreshToken = account.getRefreshToken();
@@ -301,8 +246,7 @@ public class MicrosoftAuthService {
 
     private MicrosoftAccount completeChain(String msaAccessToken, String refreshToken,
                                            String clientId, StageListener listener) throws AuthException {
-        // ---- 1) Xbox Live 用户认证 ----
-        notify(listener, "正在验证 Xbox Live 账户 ...");
+        notify(listener, I18n.tr("auth.stage_xbox"));
         JsonObject props = new JsonObject();
         props.addProperty("AuthMethod", "RPS");
         props.addProperty("SiteName", "user.auth.xboxlive.com");
@@ -316,17 +260,16 @@ public class MicrosoftAuthService {
         HttpResult xboxResult = sendJson(XBOX_USER_AUTH_URL, xboxBody, null);
         if (xboxResult.code != 200) {
             throw new AuthException("xbox_auth_failed",
-                    "Xbox Live 用户认证失败（HTTP " + xboxResult.code + "）");
+                    I18n.tr("auth.xbox_http", xboxResult.code));
         }
         JsonObject xboxJson = parse(xboxResult.body);
         String xblToken = str(xboxJson, "Token");
         String uhs = firstUhs(xboxJson);
         if (xblToken.isBlank() || uhs.isBlank()) {
-            throw new AuthException("xbox_auth_failed", "Xbox Live 返回数据缺少 Token 或 uhs");
+            throw new AuthException("xbox_auth_failed", I18n.tr("auth.xbox_fields"));
         }
 
-        // ---- 2) XSTS 授权 ----
-        notify(listener, "正在获取 XSTS 授权令牌 ...");
+        notify(listener, I18n.tr("auth.stage_xsts"));
         JsonObject xstsProps = new JsonObject();
         xstsProps.addProperty("SandboxId", "RETAIL");
         JsonArray tokens = new JsonArray();
@@ -344,55 +287,49 @@ public class MicrosoftAuthService {
             throw xstsError(xstsResult.body, error);
         }
         if (xstsResult.code != 200) {
-            throw new AuthException("xsts_failed", "XSTS 授权失败（HTTP " + xstsResult.code + "）");
+            throw new AuthException("xsts_failed", I18n.tr("auth.xsts_http", xstsResult.code));
         }
         JsonObject xstsJson = parse(xstsResult.body);
         String xstsToken = str(xstsJson, "Token");
         String xstsUhs = firstUhs(xstsJson);
-        // XUID 是 XSTS DisplayClaims 里的 xid（Xbox 用户 ID）；取不到时退回 uhs 保证字段非空
         String xuid = firstClaim(xstsJson, "xid");
         if (xstsToken.isBlank()) {
-            throw new AuthException("xsts_failed", "XSTS 返回数据缺少 Token");
+            throw new AuthException("xsts_failed", I18n.tr("auth.xsts_fields"));
         }
-        // uhs（Xbox User Hash）一致性校验：XSTS 与 Xbox Live 用户认证阶段返回的 uhs 必须完全一致，
-        // 否则说明服务端返回了其他用户的授权（对标 Prism XboxAuthorizationStep 的 user hash 校验）。
         if (xstsUhs.isBlank() || !xstsUhs.equals(uhs)) {
             throw new AuthException("xsts_failed",
-                    "XSTS 返回的用户标识与 Xbox Live 阶段不一致（uhs 校验失败），出于安全考虑已中止登录，请重试");
+                    I18n.tr("auth.uhs_mismatch"));
         }
 
-        // ---- 3) Minecraft 登录 ----
-        notify(listener, "正在登录 Minecraft 服务 ...");
+        notify(listener, I18n.tr("auth.stage_mc"));
         JsonObject loginBody = new JsonObject();
         loginBody.addProperty("identityToken", "XBL3.0 x=" + uhs + ";" + xstsToken);
         HttpResult loginResult = sendJson(MC_LOGIN_URL, loginBody, null);
         if (loginResult.code != 200) {
             if (loginResult.code == 401) {
-                throw new AuthException("mc_login_failed", "Minecraft 登录被拒绝：该账户没有 Minecraft Java 版");
+                throw new AuthException("mc_login_failed", I18n.tr("auth.mc_denied"));
             }
-            throw new AuthException("mc_login_failed", "Minecraft 登录失败（HTTP " + loginResult.code + "）");
+            throw new AuthException("mc_login_failed", I18n.tr("auth.mc_http", loginResult.code));
         }
         JsonObject loginJson = parse(loginResult.body);
         String mcToken = str(loginJson, "access_token");
         if (mcToken.isBlank()) {
-            throw new AuthException("mc_login_failed", "Minecraft 登录响应缺少 access_token");
+            throw new AuthException("mc_login_failed", I18n.tr("auth.mc_no_token"));
         }
         long expiresIn = (long) num(loginJson, "expires_in", 86_400);
         long notAfter = System.currentTimeMillis() + expiresIn * 1000L;
 
-        // ---- 4) 授权校验（mcstore） ----
-        notify(listener, "正在校验游戏授权 ...");
+        notify(listener, I18n.tr("auth.stage_license"));
         HttpResult storeResult = sendGetWithRetry(MC_ENTITLEMENTS_URL, mcToken);
         if (storeResult.code != 200) {
             throw new AuthException("no_entitlement",
-                    "该账户没有 Minecraft Java 版授权（未购买或授权校验失败，HTTP " + storeResult.code + "）");
+                    I18n.tr("auth.license_http", storeResult.code));
         }
         if (!hasMinecraftEntitlement(parse(storeResult.body))) {
-            throw new AuthException("no_entitlement", "该账户未购买 Minecraft Java 版");
+            throw new AuthException("no_entitlement", I18n.tr("auth.not_owned"));
         }
 
-        // ---- 5) 游戏档案 ----
-        notify(listener, "正在读取 Minecraft 游戏档案 ...");
+        notify(listener, I18n.tr("auth.stage_profile"));
         HttpResult profileResult = sendGetWithRetry(MC_PROFILE_URL, mcToken);
         String profileId;
         String profileName;
@@ -404,10 +341,10 @@ public class MicrosoftAuthService {
             throw profileMissingError(mcToken);
         } else {
             throw new AuthException("profile_failed",
-                    "读取 Minecraft 游戏档案失败（HTTP " + profileResult.code + "）");
+                    I18n.tr("auth.profile_http", profileResult.code));
         }
         if (profileName.isBlank() || profileId.isBlank()) {
-            throw new AuthException("profile_failed", "Minecraft 档案数据缺少 id 或 name");
+            throw new AuthException("profile_failed", I18n.tr("auth.profile_fields"));
         }
 
         MicrosoftAccount account = new MicrosoftAccount();
@@ -419,80 +356,53 @@ public class MicrosoftAuthService {
         account.setClientId(clientId);
         account.setNotAfter(notAfter);
         account.setUserProperties("{}");
-        notify(listener, "登录完成：" + profileName);
+        notify(listener, I18n.tr("auth.done", profileName));
         return account;
     }
 
-    /** profile 404：区分「有 Java 版授权但未创建档案」与「无 Java 版授权」。 */
     private AuthException profileMissingError(String mcToken) {
         HttpResult license;
         try {
             license = sendGetWithRetry(MC_LICENSE_URL, mcToken);
         } catch (AuthException e) {
-            return new AuthException("no_profile", "该账户没有 Minecraft Java 版游戏档案（可能未购买 Java 版）");
+            return new AuthException("no_profile", I18n.tr("auth.no_profile"));
         }
         if (license.code == 200 && hasItems(parse(license.body))) {
             return new AuthException("profile_missing",
-                    "该账户拥有 Minecraft Java 版但尚未创建游戏档案，请先前往 minecraft.net 创建档案后重试");
+                    I18n.tr("auth.profile_missing"));
         }
-        return new AuthException("no_profile", "该账户没有 Minecraft Java 版游戏档案（可能未购买 Java 版）");
+        return new AuthException("no_profile", I18n.tr("auth.no_profile"));
     }
 
-    /**
-     * XSTS 401：按 XErr 映射中文提示。
-     *
-     * <p>码表与 Prism Launcher XboxAuthorizationStep::processSTSError 完全对齐，
-     * 每条提示都给出可操作的处理指引，未知码保留兜底提示并回显原始 XErr 数值。</p>
-     */
     private AuthException xstsError(String body, JsonObject error) {
         long xerr = (long) num(error, "XErr", 0);
         String redirect = str(error, "Redirect");
-        String suffix = redirect.isBlank() ? "" : "（" + redirect + "）";
-        // 注意：XErr 数值均超过 int 上限（2148916227 > 2147483647），必须用 long 常量比较，不能写成 int switch
+        String suffix = redirect.isBlank() ? "" : " (" + redirect + ")";
         if (xerr == 2148916233L) {
-            return new AuthException("xerr_2148916233",
-                    "该 Microsoft 账户尚未创建 Xbox 档案（从未登录过 Xbox Live）。"
-                            + "请先前往 https://www.minecraft.net/en-us/store/minecraft-java-edition 购买或"
-                            + "访问 https://start.ui.xboxlive.com 创建 Xbox 档案后重试" + suffix);
+            return new AuthException("xerr_2148916233", I18n.tr("auth.xerr_2148916233") + suffix);
         }
         if (xerr == 2148916235L) {
-            return new AuthException("xerr_2148916235",
-                    "该账户所在国家或地区已被 Xbox Live 屏蔽，无法登录 Minecraft Java 版。"
-                            + "请更换支持 Xbox Live 的国家/地区账户或网络环境后重试" + suffix);
+            return new AuthException("xerr_2148916235", I18n.tr("auth.xerr_2148916235") + suffix);
         }
         if (xerr == 2148916238L) {
-            return new AuthException("xerr_2148916238",
-                    "该账户为未成年人账户且未加入 Microsoft 家庭组。"
-                            + "请家长按 https://help.minecraft.net/hc/en-us/articles/4408968616077 完成家庭组绑定后重试" + suffix);
+            return new AuthException("xerr_2148916238", I18n.tr("auth.xerr_2148916238") + suffix);
         }
         if (xerr == 2148916234L) {
-            return new AuthException("xerr_2148916234",
-                    "该账户尚未接受 Xbox 服务条款（Xbox Terms of Service）。"
-                            + "请登录 https://www.xbox.com 接受相关条款后重新登录" + suffix);
+            return new AuthException("xerr_2148916234", I18n.tr("auth.xerr_2148916234") + suffix);
         }
         if (xerr == 2148916236L) {
-            return new AuthException("xerr_2148916236",
-                    "该账户需要完成年龄验证才能登录 Xbox Live。"
-                            + "请先登录 https://login.live.com/login.srf 完成年龄验证后重试" + suffix);
+            return new AuthException("xerr_2148916236", I18n.tr("auth.xerr_2148916236") + suffix);
         }
         if (xerr == 2148916237L) {
-            return new AuthException("xerr_2148916237",
-                    "该账户的游戏时长已用尽，已被 Xbox 限制登录。"
-                            + "请在家长控制 / 屏幕时间设置中调整该账户的时长限制后重试" + suffix);
+            return new AuthException("xerr_2148916237", I18n.tr("auth.xerr_2148916237") + suffix);
         }
         if (xerr == 2148916227L) {
-            return new AuthException("xerr_2148916227",
-                    "该账户因违反 Xbox 社区准则已被 Xbox 封禁，无法使用。"
-                            + "请前往 https://enforcement.xbox.com 查看封禁详情并申诉" + suffix);
+            return new AuthException("xerr_2148916227", I18n.tr("auth.xerr_2148916227") + suffix);
         }
         if (xerr == 2148916229L) {
-            return new AuthException("xerr_2148916229",
-                    "该账户当前受家长控制限制，监护人尚未授予在线游戏权限。"
-                            + "请监护人登录 https://account.microsoft.com/family/ 修改该账户权限后重试" + suffix);
+            return new AuthException("xerr_2148916229", I18n.tr("auth.xerr_2148916229") + suffix);
         }
-        return new AuthException("xsts_failed",
-                "XSTS 授权失败，返回了未知错误码" + (xerr == 0 ? "" : "（XErr " + xerr + "）")
-                        + "，请稍后重试；若持续出现，请检查账户状态或重新登录" + suffix);
+        return new AuthException("xsts_failed", I18n.tr("auth.xsts_unknown", xerr == 0 ? "" : " (XErr " + xerr + ")") + suffix);
     }
 
     private boolean hasMinecraftEntitlement(JsonObject json) {
@@ -543,33 +453,27 @@ public class MicrosoftAuthService {
         return send(url, "POST", sb.toString(), "application/x-www-form-urlencoded; charset=utf-8", null);
     }
 
-    /**
-     * 表单端点（devicecode / token）的有限重试：429、5xx 与网络异常最多额外重试两次。
-     *
-     * <p>设备码轮询本身有长时间的退避循环，这里只服务于「只发一次」的请求，
-     * 避免一次网络抖动就让整条登录失败。</p>
-     */
     private HttpResult sendFormWithRetry(String url, Map<String, String> form, StageListener listener)
             throws AuthException {
         AuthException last = null;
         for (int attempt = 0; attempt < 3; attempt++) {
             if (attempt > 0) {
-                notify(listener, "Microsoft 服务暂时不可用，正在重试（第 " + attempt + " 次）...");
+                notify(listener, I18n.tr("auth.ms_retry", attempt));
                 try {
                     Thread.sleep(1_000L * attempt);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new AuthException("cancelled", "已取消登录");
+                    throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
                 }
                 if (cancelled.get()) {
-                    throw new AuthException("cancelled", "已取消登录");
+                    throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
                 }
             }
             try {
                 HttpResult result = sendForm(url, form);
                 if (result.code == 429 || result.code >= 500) {
                     last = new AuthException("http_" + result.code,
-                            "Microsoft 服务暂时不可用（HTTP " + result.code + "）");
+                            I18n.tr("auth.ms_http", result.code));
                     continue;
                 }
                 return result;
@@ -581,7 +485,7 @@ public class MicrosoftAuthService {
             }
         }
         throw last == null
-                ? new AuthException("network_error", "连接 Microsoft 登录服务失败，请检查网络后重试")
+                ? new AuthException("network_error", I18n.tr("auth.ms_net"))
                 : last;
     }
 
@@ -596,7 +500,6 @@ public class MicrosoftAuthService {
         return send(url, "GET", null, null, headers);
     }
 
-    /** GET 端点（entitlements / profile）的有限重试：429、5xx、网络异常各重试两次。 */
     private HttpResult sendGetWithRetry(String url, String bearerToken) throws AuthException {
         AuthException last = null;
         for (int attempt = 0; attempt < 3; attempt++) {
@@ -605,17 +508,17 @@ public class MicrosoftAuthService {
                     Thread.sleep(800L * attempt);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                    throw new AuthException("cancelled", "已取消登录");
+                    throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
                 }
                 if (cancelled.get()) {
-                    throw new AuthException("cancelled", "已取消登录");
+                    throw new AuthException("cancelled", I18n.tr("auth.cancelled"));
                 }
             }
             try {
                 HttpResult result = sendGet(url, bearerToken);
                 if (result.code == 429 || result.code >= 500) {
                     last = new AuthException("http_" + result.code,
-                            "Minecraft 服务暂时不可用（HTTP " + result.code + "）");
+                            I18n.tr("auth.mcs_http", result.code));
                     continue;
                 }
                 return result;
@@ -627,7 +530,7 @@ public class MicrosoftAuthService {
             }
         }
         throw last == null
-                ? new AuthException("network_error", "连接 Minecraft 服务失败，请检查网络后重试")
+                ? new AuthException("network_error", I18n.tr("auth.mcs_net"))
                 : last;
     }
 
@@ -661,9 +564,8 @@ public class MicrosoftAuthService {
             String text = in == null ? "" : readAll(in);
             return new HttpResult(code, text);
         } catch (IOException e) {
-            // 只暴露类别，不回显 URL 之外的信息，避免任何凭据进入日志
-            throw new AuthException("network_error", "网络请求失败：" + e.getClass().getSimpleName()
-                    + (e.getMessage() == null ? "" : "（" + e.getMessage() + "）"));
+            throw new AuthException("network_error", I18n.tr("auth.net_error", e.getClass().getSimpleName()
+                    + (e.getMessage() == null ? "" : " (" + e.getMessage() + ")")));
         } finally {
             if (conn != null) {
                 conn.disconnect();
@@ -681,8 +583,6 @@ public class MicrosoftAuthService {
             return out.toString(StandardCharsets.UTF_8);
         }
     }
-
-    // ------------------------------------------------------------------ JSON 工具
 
     private static JsonObject parse(String text) {
         try {
@@ -726,7 +626,6 @@ public class MicrosoftAuthService {
         return firstClaim(json, "uhs");
     }
 
-    /** 读取 DisplayClaims.xui[0] 中的指定声明（uhs / xid 等）。 */
     private static String firstClaim(JsonObject json, String name) {
         JsonElement claims = json == null ? null : json.get("DisplayClaims");
         if (claims == null || !claims.isJsonObject()) {
@@ -744,17 +643,15 @@ public class MicrosoftAuthService {
         String description = str(error, "error_description");
         String code = str(error, "error");
         if (!description.isBlank()) {
-            // OAuth 描述里可能带换行，压成一行便于界面展示
             return description.replaceAll("\\s+", " ").trim();
         }
-        return code.isBlank() ? "未知错误" : code;
+        return code.isBlank() ? I18n.tr("auth.unknown_error") : code;
     }
 
     public static String normalizeClientId(String clientId) {
         return (clientId == null || clientId.isBlank()) ? DEFAULT_CLIENT_ID : clientId.trim();
     }
 
-    /** 32 位无连字符 UUID → 标准带连字符格式；其他格式原样返回。 */
     public static String formatUuid(String id) {
         if (id == null) {
             return "";
@@ -772,12 +669,10 @@ public class MicrosoftAuthService {
             try {
                 listener.onStage(message);
             } catch (Exception ignored) {
-                // 界面回调异常不影响登录流程
             }
         }
     }
 
-    /** 分片休眠；返回 false 表示被取消。 */
     private boolean sleepInterruptible(long millis) {
         long remain = millis;
         while (remain > 0) {

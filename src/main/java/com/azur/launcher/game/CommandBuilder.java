@@ -8,11 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 启动命令构建器。
- * <p>优先使用 1.13+ 的 arguments（按 rules 过滤后展开 value），
- * 旧版本回退到 minecraftArguments 分词 + 占位符替换。</p>
- */
 public final class CommandBuilder {
 
     private CommandBuilder() {
@@ -24,13 +19,11 @@ public final class CommandBuilder {
 
         command.add(profile.getJavaExecutable().toString());
 
-        // ---- 内存与基础属性（置于最前，确保任何情况下都生效） ----
         command.add("-Xmx" + profile.getMaxMemoryMb() + "m");
         command.add("-Xms" + profile.getMinMemoryMb() + "m");
         command.add("-Dminecraft.launcher.brand=" + LaunchProfile.LAUNCHER_NAME);
         command.add("-Dminecraft.launcher.version=" + LaunchProfile.LAUNCHER_VERSION);
 
-        // ---- JVM 参数：优先版本 JSON，旧版本回退到默认构造 ----
         List<String> jvmArgs = expand(meta.getArguments() == null ? null : meta.getArguments().getJvm(), placeholders);
         if (jvmArgs.isEmpty()) {
             jvmArgs.add("-Djava.library.path=" + profile.getNativesDir());
@@ -39,17 +32,14 @@ public final class CommandBuilder {
         }
         command.addAll(jvmArgs);
 
-        // ---- 用户自定义 JVM 参数 ----
         command.addAll(splitPlain(profile.getExtraJvmArgs()));
 
-        // ---- 主类 ----
         String mainClass = meta.getMainClass();
         if (mainClass == null || mainClass.isBlank()) {
-            throw new IllegalStateException("版本 JSON 缺少 mainClass，无法启动");
+            throw new IllegalStateException("Version JSON has no mainClass");
         }
         command.add(mainClass);
 
-        // ---- 游戏参数 ----
         List<String> gameArgs = expand(meta.getArguments() == null ? null : meta.getArguments().getGame(), placeholders);
         if (gameArgs.isEmpty() && meta.getMinecraftArguments() != null && !meta.getMinecraftArguments().isBlank()) {
             for (String token : splitPlain(meta.getMinecraftArguments())) {
@@ -60,8 +50,6 @@ public final class CommandBuilder {
 
         return command;
     }
-
-    // ------------------------------------------------------------------ 内部实现
 
     private static List<String> expand(List<Arguments.Entry> entries, Map<String, String> placeholders) {
         List<String> result = new ArrayList<>();
@@ -108,7 +96,6 @@ public final class CommandBuilder {
         return out;
     }
 
-    /** 按空白拆分命令行片段，支持双引号包裹。 */
     public static List<String> splitPlain(String input) {
         List<String> tokens = new ArrayList<>();
         if (input == null || input.isBlank()) {

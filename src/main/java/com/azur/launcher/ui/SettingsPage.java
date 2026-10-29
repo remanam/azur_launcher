@@ -1,0 +1,176 @@
+package com.azur.launcher.ui;
+
+import com.azur.launcher.game.JavaDetector;
+import com.azur.launcher.i18n.I18n;
+
+import javafx.application.Platform;
+import javafx.scene.Node;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
+
+import java.util.List;
+
+/** Settings: memory, Java, download threads, JVM arguments, language and theme. Every change is saved at once. */
+final class SettingsPage {
+
+    private static final int MEMORY_MIN_MB = 512;
+    private static final int MEMORY_MAX_MB = 32768;
+    private static final int MEMORY_STEP_MB = 512;
+    private static final List<String> LANGUAGES = List.of(I18n.AUTO, "ru", "en");
+
+    private final AppContext ctx;
+    private final Runnable onLanguageChanged;
+    private final Runnable onThemeChanged;
+    private final VBox root = new VBox(0);
+    private final ComboBox<String> javaBox = new ComboBox<>();
+    private List<JavaDetector.JavaInfo> detected = List.of();
+
+    SettingsPage(AppContext ctx, Runnable onLanguageChanged, Runnable onThemeChanged) {
+        this.ctx = ctx;
+        this.onLanguageChanged = onLanguageChanged;
+        this.onThemeChanged = onThemeChanged;
+
+        VBox header = new VBox(3, UiKit.label(I18n.tr("settings.title"), "page-title"),
+                UiKit.label(I18n.tr("settings.subtitle"), "page-subtitle"));
+        VBox options = new VBox(0, memoryRow(), javaRow(), threadsRow(), jvmArgsRow(), languageRow(), themeRow(),
+                folderRow());
+        VBox page = new VBox(14, header, UiKit.card(options));
+        page.getStyleClass().add("page");
+        root.getChildren().add(page);
+        detectJava();
+    }
+
+    Node node() {
+        return UiKit.pageScroll(root);
+    }
+
+    private Node memoryRow() {
+        Slider slider = new Slider(MEMORY_MIN_MB, MEMORY_MAX_MB, alignMemory(ctx.config.getMaxMemoryMb()));
+        slider.setBlockIncrement(MEMORY_STEP_MB);
+        slider.setPrefWidth(260);
+        Label value = UiKit.label(memoryText((int) slider.getValue()), "value-label");
+        slider.valueProperty().addListener((obs, old, v) -> {
+            int mb = alignMemory(v.intValue());
+            value.setText(memoryText(mb));
+            ctx.config.setMaxMemoryMb(mb);
+            ctx.saveConfig();
+        });
+        return UiKit.optionItem(I18n.tr("settings.memory"), I18n.tr("settings.memory_hint"), slider, value);
+    }
+
+    private Node javaRow() {
+        javaBox.setPrefWidth(320);
+        javaBox.getItems().setAll(I18n.tr("settings.java_auto"));
+        javaBox.getSelectionModel().selectFirst();
+        javaBox.setOnAction(event -> {
+            int index = javaBox.getSelectionModel().getSelectedIndex();
+            if (index < 0 || detected.isEmpty() && index > 0) {
+                return;
+            }
+            ctx.config.setJavaPath(index == 0 ? "" : detected.get(index - 1).getJavaExecutable().toString());
+            ctx.saveConfig();
+        });
+        return UiKit.optionItem(I18n.tr("settings.java"), I18n.tr("settings.java_hint"), javaBox);
+    }
+
+    private Node threadsRow() {
+        Slider slider = new Slider(1, 64, ctx.config.getDownloadThreads());
+        slider.setPrefWidth(260);
+        Label value = UiKit.label(String.valueOf(ctx.config.getDownloadThreads()), "value-label");
+        slider.valueProperty().addListener((obs, old, v) -> {
+            ctx.config.setDownloadThreads(v.intValue());
+            value.setText(String.valueOf(ctx.config.getDownloadThreads()));
+            ctx.saveConfig();
+        });
+        return UiKit.optionItem(I18n.tr("settings.threads"), I18n.tr("settings.threads_hint"), slider, value);
+    }
+
+    private Node jvmArgsRow() {
+        TextField field = new TextField(ctx.config.getJvmArgs());
+        field.setPrefWidth(320);
+        field.textProperty().addListener((obs, old, text) -> {
+            ctx.config.setJvmArgs(text);
+            ctx.saveConfig();
+        });
+        return UiKit.optionItem(I18n.tr("settings.jvm_args"), I18n.tr("settings.jvm_args_hint"), field);
+    }
+
+    private Node languageRow() {
+        ComboBox<String> box = new ComboBox<>();
+        box.getItems().setAll(LANGUAGES);
+        box.setValue(ctx.config.getLanguage());
+        box.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(String code) {
+                return I18n.tr("settings.lang." + code);
+            }
+
+            @Override
+            public String fromString(String text) {
+                return text;
+            }
+        });
+        box.setOnAction(event -> {
+            if (!box.getValue().equals(ctx.config.getLanguage())) {
+                ctx.config.setLanguage(box.getValue());
+                ctx.saveConfig();
+                I18n.setLanguage(box.getValue());
+                Platform.runLater(onLanguageChanged);
+            }
+        });
+        return UiKit.optionItem(I18n.tr("settings.language"), I18n.tr("settings.language_hint"), box);
+    }
+
+    private Node themeRow() {
+        CheckBox dark = new CheckBox();
+        dark.setSelected(ctx.config.isDarkMode());
+        dark.setOnAction(event -> {
+            ctx.config.setDarkMode(dark.isSelected());
+            ctx.saveConfig();
+            onThemeChanged.run();
+        });
+        return UiKit.optionItem(I18n.tr("settings.dark"), I18n.tr("settings.dark_hint"), dark);
+    }
+
+    private Node folderRow() {
+        Button open = UiKit.button(I18n.tr("home.open_folder"), "icon-folder", "button-border",
+                () -> ctx.openInSystem(ctx.gameDir()));
+        Label path = UiKit.label(ctx.gameDir().toString(), "path-value");
+        path.setWrapText(true);
+        return UiKit.optionItem(I18n.tr("settings.data"), ctx.dirs.root().toString(), path, open);
+    }
+
+    /** Scans for Java runtimes off the UI thread and fills the combo, keeping the saved choice. */
+    private void detectJava() {
+        ctx.io.submit(() -> {
+            List<JavaDetector.JavaInfo> found = JavaDetector.detectAll();
+            Platform.runLater(() -> {
+                detected = found;
+                javaBox.getItems().setAll(I18n.tr("settings.java_auto"));
+                found.forEach(info -> javaBox.getItems().add(info.toString()));
+                String saved = ctx.config.getJavaPath();
+                int selected = 0;
+                for (int i = 0; i < found.size(); i++) {
+                    if (found.get(i).getJavaExecutable().toString().equals(saved)) {
+                        selected = i + 1;
+                    }
+                }
+                javaBox.getSelectionModel().select(selected);
+            });
+        });
+    }
+
+    static int alignMemory(int value) {
+        int aligned = Math.round(value / (float) MEMORY_STEP_MB) * MEMORY_STEP_MB;
+        return Math.min(MEMORY_MAX_MB, Math.max(MEMORY_MIN_MB, aligned));
+    }
+
+    private static String memoryText(int mb) {
+        return mb % 1024 == 0 ? (mb / 1024) + " GB" : mb + " MB";
+    }
+}

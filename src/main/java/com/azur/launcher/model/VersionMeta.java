@@ -3,10 +3,6 @@ package com.azur.launcher.model;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 单个版本的 JSON（versions/&lt;id&gt;/&lt;id&gt;.json）。
- * 同时兼容 1.13+ 的 arguments 写法与旧版 minecraftArguments 写法。
- */
 public class VersionMeta {
 
     private String id;
@@ -43,7 +39,6 @@ public class VersionMeta {
         return inheritsFrom;
     }
 
-    /** 1.17+ 中部分版本通过 jar 字段指向父版本的真实客户端 jar */
     public String getJar() {
         return jar;
     }
@@ -120,7 +115,6 @@ public class VersionMeta {
         return downloads == null ? null : downloads.get("client");
     }
 
-    /** 版本 JSON 中声明的 Java 组件版本要求（1.17+ 才有） */
     public static class JavaVersion {
         private String component;
         private int majorVersion;

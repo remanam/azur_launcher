@@ -10,21 +10,11 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-/**
- * natives 解压器：把平台 native 动态库从 jar 中释放到 natives 目录。
- * 内置 Zip Slip 防护与 META-INF / extract.exclude 过滤。
- */
 public final class NativeExtractor {
 
     private NativeExtractor() {
     }
 
-    /**
-     * @param zipFile  natives jar
-     * @param destDir  目标目录（versions/&lt;id&gt;/natives）
-     * @param excludes 版本 JSON 中 library.extract.exclude 声明的前缀列表
-     * @return 解压出的文件数
-     */
     public static int extract(Path zipFile, Path destDir, List<String> excludes) throws IOException {
         if (zipFile == null || !Files.isRegularFile(zipFile)) {
             return 0;
@@ -48,7 +38,6 @@ public final class NativeExtractor {
                 }
                 Path out = dest.resolve(name).normalize();
                 if (!out.startsWith(dest)) {
-                    // Zip Slip：跳过越界条目
                     continue;
                 }
                 Path parent = out.getParent();

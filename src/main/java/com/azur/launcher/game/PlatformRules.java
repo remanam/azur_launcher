@@ -6,17 +6,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-/**
- * 平台规则与 natives 判定。
- * 实现官方 rules 语义：按顺序遍历，命中者覆盖 allowed 状态，最终值为最终判定。
- */
 public final class PlatformRules {
 
     public static final String OS_NAME = detectOsName();
     public static final String OS_ARCH = detectOsArch();
     public static final String OS_VERSION = System.getProperty("os.version", "");
 
-    /** 当前会话支持的特性开关（如自定义分辨率）。 */
     private static volatile Map<String, Boolean> features = Map.of();
 
     private PlatformRules() {
@@ -63,9 +58,6 @@ public final class PlatformRules {
         return "x86";
     }
 
-    /**
-     * 判断规则列表是否放行。rules 为空视为放行。
-     */
     public static boolean isAllowed(List<Rule> rules) {
         if (rules == null || rules.isEmpty()) {
             return true;
@@ -94,7 +86,6 @@ public final class PlatformRules {
                         return false;
                     }
                 } catch (Exception ignored) {
-                    // 非法正则视为不匹配
                     return false;
                 }
             }
@@ -110,10 +101,6 @@ public final class PlatformRules {
         return true;
     }
 
-    /**
-     * 取该 library 在当前平台对应的 natives classifier 名称。
-     * 例如 windows 平台返回 "natives-windows"（对应 downloads.classifiers 的键）。
-     */
     public static String nativesClassifier(Map<String, String> natives) {
         if (natives == null || natives.isEmpty()) {
             return null;
@@ -122,7 +109,6 @@ public final class PlatformRules {
         if (classifier == null) {
             return null;
         }
-        // 部分旧版本使用 ${arch} 占位（32 位平台）
         if (classifier.contains("${arch}")) {
             String arch = "x86_64".equals(OS_ARCH) ? "64" : "32";
             classifier = classifier.replace("${arch}", arch);
