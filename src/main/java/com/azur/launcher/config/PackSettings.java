@@ -18,8 +18,8 @@ public final class PackSettings {
 
     /** Address of the signed servers.json (https). Empty: only the cached list is shown. */
     private String serversUrl = "";
-    /** Invite code {@code azur1.…} from the server owner; passed to the updater. */
-    private String invite = "";
+    /** Only read from files written before the invite code moved into the vault; never written again. */
+    private String invite;
     /** Explicit path of the azur-updater executable; empty: data folder or the bundled build. */
     private String updaterPath = "";
 
@@ -31,12 +31,11 @@ public final class PackSettings {
         this.serversUrl = serversUrl.trim();
     }
 
-    public String getInvite() {
-        return invite == null ? "" : invite;
-    }
-
-    public void setInvite(String invite) {
-        this.invite = invite.trim();
+    /** The plain invite of an old pack.json (migration); cleared once taken so that it is not saved again. */
+    public String takeLegacyInvite() {
+        String legacy = invite == null ? "" : invite.trim();
+        invite = null;
+        return legacy;
     }
 
     public String getUpdaterPath() {

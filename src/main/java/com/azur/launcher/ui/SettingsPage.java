@@ -9,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 
@@ -128,7 +129,23 @@ final class SettingsPage {
     }
 
     private Node inviteRow() {
-        return textRow("settings.invite", "settings.invite_hint", ctx.pack.getInvite(), ctx.pack::setInvite);
+        PasswordField field = new PasswordField();
+        field.setText(ctx.invite());
+        field.setPrefWidth(320);
+        // the vault write is slow on purpose (key derivation): save on Enter or when the field loses focus
+        Runnable save = () -> {
+            if (!field.getText().trim().equals(ctx.invite())) {
+                String code = field.getText();
+                ctx.io.submit(() -> ctx.setInvite(code));
+            }
+        };
+        field.setOnAction(event -> save.run());
+        field.focusedProperty().addListener((obs, was, focused) -> {
+            if (!focused) {
+                save.run();
+            }
+        });
+        return UiKit.optionItem(I18n.tr("settings.invite"), I18n.tr("settings.invite_hint"), field);
     }
 
     private Node updaterRow() {

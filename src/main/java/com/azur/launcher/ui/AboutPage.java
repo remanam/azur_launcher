@@ -29,30 +29,30 @@ final class AboutPage {
                 UiKit.label(I18n.tr("about.version", LauncherApp.VERSION), "page-subtitle")));
         title.setAlignment(Pos.CENTER_LEFT);
 
-        TextArea fontText = new TextArea(fontLicenceText());
-        fontText.setEditable(false);
-        fontText.setWrapText(true);
-        fontText.setPrefRowCount(10);
-        fontText.getStyleClass().add("log-area");
-        fontText.setVisible(false);
-        fontText.setManaged(false);
-        Button toggle = UiKit.button(I18n.tr("about.show_ofl"), null, "button-border", () -> {
-            boolean show = !fontText.isVisible();
-            fontText.setVisible(show);
-            fontText.setManaged(show);
-        });
+        TextArea legalText = new TextArea();
+        legalText.setEditable(false);
+        legalText.setWrapText(true);
+        legalText.setPrefRowCount(12);
+        legalText.getStyleClass().add("log-area");
+        legalText.setVisible(false);
+        legalText.setManaged(false);
+        HBox legalButtons = new HBox(8,
+                legalButton("about.show_gpl", legalText, "/legal/LICENSE"),
+                legalButton("about.show_notice", legalText, "/legal/NOTICE"),
+                legalButton("about.show_third", legalText, "/legal/THIRD_PARTY.txt"),
+                legalButton("about.show_ofl", legalText, FONT_LICENCES));
 
         root.getStyleClass().add("page");
         root.getChildren().addAll(title,
                 UiKit.card(UiKit.cardHeader("icon-info", I18n.tr("about.licence_title")),
                         text(I18n.tr("about.gpl")), small(I18n.tr("about.upstream"))),
                 UiKit.card(UiKit.cardHeader("icon-folder", I18n.tr("about.source_title")),
-                        text(I18n.tr("about.source"))),
+                        text(I18n.tr("about.source")), small(I18n.tr("about.source_where"))),
                 UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("about.third_title")),
                         small("JavaFX 21 - GPL-2.0 with Classpath Exception"),
                         small("Gson - Apache-2.0"),
                         small("Philosopher, PT Sans - SIL Open Font License 1.1"),
-                        toggle, fontText));
+                        legalButtons, legalText));
     }
 
     Node node() {
@@ -71,16 +71,25 @@ final class AboutPage {
         return label;
     }
 
-    private static String fontLicenceText() {
+    private Button legalButton(String key, TextArea target, String... resources) {
+        return UiKit.button(I18n.tr(key), null, "button-border", () -> {
+            target.setText(readAll(resources));
+            target.setVisible(true);
+            target.setManaged(true);
+            target.positionCaret(0);
+        });
+    }
+
+    private static String readAll(String... resources) {
         StringBuilder text = new StringBuilder();
-        for (String resource : FONT_LICENCES) {
+        for (String resource : resources) {
             try (InputStream in = AboutPage.class.getResourceAsStream(resource)) {
                 if (in != null) {
-                    text.append(new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("﻿", ""))
+                    text.append(new String(in.readAllBytes(), StandardCharsets.UTF_8).replace("\uFEFF", ""))
                             .append("\n\n----------\n\n");
                 }
             } catch (IOException ignored) {
-                // the licence text is a convenience copy; the files ship in the jar next to the fonts
+                // the texts are also files next to the launcher; a read failure only leaves the box empty
             }
         }
         return text.toString();

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-/** Lists installed versions from disk; works offline. */
+/** Lists installed versions from disk; works without network. */
 public final class LocalVersionScanner {
 
     private static final Gson GSON = new Gson();

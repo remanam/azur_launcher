@@ -3,6 +3,7 @@ package com.azur.launcher.ui;
 import com.azur.launcher.auth.AccountStore;
 import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.AuthSettings;
+import com.azur.launcher.auth.InviteStore;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
@@ -38,6 +39,8 @@ final class AppContext {
     final Stage stage;
     /** Server list and pack sync settings (invite, servers.json address, updater path). */
     final PackSettings pack;
+    private final InviteStore invites;
+    private String invite = "";
     /** Background work (network, disk). Daemon threads, so they never block exit. */
     final ExecutorService io = Executors.newCachedThreadPool(runnable -> {
         Thread thread = new Thread(runnable, "azur-io");
@@ -62,6 +65,33 @@ final class AppContext {
         this.host = host;
         this.stage = stage;
         this.pack = PackSettings.load(dirs.packSettingsFile());
+        this.invites = InviteStore.system(dirs.inviteVaultFile());
+        this.invite = invites.read();
+        migrateLegacyInvite();
+    }
+
+    /** The invite code (kept in the encrypted vault, not in pack.json). */
+    String invite() {
+        return invite;
+    }
+
+    void setInvite(String value) {
+        invite = value.trim();
+        try {
+            invites.write(invite);
+        } catch (Exception e) {
+            log("Cannot save the invite code: " + e.getMessage());
+        }
+    }
+
+    private void migrateLegacyInvite() {
+        String legacy = pack.takeLegacyInvite();
+        if (!legacy.isEmpty()) {
+            if (invite.isEmpty()) {
+                setInvite(legacy);
+            }
+            savePack();
+        }
     }
 
     void savePack() {

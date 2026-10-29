@@ -56,6 +56,20 @@
 
     <build>
         <finalName>azur-launcher</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <!-- Licence texts shown in About -->
+            <resource>
+                <directory>${project.basedir}</directory>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+                <targetPath>legal</targetPath>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -160,5 +174,97 @@
                 </plugins>
             </build>
         </profile>
+        <!-- Release package staging: jars + updater binaries in target/dist; packaging/release.sh then runs jpackage (docs/RELEASE.md). -->
+        <profile>
+            <id>dist</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-dependency-plugin</artifactId>
+                        <version>3.7.0</version>
+                        <executions>
+                            <execution>
+                                <id>stage-runtime-jars</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-dependencies</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/dist/input</outputDirectory>
+                                    <includeScope>runtime</includeScope>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>stage-launcher-jar</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/dist/input</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}</directory>
+                                            <includes>
+                                                <include>${project.build.finalName}.jar</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                            <!-- binaries come from tools/updater/build.sh and are never committed; absent folder = skipped -->
+                            <execution>
+                                <id>stage-updater</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/dist/updater-src</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.basedir}/../tools/updater/dist-bin</directory>
+                                            <includes>
+                                                <include>azur-updater-*</include>
+                                            </includes>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>image-guard</id>
+                                <!-- run by packaging/release.sh after jpackage: mvn -Pdist surefire:test@image-guard -->
+                                <phase>none</phase>
+                                <goals>
+                                    <goal>test</goal>
+                                </goals>
+                                <configuration>
+                                    <test>ReleaseJarGuardIT</test>
+                                    <systemPropertyVariables>
+                                        <azur.jar>${project.build.directory}/${project.build.finalName}.jar</azur.jar>
+                                        <azur.image>${project.build.directory}/dist/out</azur.image>
+                                    </systemPropertyVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
     </profiles>
 </project>

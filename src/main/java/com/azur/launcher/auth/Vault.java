@@ -46,6 +46,10 @@ final class Vault {
         this.machineMaterial = machineMaterial;
     }
 
+    Path file() {
+        return file;
+    }
+
     boolean exists() {
         return Files.isRegularFile(file);
     }

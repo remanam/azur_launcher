@@ -35,6 +35,10 @@ public final class ProfileLoader {
         return parse(Files.readString(file, StandardCharsets.UTF_8), file.toString());
     }
 
+    public static String toJson(Profile profile) {
+        return new com.google.gson.GsonBuilder().setPrettyPrinting().create().toJson(profile) + "\n";
+    }
+
     public static Profile parse(String json, String origin) throws ProfileException {
         Profile profile;
         try {

@@ -15,10 +15,10 @@ import java.nio.charset.StandardCharsets;
 /** Minecraft server list ping (handshake, status request, ping/pong). Blocking, with hard timeouts. */
 public final class ServerPing {
 
-    /** Result of one ping; {@link #OFFLINE} when the server did not answer. */
+    /** Result of one ping; {@link #UNREACHABLE} when the server did not answer. */
     public record Result(boolean online, int playersOnline, int playersMax, long latencyMs, String version,
                          String motd) {
-        public static final Result OFFLINE = new Result(false, 0, 0, -1, "", "");
+        public static final Result UNREACHABLE = new Result(false, 0, 0, -1, "", "");
     }
 
     private static final int PROTOCOL = 767;
@@ -27,7 +27,7 @@ public final class ServerPing {
     private ServerPing() {
     }
 
-    /** Never throws: any failure is {@link Result#OFFLINE}. */
+    /** Never throws: any failure is {@link Result#UNREACHABLE}. */
     public static Result ping(String host, int port, int timeoutMs) {
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(host, port), timeoutMs);
@@ -43,7 +43,7 @@ public final class ServerPing {
             long latency = (System.nanoTime() - sent) / 1_000_000;
             return parseStatus(json, latency);
         } catch (IOException | RuntimeException e) {
-            return Result.OFFLINE;
+            return Result.UNREACHABLE;
         }
     }
 

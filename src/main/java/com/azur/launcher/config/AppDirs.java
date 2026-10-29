@@ -90,6 +90,11 @@ public final class AppDirs {
         return root.resolve("pack.json");
     }
 
+    /** Encrypted invite code of the pack server. */
+    public Path inviteVaultFile() {
+        return root.resolve("accounts").resolve("invite.vault");
+    }
+
     /** Last verified servers.json. */
     public Path serversCacheFile() {
         return root.resolve("cache").resolve("servers.json");

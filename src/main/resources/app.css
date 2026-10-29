@@ -880,7 +880,7 @@
     -fx-background-color: -azur-online;
 }
 
-.status-dot.offline {
+.status-dot.down {
     -fx-background-color: -azur-error;
 }
 

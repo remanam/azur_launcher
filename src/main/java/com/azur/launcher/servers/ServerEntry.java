@@ -8,6 +8,7 @@ public record ServerEntry(
         int port,
         String mcVersion,
         String neoforge,
+        String neoforgeSha256,
         String java,
         String packChannel,
         String packUrl,

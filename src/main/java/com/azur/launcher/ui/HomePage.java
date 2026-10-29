@@ -1,19 +1,10 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.auth.AuthAccount;
-import com.azur.launcher.auth.AuthException;
-import com.azur.launcher.auth.AuthNetwork;
-import com.azur.launcher.auth.SessionManager;
 import com.azur.launcher.auth.MicrosoftAccount;
-import com.azur.launcher.auth.MicrosoftAuthService;
-import com.azur.launcher.game.GameLauncher;
 import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
 import com.azur.launcher.i18n.I18n;
-import com.azur.launcher.launch.GameStarter;
-import com.azur.launcher.launch.LaunchRequest;
-import com.azur.launcher.launch.VersionPicker;
 import com.azur.launcher.loader.NeoForgeCatalog;
 import com.azur.launcher.loader.NeoForgeInstaller;
 import com.azur.launcher.model.VersionManifest;
@@ -53,16 +44,15 @@ final class HomePage {
     private final Button launchButton;
     private final TextArea logArea = new TextArea();
 
-    private GameLauncher launcher;
-    /** True while the game process runs: an account refresh then would invalidate the running session's token. */
-    private volatile boolean gameSessionActive;
+    private final PlayController play;
     private volatile boolean busy;
 
-    HomePage(AppContext ctx) {
+    HomePage(AppContext ctx, PlayController play) {
         this.ctx = ctx;
+        this.play = play;
         this.versionManager = new VersionManager(ctx.gamePaths(), ctx::log);
 
-        launchButton = UiKit.button(I18n.tr("home.play"), "icon-play", "launch-button", this::onLaunchPressed);
+        launchButton = UiKit.button(I18n.tr("home.play"), "icon-play", "launch-button", play::startDefault);
         launchButton.setDefaultButton(true);
         installButton = UiKit.button(I18n.tr("home.install"), "icon-plus", "button-raised", this::install);
 
@@ -72,6 +62,7 @@ final class HomePage {
         logArea.setText(ctx.logText());
         ctx.bindLog(line -> logArea.appendText(line + "\n"));
         ctx.onAccountsChanged(this::updateHero);
+        play.onPhase(this::showPhase);
         refreshInstalled();
         updateHero();
         loadManifest();
@@ -79,17 +70,6 @@ final class HomePage {
 
     Node node() {
         return UiKit.pageScroll(root);
-    }
-
-    /** {@link GameStarter}: selects the installed version of the requested server and starts or stops the game. */
-    void start(LaunchRequest request) {
-        var version = VersionPicker.pick(installedBox.getItems(), request.server(), ctx.config.getVersionId());
-        if (version.isEmpty()) {
-            error(I18n.tr("sync.no_version", request.server().neoforge()));
-            return;
-        }
-        installedBox.setValue(version.get());
-        onLaunchPressed();
     }
 
     // ------------------------------------------------------------------ layout
@@ -258,93 +238,22 @@ final class HomePage {
     private void setBusy(boolean value) {
         busy = value;
         installButton.setDisable(value);
-        launchButton.setDisable(value);
+        launchButton.setDisable(value || play.phase() == PlayController.Phase.PREPARING);
     }
 
     // ------------------------------------------------------------------ launch
 
-    private void onLaunchPressed() {
-        if (launcher != null && launcher.isRunning()) {
-            GameLauncher running = launcher;
-            ctx.io.submit(running::stop);
-            ctx.setStatus(I18n.tr("home.stopping"));
-            return;
-        }
-        startGame();
-    }
-
-    private void startGame() {
-        AuthAccount account = ctx.debugAccount != null ? ctx.debugAccount : ctx.accounts.selectedAccount();
-        if (account == null) {
-            error(I18n.tr("home.sign_in_needed"));
-            return;
-        }
-        LocalVersion version = installedBox.getValue();
-        if (version == null) {
-            error(I18n.tr("home.no_version_selected"));
-            return;
-        }
-        ctx.config.setVersionId(version.id());
-        ctx.saveConfig();
-        setLaunching(true);
-        GameLauncher game = new GameLauncher(ctx.gamePaths(), ctx::log,
-                (done, total, current) -> ctx.setProgress(total == 0 ? -1 : done / (double) total));
-        game.addExitSink(code -> Platform.runLater(() -> onGameExit(code)));
-        launcher = game;
-        ctx.io.submit(() -> {
-            try {
-                refreshAccountIfNeeded(account);
-                game.launch(ctx.config, account);
-                gameSessionActive = true;
-                ctx.setProgress(-1);
-                ctx.setStatus(I18n.tr("home.running"));
-                Platform.runLater(() -> launchButton.setDisable(false));
-            } catch (Exception e) {
-                ctx.log("Launch failed: " + e.getMessage());
-                ctx.setProgress(-1);
-                Platform.runLater(() -> {
-                    setLaunching(false);
-                    error(e.getMessage());
-                });
-            }
-        });
-    }
-
-    /** Verifies/refreshes a Microsoft session before launch; a still-valid cached one is used if auth is unreachable. */
-    private void refreshAccountIfNeeded(AuthAccount account) throws AuthException {
-        if (!(account instanceof MicrosoftAccount microsoft) || gameSessionActive) {
-            return;
-        }
-        SessionManager.State state = SessionManager.prepare(microsoft,
-                new MicrosoftAuthService(AuthNetwork.quick(ctx.authSettings)), ctx.authSettings.clientId(),
-                ctx::setStatus);
-        if (state == SessionManager.State.CACHED_UNREACHABLE) {
-            ctx.setStatus(I18n.tr("auth.using_cached_session"));
-            ctx.log("Auth hosts unreachable, launching with the cached session");
-        }
-        if (state != SessionManager.State.VALID) {
-            try {
-                ctx.accounts.save();
-            } catch (Exception e) {
-                ctx.log("Cannot save accounts: " + e.getMessage());
-            }
-        }
-    }
-
-    private void onGameExit(int code) {
-        gameSessionActive = false;
-        setLaunching(false);
-        ctx.setStatus(I18n.tr("home.exited", code));
-    }
-
-    private void setLaunching(boolean launching) {
-        launchButton.setDisable(launching);
-        launchButton.setText(I18n.tr(launching ? "home.stop" : "home.play"));
+    /** Mirrors the shared play state on the button; the launch itself is {@link PlayController}. */
+    private void showPhase(PlayController.Phase phase) {
+        boolean running = phase == PlayController.Phase.RUNNING;
+        boolean preparing = phase == PlayController.Phase.PREPARING;
+        launchButton.setDisable(preparing);
+        launchButton.setText(I18n.tr(running ? "home.stop" : "home.play"));
         launchButton.getStyleClass().remove("stopping");
-        if (launching) {
+        if (running) {
             launchButton.getStyleClass().add("stopping");
         }
-        installButton.setDisable(launching);
+        installButton.setDisable(phase != PlayController.Phase.IDLE || busy);
     }
 
     private void error(String message) {

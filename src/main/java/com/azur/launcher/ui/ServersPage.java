@@ -1,12 +1,12 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.game.LocalVersion;
-import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.i18n.I18n;
-import com.azur.launcher.launch.GameStarter;
 import com.azur.launcher.launch.LaunchRequest;
-import com.azur.launcher.launch.VersionPicker;
+import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.profile.Instance;
+import com.azur.launcher.profile.InstanceStore;
+import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.servers.ServerListService;
 import com.azur.launcher.servers.ServerPing;
@@ -31,7 +31,6 @@ import java.time.Clock;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 /** Servers: the signed list on the left, the selected server (status, pack, Update / Play) on the right. */
 final class ServersPage {
@@ -44,7 +43,7 @@ final class ServersPage {
     }
 
     private final AppContext ctx;
-    private final GameStarter starter;
+    private final PlayController play;
     private final ServerStatusService status;
     private final HBox root = new HBox(16);
     private final VBox listBox = new VBox(8);
@@ -56,23 +55,30 @@ final class ServersPage {
     private final ProgressBar progress = new ProgressBar(0);
     private final Button updateButton;
     private final Button verifyButton;
+    private final Button repairButton;
     private final Button playButton;
 
     private List<ServerEntry> servers = List.of();
     private ServerEntry selected;
     private volatile boolean busy;
 
-    ServersPage(AppContext ctx, GameStarter starter) {
+    ServersPage(AppContext ctx, PlayController play) {
         this.ctx = ctx;
-        this.starter = starter;
+        this.play = play;
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         updateButton = UiKit.button(I18n.tr("servers.update"), "icon-refresh", "button-raised", this::sync);
         verifyButton = UiKit.button(I18n.tr("servers.verify"), null, "button-border", this::verify);
-        playButton = UiKit.button(I18n.tr("home.play"), "icon-play", "launch-button", () -> {
+        repairButton = UiKit.button(I18n.tr("servers.repair"), null, "button-border", () -> {
             if (selected != null) {
-                starter.start(new LaunchRequest(selected));
+                play.repair(selected);
             }
         });
+        playButton = UiKit.button(I18n.tr("home.play"), "icon-play", "launch-button", () -> {
+            if (selected != null) {
+                play.start(new LaunchRequest(selected));
+            }
+        });
+        play.onPhase(this::showPhase);
 
         Button reload = UiKit.button(I18n.tr("home.refresh"), "icon-refresh", "button-border", this::reload);
         banner.setWrapText(true);
@@ -165,11 +171,11 @@ final class ServersPage {
         if (view == null) {
             return;
         }
-        view.dot().getStyleClass().removeAll("online", "offline");
-        view.dot().getStyleClass().add(result.online() ? "online" : "offline");
+        view.dot().getStyleClass().removeAll("online", "down");
+        view.dot().getStyleClass().add(result.online() ? "online" : "down");
         view.info().setText(result.online()
                 ? I18n.tr("servers.online", result.playersOnline(), result.playersMax(), result.latencyMs())
-                : I18n.tr("servers.offline"));
+                : I18n.tr("servers.down"));
     }
 
     private void select(ServerEntry entry) {
@@ -208,7 +214,7 @@ final class ServersPage {
                 kv("servers.channel", e.packChannel().isBlank() ? "-" : e.packChannel()),
                 kv("servers.pack", packVersions.getOrDefault(e.id(), "-")),
                 kv("servers.invite", I18n.tr(e.inviteRequired() ? "servers.invite_yes" : "servers.invite_no")));
-        HBox actions = new HBox(10, updateButton, verifyButton, UiKit.spacer(), playButton);
+        HBox actions = new HBox(10, updateButton, verifyButton, repairButton, UiKit.spacer(), playButton);
         actions.setAlignment(Pos.CENTER_LEFT);
         VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, progress, message);
         VBox news = UiKit.card(UiKit.cardHeader("icon-terminal", I18n.tr("servers.news")),
@@ -239,23 +245,17 @@ final class ServersPage {
         if (entry == null || busy) {
             return;
         }
-        String invite = ctx.pack.getInvite();
+        String invite = ctx.invite();
         if (!verifyOnly && invite.isBlank()) {
             message.setText(I18n.tr("sync.no_invite"));
             return;
         }
-        List<LocalVersion> installed = LocalVersionScanner.scan(ctx.gameDir());
-        Optional<LocalVersion> version = VersionPicker.pick(installed, entry, ctx.config.getVersionId());
-        if (version.isEmpty()) {
-            message.setText(I18n.tr("sync.no_version", entry.neoforge().isBlank() ? entry.mcVersion() : entry.neoforge()));
-            return;
-        }
-        Path instance = ctx.gamePaths().contentRoot(version.get().id());
         setBusy(true);
         message.setText(I18n.tr(verifyOnly ? "sync.verifying" : "sync.starting"));
         ctx.io.submit(() -> {
             PackSyncService.Result result;
             try {
+                Path instance = instanceDir(entry);
                 PackSyncService service = new PackSyncService(
                         UpdaterBinary.resolve(ctx.pack.getUpdaterPath(), ctx.dirs.binDir()),
                         PackSyncService.systemStarter(ctx.dirs.updaterHome()));
@@ -269,6 +269,12 @@ final class ServersPage {
             PackSyncService.Result finished = result;
             Platform.runLater(() -> finish(entry, finished, verifyOnly));
         });
+    }
+
+    /** The game folder of the server's instance (profile written from the signed entry on first use). */
+    private Path instanceDir(ServerEntry entry) throws IOException {
+        Instance instance = new InstanceStore(ctx.dirs).ensure(ServerProfiles.derive(entry, InstanceStore.bundledProfile()));
+        return instance.gameDir();
     }
 
     private void showProgress(String phase, String file, long done, long total) {
@@ -303,5 +309,18 @@ final class ServersPage {
         busy = value;
         updateButton.setDisable(value);
         verifyButton.setDisable(value);
+    }
+
+    /** Play turns into Stop while the game runs; Update and Repair wait until the game is closed. */
+    private void showPhase(PlayController.Phase phase) {
+        boolean idle = phase == PlayController.Phase.IDLE;
+        repairButton.setDisable(!idle);
+        updateButton.setDisable(!idle || busy);
+        playButton.setDisable(phase == PlayController.Phase.PREPARING);
+        playButton.setText(I18n.tr(phase == PlayController.Phase.RUNNING ? "home.stop" : "home.play"));
+        playButton.getStyleClass().remove("stopping");
+        if (phase == PlayController.Phase.RUNNING) {
+            playButton.getStyleClass().add("stopping");
+        }
     }
 }

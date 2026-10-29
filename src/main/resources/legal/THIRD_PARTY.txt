@@ -1,0 +1,22 @@
+Third-party components shipped with Azur Launcher
+
+OpenJFX 21 (javafx-base, javafx-graphics, javafx-controls)
+  GPL-2.0 with the Classpath Exception. https://openjfx.io/ , source: https://github.com/openjdk/jfx
+
+Gson 2.11.0
+  Apache License 2.0. https://github.com/google/gson
+
+Java runtime (OpenJDK 21, bundled in the installer builds)
+  GPL-2.0 with the Classpath Exception. https://openjdk.org/
+
+MCLQE Launcher (upstream of this fork)
+  GPL-3.0, used with the written permission of the author. https://github.com/yezi-fak/MCLQE
+
+Fonts: Philosopher (Jovanny Lemonad), PT Sans (ParaType)
+  SIL Open Font License 1.1, texts are shown in About and stored next to the fonts.
+
+azur-updater (separate program started by the launcher; installer builds ship it in the app folder)
+  Same project, same GPL-3.0 licence; Go standard library only (BSD-3-Clause). Source: tools/updater.
+
+Downloaded at run time, not part of this package: Minecraft client and libraries (Mojang, subject to the
+Minecraft EULA), NeoForge (LGPL-2.1 and other licences of its libraries).

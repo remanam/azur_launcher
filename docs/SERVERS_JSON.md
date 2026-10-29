@@ -27,6 +27,7 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
 - Required: `schema` (=1), `validUntil` (RFC 3339), `servers[]` with unique non-empty `id`, `name`, `address`.
 - `port` 0 or absent = 25565; range 1..65535. Other fields are optional strings (`inviteRequired` a boolean).
 - `neoforge` selects the installed game version for the server (its id must contain the build); `packUrl`, when set,
+- `neoforgeSha256` (optional): SHA-256 of the NeoForge installer when the build differs from the embedded profile; without it only the embedded build is accepted.
   replaces the address stored in the player's invite code.
 - Unknown fields are ignored. A different `schema` is refused.
 

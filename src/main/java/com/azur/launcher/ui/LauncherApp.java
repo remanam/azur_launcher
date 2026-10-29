@@ -114,8 +114,9 @@ public class LauncherApp extends Application {
     private Node content() {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
-        HomePage homePage = new HomePage(ctx);
-        area.getChildren().addAll(new ServersPage(ctx, homePage::start).node(), homePage.node(),
+        PlayController play = new PlayController(ctx);
+        HomePage homePage = new HomePage(ctx, play);
+        area.getChildren().addAll(new ServersPage(ctx, play).node(), homePage.node(),
                 new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build).node(), new AboutPage().node());
         showPage(area, current);
         return area;

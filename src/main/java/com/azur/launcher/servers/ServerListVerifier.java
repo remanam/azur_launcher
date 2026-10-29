@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -51,7 +52,7 @@ public final class ServerListVerifier {
         return open(envelope, key, now, false);
     }
 
-    /** Same, but an expired (yet correctly signed) file is accepted; used for the offline cache only. */
+    /** Same, but an expired (yet correctly signed) file is accepted; used for the cached copy only. */
     public static ServerList openIgnoringExpiry(byte[] envelope, PublicKey key, Instant now)
             throws ServerListException {
         return open(envelope, key, now, true);
@@ -125,7 +126,8 @@ public final class ServerListVerifier {
             throw new ServerListException(ServerListException.Reason.BAD_FORMAT, "bad port for " + raw.id());
         }
         return new ServerEntry(raw.id(), raw.name(), raw.address(), port, nz(raw.mcVersion()), nz(raw.neoforge()),
-                nz(raw.java()), nz(raw.packChannel()), nz(raw.packUrl()), raw.inviteRequired(), nz(raw.motd()));
+                nz(raw.neoforgeSha256()).toLowerCase(Locale.ROOT), nz(raw.java()), nz(raw.packChannel()),
+                nz(raw.packUrl()), raw.inviteRequired(), nz(raw.motd()));
     }
 
     private static boolean blank(String s) {

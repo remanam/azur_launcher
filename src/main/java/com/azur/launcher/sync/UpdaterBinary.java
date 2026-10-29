@@ -10,8 +10,10 @@ import java.util.Optional;
 
 /**
  * Finds the {@code azur-updater} executable. Order: the path from settings, the copy in the data folder
- * ({@code <data>/bin}), then the build bundled in the jar as {@code /updater/azur-updater-<os>-<arch>[.exe]}
- * (extracted once into {@code <data>/bin}). File names match tools/updater/build.sh.
+ * ({@code <data>/bin}), the one packaged next to the app ({@code $APPDIR/updater}, system property
+ * {@code azur.app.dir}, set by the jpackage launcher), then a build embedded in the jar as
+ * {@code /updater/azur-updater-<os>-<arch>[.exe]} (extracted once into {@code <data>/bin}). File names match
+ * tools/updater/build.sh; the release package copies the binaries in with {@code -Pdist}.
  */
 public final class UpdaterBinary {
 
@@ -41,7 +43,16 @@ public final class UpdaterBinary {
         return Files.isRegularFile(inBin) ? Optional.of(inBin) : Optional.empty();
     }
 
-    /** {@link #locate} plus the bundled resource; throws when the updater is nowhere to be found. */
+    /** The binary shipped in the app image, when this process was started by the packaged launcher. */
+    static Optional<Path> packaged(String appDir, String fileName) {
+        if (appDir == null || appDir.isBlank()) {
+            return Optional.empty();
+        }
+        Path file = Path.of(appDir.trim()).resolve("updater").resolve(fileName);
+        return Files.isRegularFile(file) ? Optional.of(file) : Optional.empty();
+    }
+
+    /** {@link #locate} plus the packaged and embedded copies; throws when the updater is nowhere to be found. */
     public static Path resolve(String configured, Path binDir) throws IOException {
         String name = fileName();
         Optional<Path> found = locate(configured, binDir, name);
@@ -50,6 +61,10 @@ public final class UpdaterBinary {
         }
         if (configured != null && !configured.isBlank()) {
             throw new IOException("Updater not found at " + configured);
+        }
+        Optional<Path> shipped = packaged(System.getProperty("azur.app.dir"), name);
+        if (shipped.isPresent()) {
+            return shipped.get();
         }
         try (InputStream in = UpdaterBinary.class.getResourceAsStream("/updater/" + name)) {
             if (in == null) {

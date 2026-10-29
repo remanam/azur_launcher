@@ -18,7 +18,7 @@ class VersionPickerTest {
     }
 
     private static ServerEntry server(String neoforge) {
-        return new ServerEntry("s", "S", "h", 25565, "1.21.1", neoforge, "", "", "", false, "");
+        return new ServerEntry("s", "S", "h", 25565, "1.21.1", neoforge, "", "", "", "", false, "");
     }
 
     @Test

@@ -42,6 +42,24 @@ public final class InstanceStore {
         }
     }
 
+    /**
+     * Instance for a profile derived from the signed server list. The list is the authority, so a changed pin
+     * replaces the file on disk (the installed state then differs and the launcher installs or repairs).
+     */
+    public Instance ensure(Profile profile) throws IOException {
+        Path dir = dirs.instancesDir().resolve(profile.serverId()).normalize();
+        if (!dir.startsWith(dirs.instancesDir()) || dir.equals(dirs.instancesDir())) {
+            throw new ProfileException("Invalid server id: " + profile.serverId());
+        }
+        String json = ProfileLoader.toJson(profile);
+        Path file = dir.resolve("profile.json");
+        if (!Files.exists(file) || !json.equals(Files.readString(file, StandardCharsets.UTF_8))) {
+            Files.createDirectories(dir);
+            Files.writeString(file, json, StandardCharsets.UTF_8);
+        }
+        return load(profile.serverId());
+    }
+
     /** The bundled default profile is copied on first run; an existing (possibly updated) file is never overwritten. */
     public Instance loadDefault() throws IOException {
         String json;
