@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 class ThemeContrastTest {
 
     private static final double AA = 4.5;
-    private static final String[] TEXT = {"on-surface", "on-surface-variant", "muted", "primary"};
+    private static final String[] TEXT = {"on-surface", "on-surface-variant", "muted", "primary", "gold-deep"};
 
     private static String css() throws IOException {
         try (InputStream in = ThemeContrastTest.class.getResourceAsStream("/app.css")) {
@@ -84,6 +84,15 @@ class ThemeContrastTest {
         assertTrue(ratio(color(css, "on-primary-container"), color(css, "primary-container")) >= AA);
         assertTrue(ratio(color(css, "on-error-container"), color(css, "error-container")) >= AA);
         assertTrue(ratio(color(css, "on-secondary-container"), color(css, "secondary-container")) >= AA);
+    }
+
+    @Test
+    void navyBandTextMeetsAa() throws IOException {
+        String css = css();
+        String navy = color(css, "navy");
+        assertTrue(ratio(color(css, "gold-light"), navy) >= AA, "gold title on navy");
+        assertTrue(ratio("#ffffff", color(css, "navy-high")) >= AA, "window icons on navy");
+        assertTrue(ratio(color(css, "gold"), color(css, "surface")) >= 1.0);
     }
 
     @Test
