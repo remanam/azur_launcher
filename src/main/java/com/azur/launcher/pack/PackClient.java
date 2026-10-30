@@ -21,7 +21,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * The pack updater client (Java port of the Go {@code azur-updater}): checks the signed manifest, downloads missing or
+ * The pack updater client (Java; the former Go client was removed 2026-10-30): checks the signed manifest, downloads missing or
  * changed files in parallel into a cache, installs them with a backup journal (any error rolls the run back), deletes
  * retired files, can verify offline and roll back. Blocking: call from a background thread.
  */
