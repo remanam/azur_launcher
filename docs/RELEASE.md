@@ -6,7 +6,7 @@ Players do not type it: ship it with `accounts/auth-settings.json` or set it in 
 
 ## 2. servers.json signing key
 - Key file: `~/.azur-dist/signing.key` (base64 seed, same as `azur-dist`). Never put it in the repo or the jar.
-- `azur-servers pubkey` prints the public key; put it into `src/main/resources/servers_pubkey.txt` (the embedded one is a DEV key) and rebuild.
+- `azur-servers pubkey` prints the public key; put it into `src/main/resources/servers_pubkey.txt` (the embedded one is a DEV key) and rebuild. Production: `AZUR_SERVERS_PUBKEY_FILE=~/.azur-keys/servers.pub packaging/release.sh` embeds the key for that build only (the tracked file is restored afterwards); keys come from `tools/deploy/keys/gen_keys.sh`.
 - Sign: `azur-servers sign --in servers.json --out servers.signed.json --valid-days 30`; publish at an https URL players enter in Settings (or ship a default in `PackSettings`). Format: `SERVERS_JSON.md`. Optional per-server `neoforgeSha256` pins a NeoForge build other than the embedded one.
 
 ## 3. One build

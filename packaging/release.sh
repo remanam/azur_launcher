@@ -14,6 +14,19 @@ if [ "${GRADLE_ONLINE:-0}" != "1" ]; then
   GRADLE_FLAGS="--offline ${GRADLE_FLAGS:-}"
 fi
 
+# Production servers.json key: AZUR_SERVERS_PUBKEY_FILE=<file with the base64 public key> (see tools/deploy/keys/gen_keys.sh).
+# It replaces the embedded dev key only for this build; the tracked resource is restored on exit, so no key is hardcoded in git.
+PUBRES=src/main/resources/servers_pubkey.txt
+if [ -n "${AZUR_SERVERS_PUBKEY_FILE:-}" ]; then
+  [ -f "$AZUR_SERVERS_PUBKEY_FILE" ] || { echo "AZUR_SERVERS_PUBKEY_FILE not found: $AZUR_SERVERS_PUBKEY_FILE" >&2; exit 1; }
+  PUBKEY=$(tr -d '[:space:]' < "$AZUR_SERVERS_PUBKEY_FILE")
+  [ "${#PUBKEY}" -eq 44 ] || { echo "public key must be 44 base64 chars (32 raw bytes)" >&2; exit 1; }
+  cp "$PUBRES" "$PUBRES.orig"
+  trap 'mv -f "$PUBRES.orig" "$PUBRES"' EXIT INT TERM
+  printf '%s\n' "$PUBKEY" > "$PUBRES"
+  echo "embedding production servers public key from $AZUR_SERVERS_PUBKEY_FILE"
+fi
+
 ./gradlew ${GRADLE_FLAGS:-} --quiet clean releaseJar
 
 # jpackage input: the fat jar (it already carries JavaFX for every platform).
