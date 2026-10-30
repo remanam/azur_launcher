@@ -220,8 +220,7 @@ final class ServersPage {
                 kv("servers.neoforge", e.neoforge().isBlank() ? "-" : e.neoforge()),
                 kv("servers.java", e.java().isBlank() ? "-" : "Java " + e.java()),
                 kv("servers.channel", e.packChannel().isBlank() ? "-" : e.packChannel()),
-                kv("servers.pack", packVersions.getOrDefault(e.id(), "-")),
-                kv("servers.invite", I18n.tr(e.inviteRequired() ? "servers.invite_yes" : "servers.invite_no")));
+                kv("servers.pack", packVersions.getOrDefault(e.id(), "-")));
         HBox actions = new HBox(10, updateButton, verifyButton, downloadButton, repairButton, UiKit.spacer(), playButton);
         actions.setAlignment(Pos.CENTER_LEFT);
         VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, progress, UiKit.withCopy(message));
@@ -289,9 +288,8 @@ final class ServersPage {
         if (entry == null || busy) {
             return;
         }
-        String invite = ctx.invite();
-        if (!verifyOnly && invite.isBlank()) {
-            message.setText(I18n.tr("sync.no_invite"));
+        if (!verifyOnly && !entry.pack().present()) {
+            message.setText(I18n.tr("sync.no_pack"));
             return;
         }
         setBusy(true);
@@ -302,7 +300,7 @@ final class ServersPage {
                 Path instance = instanceDir(entry);
                 PackSyncService service = PackOps.newService(ctx);
                 outcome = verifyOnly ? new PackOps.Outcome(service.verify(instance), true, false)
-                        : PackOps.update(service, entry, instance, invite,
+                        : PackOps.update(service, entry, instance,
                                 (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)));
             } catch (IOException e) {
                 ctx.log("Pack sync: " + e.getMessage());

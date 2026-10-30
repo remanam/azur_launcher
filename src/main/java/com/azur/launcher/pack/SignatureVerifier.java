@@ -15,7 +15,7 @@ import java.util.Base64;
 /**
  * Opens the signed manifest envelope {@code {payload, sig, key_id}}. The signed bytes are exactly the base64-decoded
  * {@code payload} (the publisher's JSON as it was signed, no re-serialisation); the signature is Ed25519 over them
- * with the pack key pinned in the invite.
+ * with the pack key from the signed server list.
  */
 public final class SignatureVerifier {
 

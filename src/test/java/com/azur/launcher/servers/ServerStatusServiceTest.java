@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 
 class ServerStatusServiceTest {
 
-    private static final ServerEntry ENTRY = new ServerEntry("a", "A", "a.example", 25565, "", "", "", "", "", "", false, "");
+    private static final ServerEntry ENTRY = new ServerEntry("a", "A", "a.example", 25565, "", "", "", "", "", null, "");
 
     private final Queue<Runnable> queue = new ArrayDeque<>();
     private final Executor manual = queue::add;

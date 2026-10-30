@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 /**
- * The player token of the community API (registration, roles, pack invite) in the same encrypted vault as the
+ * The player token of the community API (registration, roles) in the same encrypted vault as the
  * accounts. The Minecraft sign-in is separate: this token never replaces it.
  */
 public final class PlayerTokenStore {

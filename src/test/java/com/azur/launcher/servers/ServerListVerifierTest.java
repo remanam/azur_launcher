@@ -16,7 +16,7 @@ import org.junit.jupiter.api.Test;
 class ServerListVerifierTest {
 
     static final Instant NOW = Instant.parse("2026-10-29T00:00:00Z");
-    static final String PAYLOAD = "{\"schema\":1,\"servers\":[{\"address\":\"a.example\",\"id\":\"a\",\"name\":\"A\","
+    static final String PAYLOAD = "{\"schema\":2,\"servers\":[{\"address\":\"a.example\",\"id\":\"a\",\"name\":\"A\","
             + "\"port\":0},{\"address\":\"b.example\",\"id\":\"b\",\"name\":\"B\",\"port\":25570}],"
             + "\"validUntil\":\"2027-01-01T00:00:00Z\"}";
 
@@ -83,29 +83,34 @@ class ServerListVerifierTest {
         assertEquals(ServerListException.Reason.BAD_FORMAT, failure("not json".getBytes(), key).reason());
         assertEquals(ServerListException.Reason.BAD_FORMAT, failure("{}".getBytes(), key).reason());
         String[] badPayloads = {
-                "{\"schema\":2,\"servers\":[],\"validUntil\":\"2027-01-01T00:00:00Z\"}",
-                "{\"schema\":1,\"servers\":[{\"id\":\"a\",\"name\":\"A\"}],\"validUntil\":\"2027-01-01T00:00:00Z\"}",
-                "{\"schema\":1,\"servers\":[{\"id\":\"a\",\"name\":\"A\",\"address\":\"x\",\"port\":70000}],"
+                "{\"schema\":3,\"servers\":[],\"validUntil\":\"2027-01-01T00:00:00Z\"}",
+                "{\"schema\":2,\"servers\":[{\"id\":\"a\",\"name\":\"A\"}],\"validUntil\":\"2027-01-01T00:00:00Z\"}",
+                "{\"schema\":2,\"servers\":[{\"id\":\"a\",\"name\":\"A\",\"address\":\"x\",\"port\":70000}],"
                         + "\"validUntil\":\"2027-01-01T00:00:00Z\"}",
-                "{\"schema\":1,\"servers\":[{\"id\":\"a\",\"name\":\"A\",\"address\":\"x\"},"
+                "{\"schema\":2,\"servers\":[{\"id\":\"a\",\"name\":\"A\",\"address\":\"x\"},"
                         + "{\"id\":\"a\",\"name\":\"B\",\"address\":\"y\"}],\"validUntil\":\"2027-01-01T00:00:00Z\"}",
-                "{\"schema\":1,\"servers\":[],\"validUntil\":\"yesterday\"}"};
+                "{\"schema\":2,\"servers\":[],\"validUntil\":\"yesterday\"}"};
         for (String payload : badPayloads) {
             assertEquals(ServerListException.Reason.BAD_FORMAT, failure(envelope(payload, key), key).reason(), payload);
         }
     }
 
     @Test
-    void fileSignedByTheGoToolVerifiesWithTheEmbeddedKey() throws Exception {
-        byte[] env;
-        try (var in = getClass().getResourceAsStream("/servers_signed_go.json")) {
-            env = in.readAllBytes();
-        }
-        ServerList list = ServerListVerifier.open(env, ServerListService.loadKey(null), NOW);
-        assertEquals("isles", list.servers().get(0).id());
-        assertEquals(25566, list.servers().get(0).port());
-        assertTrue(list.servers().get(0).inviteRequired());
-        assertEquals("Тестовый сервер", list.servers().get(0).motd());
-        assertEquals(25565, list.servers().get(1).port());
+    void packFieldIsReadAndMissingPackMeansNone() throws Exception {
+        KeyPair key = newKey();
+        String payload = "{\"schema\":2,\"servers\":[{\"address\":\"a.example\",\"id\":\"a\",\"name\":\"A\","
+                + "\"pack\":{\"url\":\"https://pack.example/pack\",\"key\":\"abc=\"}},"
+                + "{\"address\":\"b.example\",\"id\":\"b\",\"name\":\"B\"}],\"validUntil\":\"2027-01-01T00:00:00Z\"}";
+        ServerList list = ServerListVerifier.open(envelope(payload, key), key.getPublic(), NOW);
+        assertEquals("https://pack.example/pack", list.servers().get(0).pack().url());
+        assertEquals("abc=", list.servers().get(0).pack().key());
+        assertTrue(!list.servers().get(1).pack().present());
+    }
+
+    @Test
+    void oldSchemaIsRefused() throws Exception {
+        KeyPair key = newKey();
+        byte[] env = envelope(PAYLOAD.replace("\"schema\":2", "\"schema\":1"), key);
+        assertEquals(ServerListException.Reason.BAD_FORMAT, failure(env, key).reason());
     }
 }

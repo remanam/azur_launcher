@@ -41,7 +41,7 @@ final class HomeState {
         return updateAvailable ? Action.UPDATE : Action.PLAY;
     }
 
-    /** The game is installed and, when the server has a pack (invite known), a pack version is recorded. */
+    /** The game is installed and, when the server has a pack (server entry has a pack), a pack version is recorded. */
     static boolean installed(boolean gameInstalled, boolean packExpected, String installedPackVersion) {
         return gameInstalled && (!packExpected || !blank(installedPackVersion));
     }

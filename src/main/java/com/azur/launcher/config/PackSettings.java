@@ -18,10 +18,8 @@ public final class PackSettings {
 
     /** Address of the signed servers.json (https). Empty: only the cached list is shown. */
     private String serversUrl = "";
-    /** Address of the community API (https): registration, roles, pack invite. Empty: the feature is off. */
+    /** Address of the community API (https): registration, roles. Empty: the feature is off. */
     private String apiBase = "";
-    /** Only read from files written before the invite code moved into the vault; never written again. */
-    private String invite;
 
     public String getServersUrl() {
         return serversUrl == null ? "" : serversUrl;
@@ -37,13 +35,6 @@ public final class PackSettings {
 
     public void setApiBase(String apiBase) {
         this.apiBase = apiBase.trim();
-    }
-
-    /** The plain invite of an old pack.json (migration); cleared once taken so that it is not saved again. */
-    public String takeLegacyInvite() {
-        String legacy = invite == null ? "" : invite.trim();
-        invite = null;
-        return legacy;
     }
 
     public static PackSettings load(Path file) {

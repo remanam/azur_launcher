@@ -1,5 +1,6 @@
 package com.azur.launcher.servers;
 
+import com.azur.launcher.pack.PackSource;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
@@ -26,7 +27,7 @@ import java.util.Set;
  */
 public final class ServerListVerifier {
 
-    public static final int SCHEMA = 1;
+    public static final int SCHEMA = 2;
     private static final int MAX_BYTES = 1 << 20;
     /** DER prefix of an Ed25519 SubjectPublicKeyInfo; the 32 raw key bytes follow. */
     private static final byte[] SPKI_PREFIX = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
@@ -127,7 +128,7 @@ public final class ServerListVerifier {
         }
         return new ServerEntry(raw.id(), raw.name(), raw.address(), port, nz(raw.mcVersion()), nz(raw.neoforge()),
                 nz(raw.neoforgeSha256()).toLowerCase(Locale.ROOT), nz(raw.java()), nz(raw.packChannel()),
-                nz(raw.packUrl()), raw.inviteRequired(), nz(raw.motd()), nz(raw.mirror()).trim());
+                raw.pack() == null ? PackSource.NONE : raw.pack(), nz(raw.motd()), nz(raw.mirror()).trim());
     }
 
     private static boolean blank(String s) {

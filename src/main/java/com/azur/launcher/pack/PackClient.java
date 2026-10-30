@@ -48,8 +48,8 @@ public final class PackClient {
     }
 
     /** Contacts the server, verifies the manifest, plans the changes. Writes nothing. */
-    public Checked check(String inviteCode, String serverUrl, Path game) throws IOException {
-        PackServer server = new PackServer(InviteToken.parse(inviteCode), serverUrl, policy);
+    public Checked check(PackSource source, Path game) throws IOException {
+        PackServer server = new PackServer(source, policy);
         PackServer.Status status = server.status();
         PackManifest manifest = server.manifest();
         if (compareVersion(VERSION, manifest.minUpdater()) < 0) {

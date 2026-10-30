@@ -1,11 +1,11 @@
 package com.azur.launcher.pack;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Base64;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -13,18 +13,16 @@ import org.junit.jupiter.api.Test;
 class PackUnitTest {
 
     @Test
-    void inviteRoundTripAndRejection() throws Exception {
+    void packSourceNeedsUrlAndAValidKey() {
         byte[] key = new byte[32];
         key[0] = 7;
-        InviteToken t = InviteToken.parse(InviteToken.encode("https://pack.example", "tok", key));
-        assertEquals("https://pack.example", t.url());
-        assertEquals("tok", t.token());
-        assertArrayEquals(key, t.publicKey());
-        assertEquals(PackException.INVITE, assertThrows(PackException.class, () -> InviteToken.parse("nope")).code());
-        assertEquals(PackException.INVITE,
-                assertThrows(PackException.class, () -> InviteToken.parse("azur1.@@@")).code());
-        assertEquals(PackException.INVITE,
-                assertThrows(PackException.class, () -> InviteToken.parse(InviteToken.encode("ftp://x", "t", key))).code());
+        PackSource ok = new PackSource(" https://pack.example ", Base64.getEncoder().encodeToString(key));
+        assertTrue(ok.present());
+        assertEquals("https://pack.example", ok.url());
+        assertFalse(PackSource.NONE.present());
+        assertFalse(new PackSource(null, null).present());
+        assertEquals(PackException.NO_PACK, assertThrows(PackException.class,
+                () -> new PackServer(new PackSource("https://x.example", "AAAA"), null)).code());
     }
 
     @Test

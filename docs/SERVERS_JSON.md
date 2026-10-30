@@ -13,23 +13,22 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
 ## Payload
 ```json
 {
-  "schema": 1,
+  "schema": 2,
   "validUntil": "2026-12-01T00:00:00Z",
   "servers": [{
     "id": "isles",                 "name": "Azur Launcher",
     "address": "play.example.org", "port": 25565,
     "mcVersion": "1.21.1",         "neoforge": "21.1.264",   "java": "21",
-    "packChannel": "stable",       "packUrl": "https://dist.example.org:8780",
-    "inviteRequired": true,        "motd": "Short description",
+    "packChannel": "stable",       "motd": "Short description",
+    "pack": {"url": "https://dist.example.org/pack", "key": "<base64 Ed25519 public key, 32 bytes>"},
     "mirror": "https://dist.example.org/mirror"
   }]
 }
 ```
-- Required: `schema` (=1), `validUntil` (RFC 3339), `servers[]` with unique non-empty `id`, `name`, `address`.
-- `port` 0 or absent = 25565; range 1..65535. Other fields are optional strings (`inviteRequired` a boolean).
-- `neoforge` selects the installed game version for the server (its id must contain the build); `packUrl`, when set,
-- `neoforgeSha256` (optional): SHA-256 of the NeoForge installer when the build differs from the embedded profile; without it only the embedded build is accepted.
-  replaces the address stored in the player's invite code.
+- Required: `schema` (=2; schema 1 with `packUrl`/`inviteRequired` is refused), `validUntil` (RFC 3339), `servers[]` with unique non-empty `id`, `name`, `address`.
+- `port` 0 or absent = 25565; range 1..65535. Other fields are optional strings.
+- `neoforge` selects the installed game version for the server (its id must contain the build); `neoforgeSha256` (optional): SHA-256 of the NeoForge installer when the build differs from the embedded profile; without it only the embedded build is accepted.
+- `pack` (optional object): where the pack of this server is and which key signs its manifest. `url`: https (plain http only for 127.0.0.1 in local tests), no trailing path rules beyond a reverse-proxy prefix such as `/pack`; `key`: base64 of the 32 raw bytes (`azur-servers pubkey`). The pack download is open (no tokens). Without `pack` the launcher installs the game but no pack (error `nopack` on update); a wrong `key` makes the manifest check fail (`signature`). `azur-servers sign` rejects a malformed `pack`.
 - `mirror` (optional): base URL of our own mirror of `maven.neoforged.net` and `libraries.minecraft.net` (layout `<mirror>/<host>/<path>`, e.g. `<mirror>/maven.neoforged.net/releases/net/neoforged/...`). The launcher tries it first for the NeoForge installer and its libraries and falls back to the official host; hashes are checked either way. https only (plain http only for 127.0.0.1 in local tests).
 - Unknown fields are ignored. A different `schema` is refused.
 

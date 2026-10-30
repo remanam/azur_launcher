@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 final class GoPackFixture implements AutoCloseable {
 
     private static Path binary;
+    private static Path serversBinary;
 
     final Path data;
     final Path key;
@@ -35,21 +36,29 @@ final class GoPackFixture implements AutoCloseable {
 
     /** Builds the Go publisher once; null when Go is missing. */
     static synchronized Path binary(Path buildDir) {
-        if (binary != null) {
-            return binary;
+        if (binary == null) {
+            binary = build(buildDir, "azur-dist");
         }
-        Path out = buildDir.resolve("azur-dist");
+        return binary;
+    }
+
+    private static synchronized Path serversBinary(Path buildDir) {
+        if (serversBinary == null) {
+            serversBinary = build(buildDir, "azur-servers");
+        }
+        return serversBinary;
+    }
+
+    private static Path build(Path buildDir, String cmd) {
+        Path out = buildDir.resolve(cmd);
         try {
-            Process p = new ProcessBuilder("go", "build", "-o", out.toString(), "./cmd/azur-dist")
+            Process p = new ProcessBuilder("go", "build", "-o", out.toString(), "./cmd/" + cmd)
                     .directory(Path.of("..", "tools", "updater").toFile()).redirectErrorStream(true).start();
             p.getInputStream().readAllBytes();
-            if (p.waitFor(180, TimeUnit.SECONDS) && p.exitValue() == 0) {
-                binary = out;
-            }
+            return p.waitFor(180, TimeUnit.SECONDS) && p.exitValue() == 0 ? out : null;
         } catch (IOException | InterruptedException e) {
             return null;
         }
-        return binary;
     }
 
     static GoPackFixture create(Path work) throws IOException {
@@ -81,8 +90,33 @@ final class GoPackFixture implements AutoCloseable {
         return "http://127.0.0.1:" + port;
     }
 
-    String invite(String name) throws IOException {
-        return run("invite", "--name", name, "--url", url());
+    /** Public key of this publisher, as the signed server list carries it ({@code azur-servers pubkey}). */
+    String publicKey(Path buildDir) throws IOException {
+        return servers(buildDir, "pubkey", "--key", key.toString());
+    }
+
+    /** Signs a servers.json document with this publisher's key ({@code azur-servers sign}). */
+    byte[] signServers(Path buildDir, String json) throws IOException {
+        Path in = Files.writeString(data.resolveSibling("servers.json"), json);
+        Path out = data.resolveSibling("servers.signed.json");
+        servers(buildDir, "sign", "--key", key.toString(), "--in", in.toString(), "--out", out.toString());
+        return Files.readAllBytes(out);
+    }
+
+    private String servers(Path buildDir, String... args) throws IOException {
+        List<String> cmd = new ArrayList<>(List.of(serversBinary(buildDir).toString()));
+        cmd.addAll(List.of(args));
+        Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+        String out = new String(p.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            if (!p.waitFor(60, TimeUnit.SECONDS) || p.exitValue() != 0) {
+                throw new IOException("azur-servers " + args[0] + " failed: " + out);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException(e);
+        }
+        return out.strip();
     }
 
     void serve() throws IOException {

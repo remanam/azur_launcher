@@ -60,7 +60,7 @@ final class AccountsPage {
         return new VBox(6, row, error);
     }
 
-    /** Community API: registration by code; the API decides roles, the whitelist flag and the pack invite. */
+    /** Community API: registration by code; the API decides roles, and the whitelist flag. */
     private VBox communityBox() {
         TextField apiBase = new TextField(ctx.pack.getApiBase());
         apiBase.setPromptText("https://api.example.com");
@@ -79,7 +79,7 @@ final class AccountsPage {
 
     /**
      * Registers this player with a code from the owner: the token goes into the vault, then {@code /v1/me} decides
-     * what the launcher shows and which pack invite it uses. 
+     * what the launcher shows.
      */
     private void register(String code, SelectableText message, Button button) {
         AuthAccount account = ctx.accounts.selected();

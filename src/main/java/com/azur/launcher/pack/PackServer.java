@@ -34,7 +34,6 @@ public final class PackServer {
     private static final Gson GSON = new Gson();
 
     private final URI base;
-    private final String token;
     private final byte[] publicKey;
     private final HostPolicy policy;
     private final HttpClient http = ProxyConfig.configure(HttpClient.newBuilder()
@@ -42,18 +41,19 @@ public final class PackServer {
             .connectTimeout(Duration.ofSeconds(15)))
             .build();
 
-    public PackServer(InviteToken invite, String urlOverride, HostPolicy policy) throws PackException {
-        String url = urlOverride == null || urlOverride.isBlank() ? invite.url() : urlOverride.strip();
+    public PackServer(PackSource source, HostPolicy policy) throws PackException {
+        if (!source.present()) {
+            throw new PackException(PackException.NO_PACK, "the server list gives no pack address or key for this server");
+        }
         try {
-            this.base = new URI(url.endsWith("/") ? url : url + "/");
+            this.base = new URI(source.url().endsWith("/") ? source.url() : source.url() + "/");
         } catch (java.net.URISyntaxException e) {
-            throw new PackException(PackException.INVITE, "the pack server address is wrong", e);
+            throw new PackException(PackException.NETWORK, "the pack server address is wrong", e);
         }
         if (base.getHost() == null) {
-            throw new PackException(PackException.INVITE, "the pack server address is wrong");
+            throw new PackException(PackException.NETWORK, "the pack server address is wrong");
         }
-        this.token = invite.token();
-        this.publicKey = invite.publicKey();
+        this.publicKey = source.publicKey();
         this.policy = policy;
         checkPolicy(base.toString());
     }
@@ -78,8 +78,7 @@ public final class PackServer {
 
     private HttpResponse<InputStream> get(String ref, long from, Duration timeout) throws PackException {
         URI uri = resolve(ref);
-        HttpRequest.Builder req = HttpRequest.newBuilder(uri).timeout(timeout).GET()
-                .header("Authorization", "Bearer " + token);
+        HttpRequest.Builder req = HttpRequest.newBuilder(uri).timeout(timeout).GET();
         if (from > 0) {
             req.header("Range", "bytes=" + from + "-");
         }
@@ -95,9 +94,6 @@ public final class PackServer {
         int code = resp.statusCode();
         if (code >= 300) {
             closeQuietly(resp.body());
-            if (code == 401) {
-                throw new PackException(PackException.INVITE, "the invite code is revoked or wrong");
-            }
             throw new PackException(PackException.NETWORK, "the pack server answered " + code);
         }
         return resp;

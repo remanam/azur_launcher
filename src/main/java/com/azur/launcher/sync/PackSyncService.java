@@ -3,10 +3,10 @@ package com.azur.launcher.sync;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.net.HostPolicy;
 import com.azur.launcher.net.HttpUtils;
-import com.azur.launcher.pack.InviteToken;
 import com.azur.launcher.pack.PackClient;
 import com.azur.launcher.pack.PackException;
 import com.azur.launcher.pack.PackServer;
+import com.azur.launcher.pack.PackSource;
 import com.azur.launcher.pack.PackState;
 
 import java.io.IOException;
@@ -16,7 +16,7 @@ import java.util.function.Supplier;
 
 /**
  * Pack sync for the UI on top of the in-process {@link PackClient} (no external updater program). Result codes are the
- * {@link PackException} codes ({@code invite}, {@code signature}, {@code network}, {@code outdated}, {@code apply},
+ * {@link PackException} codes ({@code nopack}, {@code signature}, {@code network}, {@code outdated}, {@code apply},
  * {@code verify}) plus {@code unknown}; {@code ""} means success. The pack server host must be allowed by the launcher's
  * {@link HostPolicy} (the servers list adds its host). Blocking: call from a background thread.
  *
@@ -60,11 +60,9 @@ public final class PackSyncService {
     }
 
     /** Cheap {@code /status} request (no manifest, no writes): newest pack version and the maintenance banner. */
-    public Remote probe(String serverUrl, String invite) {
+    public Remote probe(PackSource source) {
         try {
-            String url = serverUrl == null || serverUrl.isBlank() ? InviteToken.parse(invite).url() : serverUrl;
-            PackServer.Status status = new PackServer(InviteToken.parse(invite),
-                    upgradeHttp ? HttpUtils.secure(url) : url, policy.get()).status();
+            PackServer.Status status = new PackServer(secure(source), policy.get()).status();
             String text = status.maintenance() ? nz(status.message()) : "";
             banner = text;
             return new Remote(true, nz(status.packVersion()), text);
@@ -73,20 +71,20 @@ public final class PackSyncService {
         }
     }
 
+    private PackSource secure(PackSource source) {
+        return upgradeHttp && !source.url().isEmpty() ? source.withUrl(HttpUtils.secure(source.url())) : source;
+    }
+
     /** The host's maintenance text from the last sync, or empty. */
     public Optional<String> maintenanceBanner() {
         return banner.isEmpty() ? Optional.empty() : Optional.of(banner);
     }
 
-    /** Brings {@code instance} to the pack of the server behind {@code invite}. */
-    public Result sync(String serverUrl, Path instance, String invite, SyncProgress progress) {
+    /** Brings {@code instance} to the pack of {@code source}. */
+    public Result sync(PackSource source, Path instance, SyncProgress progress) {
         try {
-            String url = serverUrl == null || serverUrl.isBlank() ? InviteToken.parse(invite).url() : serverUrl;
-            if (upgradeHttp) {
-                url = HttpUtils.secure(url);
-            }
             PackClient client = new PackClient(home, policy.get());
-            PackClient.Checked checked = client.check(invite, url, instance);
+            PackClient.Checked checked = client.check(secure(source), instance);
             banner = checked.status().maintenance() ? nz(checked.status().message()) : "";
             String version = client.update(checked, instance, progress::onProgress);
             return new Result(0, "", "", version);

@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Our own community service: registration by code, roles, whitelist status and the pack invite. This API only grants
+ * Our own community service: registration by code, roles and whitelist status. This API only grants
  * access to our infrastructure; the player account stays a plain nickname.
  * Contract (see docs/API.md): {@code POST /v1/register}, {@code GET /v1/me}, {@code POST /v1/token/rotate}.
  */
@@ -28,8 +28,8 @@ public final class CommunityApi {
     public record Server(String name, String address, int port) {
     }
 
-    /** Where the pack can be fetched from; the invite carries the address, the token and the signing key. */
-    public record Pack(String url, String invite, String version) {
+    /** Where the pack can be fetched from (informational: the launcher takes the pack from the signed server list). */
+    public record Pack(String url, String version) {
     }
 
     /** What the API knows about this player. {@code server} and {@code pack} are null right after registration. */
@@ -85,7 +85,7 @@ public final class CommunityApi {
         return new Session(required(response, "player_token"), nick, uuid, roles(response), true, null, null);
     }
 
-    /** Current state of the player: roles, whitelist flag, server and pack invite. */
+    /** Current state of the player: roles, whitelist flag, server and pack address. */
     public Session me(String token) throws IOException {
         JsonObject response = send("/v1/me", token, null);
         return new Session(token, text(response, "nick"), text(response, "uuid"), roles(response),
@@ -209,6 +209,6 @@ public final class CommunityApi {
             return null;
         }
         JsonObject pack = element.getAsJsonObject();
-        return new Pack(text(pack, "url"), text(pack, "invite"), text(pack, "version"));
+        return new Pack(text(pack, "url"), text(pack, "version"));
     }
 }

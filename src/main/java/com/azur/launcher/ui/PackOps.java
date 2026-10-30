@@ -44,7 +44,7 @@ final class PackOps {
                 progress::step);
     }
 
-    /** Installs the pin (client, libraries, assets) and then the pack when an invite exists; {@code entry} null = default instance. */
+    /** Installs the pin (client, libraries, assets) and then the pack when the server entry has a pack; {@code entry} null = default instance. */
     static Outcome download(AppContext ctx, ServerEntry entry, SyncProgress sync,
                             com.azur.launcher.net.DownloadManager.ProgressListener pin) {
         return run(ctx, entry, sync, pin, null, null);
@@ -54,7 +54,6 @@ final class PackOps {
                                DownloadManager.ProgressListener pin, DownloadManager.ProgressListener libraries,
                                Consumer<InstallProgress.Step> step) {
         Consumer<InstallProgress.Step> at = step == null ? s -> { } : step;
-        String invite = ctx.invite();
         try {
             InstanceStore store = new InstanceStore(ctx.dirs);
             Instance instance = entry == null ? store.loadDefault()
@@ -65,11 +64,11 @@ final class PackOps {
             pins.installIfNeeded(instance);
             at.accept(InstallProgress.Step.MINECRAFT);
             pins.installIfNeeded(instance, ctx.config.getDownloadThreads(), pin);
-            if (entry == null || invite.isBlank()) {
+            if (entry == null || !entry.pack().present()) {
                 return new Outcome(new PackSyncService.Result(0, "", "", ""), false, false);
             }
             at.accept(InstallProgress.Step.CHECK);
-            return update(PackSyncService.standard(ctx.dirs), entry, instance.gameDir(), invite, sync);
+            return update(PackSyncService.standard(ctx.dirs), entry, instance.gameDir(), sync);
         } catch (IOException e) {
             ctx.log("Download client: " + e.getMessage());
             return new Outcome(new PackSyncService.Result(-1, "download", e.getMessage(), ""), false, false);
@@ -84,9 +83,9 @@ final class PackOps {
      * Updates the pack. When the pack server cannot be reached but the installed files still verify, the player keeps
      * using the local copy (restricted networks, outages) instead of being blocked.
      */
-    static Outcome update(PackSyncService service, ServerEntry entry, Path instance, String invite,
+    static Outcome update(PackSyncService service, ServerEntry entry, Path instance,
                           SyncProgress progress) {
-        PackSyncService.Result result = service.sync(entry.packUrl(), instance, invite, progress);
+        PackSyncService.Result result = service.sync(entry.pack(), instance, progress);
         if (result.ok() || !"network".equals(result.code())) {
             return new Outcome(result, false, false);
         }

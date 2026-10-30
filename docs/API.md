@@ -1,6 +1,6 @@
 # Community API contract (owner side)
 
-The launcher talks to our own service for registration, roles, whitelist status and the pack invite. The **Minecraft
+The launcher talks to our own service for registration, roles, whitelist status and the pack address. The **Minecraft
 sign-in stays with Microsoft**: this API never replaces it and never issues a Minecraft session.
 
 Client: [`CommunityApi`](../src/main/java/com/azur/launcher/api/CommunityApi.java).
@@ -35,7 +35,7 @@ Header `Authorization: Bearer <player_token>`.
   "roles": ["friend", "builder"],
   "whitelisted": true,
   "server": {"name": "Azur Launcher", "address": "mc.example.ru", "port": 25565},
-  "pack": {"url": "https://pack.example.ru", "invite": "azur1.…", "version": "2026.10.29-1900"}
+  "pack": {"url": "https://pack.example.ru", "version": "2026.10.29-1900"}
 }
 ```
 
@@ -44,7 +44,7 @@ Header `Authorization: Bearer <player_token>`.
 | 200 | as above; `server` and `pack` may be absent, missing fields are tolerated by the client |
 | 401 | `{"error": "token_invalid"}` / `{"error": "token_revoked"}` |
 
-All fields are optional for the client: a missing `pack.invite` simply means "no invite to apply".
+All fields are optional for the client: `pack` is informational: the launcher takes the pack url and key from the signed servers.json.
 
 ### `POST /v1/token/rotate`
 
@@ -58,7 +58,7 @@ Header `Authorization: Bearer <player_token>`, body `{}`.
 ## What the launcher does with the answer
 
 1. Stores `player_token` in the vault (never in `pack.json`, never in logs).
-2. `GET /v1/me` right after registration; `pack.invite` is written to the invite vault and used for the pack sync (`PackSyncService`).
+2. `GET /v1/me` right after registration; the result is only logged (pack invites were removed 2026-10-30).
 3. `whitelisted=false` is shown to the player as "not added yet", not as an error.
 4. `roles` are displayed only; no client-side permission depends on them.
 
@@ -68,5 +68,4 @@ Header `Authorization: Bearer <player_token>`, body `{}`.
   keep `online-mode=true` and its own whitelist by UUID; the API's `whitelisted` flag is for the player's convenience.
 - If the API is supposed to maintain the server whitelist, it does so server-side (RCON or the whitelist file), never
   through the launcher.
-- Invite codes for the pack (`azur1.…`) are separate from `player_token`: the invite carries the pack address, its
-  access token and the Ed25519 key that signs the manifest. Both can be issued by the same service.
+- The pack download has no codes or tokens (removed 2026-10-30); `player_token` is only for this API.

@@ -66,7 +66,7 @@ public final class AppDirs {
         return root.resolve("accounts").resolve("accounts.json");
     }
 
-    /** Player token of the community API (registration, roles, pack invite); same vault format as the invite. */
+    /** Player token of the community API (registration, roles) in the encrypted vault. */
     public Path playerTokenVaultFile() {
         return root.resolve("accounts").resolve("player.vault");
     }
@@ -93,11 +93,6 @@ public final class AppDirs {
     /** Server list and pack sync settings. */
     public Path packSettingsFile() {
         return root.resolve("pack.json");
-    }
-
-    /** Encrypted invite code of the pack server. */
-    public Path inviteVaultFile() {
-        return root.resolve("accounts").resolve("invite.vault");
     }
 
     /** Last verified servers.json. */

@@ -43,7 +43,7 @@ class CommunityApiTest {
             authHeader.set(exchange.getRequestHeaders().getFirst("Authorization"));
             reply(exchange, 200, "{\"nick\":\"Vasya\",\"uuid\":\"uuid-1\",\"roles\":[\"friend\",\"builder\"],"
                     + "\"whitelisted\":true,\"server\":{\"name\":\"Isles\",\"address\":\"mc.example\",\"port\":25565},"
-                    + "\"pack\":{\"url\":\"https://pack.example\",\"invite\":\"azur1.abc\",\"version\":\"2026.10.29-1900\"}}");
+                    + "\"pack\":{\"url\":\"https://pack.example\",\"version\":\"2026.10.29-1900\"}}");
         });
         server.start();
         CommunityApi api = new CommunityApi(base());
@@ -60,7 +60,6 @@ class CommunityApiTest {
         assertTrue(session.whitelisted());
         assertEquals("mc.example", session.server().address());
         assertEquals(25565, session.server().port());
-        assertEquals("azur1.abc", session.pack().invite());
         assertEquals("2026.10.29-1900", session.pack().version());
     }
 

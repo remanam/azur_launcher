@@ -15,7 +15,7 @@ import org.junit.jupiter.api.io.TempDir;
 class ServerProfilesTest {
 
     private static ServerEntry entry(String neoforge, String sha) {
-        return new ServerEntry("isles", "Isles", "h", 25565, "1.21.1", neoforge, sha, "21", "beta", "", false, "");
+        return new ServerEntry("isles", "Isles", "h", 25565, "1.21.1", neoforge, sha, "21", "beta", null, "");
     }
 
     @Test
@@ -50,7 +50,7 @@ class ServerProfilesTest {
     @Test
     void badServerIdIsRefused(@TempDir Path tmp) throws IOException {
         Profile base = InstanceStore.bundledProfile();
-        ServerEntry bad = new ServerEntry("../x", "X", "h", 25565, "", "", "", "", "", "", false, "");
+        ServerEntry bad = new ServerEntry("../x", "X", "h", 25565, "", "", "", "", "", null, "");
         assertThrows(ProfileException.class, () -> ServerProfiles.derive(bad, base));
     }
 }

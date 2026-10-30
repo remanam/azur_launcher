@@ -1,6 +1,7 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.game.PinService;
+import com.azur.launcher.pack.PackSource;
 import com.azur.launcher.profile.Instance;
 import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.sync.PackSyncService;
@@ -37,23 +38,22 @@ final class PackState {
     /** @param server the selected server or null (default instance: no pack to track) */
     synchronized Snapshot read(Instance instance, ServerEntry server, boolean force) {
         boolean gameInstalled = new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).check(instance).isEmpty();
-        String invite = ctx.invite();
-        boolean packExpected = server != null && !invite.isBlank();
+        boolean packExpected = server != null && server.pack().present();
         String local = packExpected ? service.installedVersion(instance.gameDir()) : "";
         boolean installed = HomeState.installed(gameInstalled, packExpected, local);
         if (!packExpected) {
             return new Snapshot(installed, false, "");
         }
-        PackSyncService.Remote now = remote(server.packUrl(), invite, force);
+        PackSyncService.Remote now = remote(server.pack(), force);
         return new Snapshot(installed, installed && HomeState.updateAvailable(local, now.version()), now.banner());
     }
 
-    private PackSyncService.Remote remote(String url, String invite, boolean force) {
-        String key = url + '\n' + invite;
+    private PackSyncService.Remote remote(PackSource source, boolean force) {
+        String key = source.url() + '\n' + source.key();
         long age = System.currentTimeMillis() - remoteAt;
         boolean fresh = key.equals(remoteKey) && age < (remote.reachable() ? TTL_MS : RETRY_MS);
         if (force || !fresh) {
-            remote = service.probe(url, invite);
+            remote = service.probe(source);
             remoteKey = key;
             remoteAt = System.currentTimeMillis();
         }
