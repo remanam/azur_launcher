@@ -65,19 +65,18 @@ final class AccountsPage {
         });
         TextField code = new TextField();
         code.setPromptText(I18n.tr("community.code_hint"));
-        Label message = UiKit.label("", "hint");
-        message.setWrapText(true);
+        SelectableText message = UiKit.selectable("", "hint");
         Button register = UiKit.button(I18n.tr("community.register"), null, "button-border", () -> { });
         register.setOnAction(event -> register(code.getText(), message, register));
         return new VBox(6, UiKit.label(I18n.tr("community.title"), "page-subtitle"),
-                UiKit.label(I18n.tr("community.hint"), "hint"), apiBase, code, register, message);
+                UiKit.label(I18n.tr("community.hint"), "hint"), apiBase, code, register, UiKit.withCopy(message));
     }
 
     /**
      * Registers this player with a code from the owner: the token goes into the vault, then {@code /v1/me} decides
      * what the launcher shows and which pack invite it uses. The Microsoft sign-in is untouched by this.
      */
-    private void register(String code, Label message, Button button) {
+    private void register(String code, SelectableText message, Button button) {
         AuthAccount account = ctx.accounts.selected();
         if (account == null) {
             message.setText(I18n.tr("community.sign_in_first"));
@@ -218,8 +217,7 @@ final class AccountsPage {
         code.setStyle("-fx-font-size: 26px; -fx-font-weight: bold;");
         Label uri = new Label(I18n.tr("signin.requesting"));
         uri.setWrapText(true);
-        Label status = UiKit.label("", "option-subtitle");
-        status.setWrapText(true);
+        SelectableText status = UiKit.selectable("", "option-subtitle");
         Label steps = UiKit.label(I18n.tr("signin.steps"), "option-subtitle");
         steps.setWrapText(true);
         VBox content = new VBox(8, steps, code, uri, status);

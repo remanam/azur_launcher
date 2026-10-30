@@ -32,7 +32,8 @@ public final class ServerProfiles {
         Profile profile = new Profile(Profile.SCHEMA, entry.id(),
                 entry.mcVersion().isBlank() ? base.minecraft() : entry.mcVersion(), neoforge, sha, java,
                 List.copyOf(base.jvmArgs()), base.ramMinMb(), base.ramMaxMb(),
-                entry.packChannel().isBlank() ? base.packChannel() : entry.packChannel(), base.mirrorBase());
+                entry.packChannel().isBlank() ? base.packChannel() : entry.packChannel(),
+                entry.mirror() == null || entry.mirror().isBlank() ? base.mirrorBase() : entry.mirror());
         List<String> problems = ProfileLoader.validate(profile);
         if (!problems.isEmpty()) {
             throw new ProfileException("Server " + entry.id() + ": " + String.join("; ", problems));

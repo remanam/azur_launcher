@@ -69,9 +69,9 @@ public final class CommunityApi {
 
     CommunityApi(String baseUrl, Duration timeout) {
         this.base = normalise(baseUrl);
-        this.http = HttpClient.newBuilder()
+        this.http = com.azur.launcher.net.ProxyConfig.configure(HttpClient.newBuilder()
                 .connectTimeout(timeout)
-                .followRedirects(HttpClient.Redirect.NEVER)
+                .followRedirects(HttpClient.Redirect.NEVER))
                 .build();
     }
 

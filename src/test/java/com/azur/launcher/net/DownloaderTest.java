@@ -220,4 +220,33 @@ class DownloaderTest {
         assertTrue(manager.downloadAll(tasks));
         assertEquals(2, hits.get());
     }
+
+    @Test
+    void mirrorIsTriedFirstAndOfficialIsTheFallback(@TempDir Path dir) throws Exception {
+        server.createContext("/official", ex -> {
+            ex.sendResponseHeaders(200, body.length);
+            try (OutputStream out = ex.getResponseBody()) {
+                out.write(body);
+            }
+        });
+        server.createContext("/mirror", ex -> {
+            hits.incrementAndGet();
+            ex.sendResponseHeaders(404, -1);
+            ex.close();
+        });
+        Checks checks = Checks.of(sha1(body), body.length);
+        Path target = dir.resolve("f.bin");
+        client(3, 2000).downloadFirst(List.of(base + "/mirror", base + "/official"), target, checks);
+        assertArrayEquals(body, Files.readAllBytes(target));
+        assertEquals(1, hits.get(), "a missing mirror costs one attempt, not three");
+    }
+
+    @Test
+    void unreachableHostGivesAHumanMessage() {
+        Downloader d = new Downloader(HostPolicy.forTests(Set.of("127.0.0.1")), 1, 1, 500, 500);
+        IOException e = assertThrows(IOException.class, () -> d.getString("http://127.0.0.1:1/x"));
+        assertInstanceOf(HostUnreachableException.class, e);
+        assertTrue(e.getMessage().contains("127.0.0.1"), e.getMessage());
+        assertFalse(e.getMessage().startsWith("Request failed"));
+    }
 }

@@ -16,6 +16,7 @@ import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -45,6 +46,38 @@ public final class Downloader {
 
     public static Downloader standard(HostPolicy policy) {
         return new Downloader(policy, 3, 500, 15_000, 30_000);
+    }
+
+    /** The same client with another attempt count (a mirror that misses must not cost three retries). */
+    public Downloader withAttempts(int count) {
+        return new Downloader(policy, count, backoffMs, connectTimeoutMs, readTimeoutMs);
+    }
+
+    /** Tries the URLs in order and returns the first answer; the last failure is thrown. */
+    public String getStringFirst(List<String> urls) throws IOException {
+        IOException last = null;
+        for (int i = 0; i < urls.size(); i++) {
+            try {
+                return (i < urls.size() - 1 ? withAttempts(1) : this).getString(urls.get(i));
+            } catch (IOException e) {
+                last = e;
+            }
+        }
+        throw last == null ? new IOException("No URL") : last;
+    }
+
+    /** Downloads from the first URL that works; earlier (mirror) URLs get one attempt, the last one all of them. */
+    public void downloadFirst(List<String> urls, Path target, Checks checks) throws IOException {
+        IOException last = null;
+        for (int i = 0; i < urls.size(); i++) {
+            try {
+                (i < urls.size() - 1 ? withAttempts(1) : this).download(urls.get(i), target, checks);
+                return;
+            } catch (IOException e) {
+                last = e;
+            }
+        }
+        throw last == null ? new IOException("No URL") : last;
     }
 
     public HostPolicy policy() {
@@ -82,7 +115,8 @@ public final class Downloader {
                 }
             }
         }
-        throw new IOException("Request failed: " + url, last);
+        throw last == null ? new IOException("Request failed: " + url)
+                : HostUnreachableException.classify(new IOException("Request failed: " + url, last), url);
     }
 
     /** True when {@code target} exists and satisfies every given check. */
@@ -134,7 +168,7 @@ public final class Downloader {
             }
         }
         Files.deleteIfExists(part);
-        throw new IOException("Download failed: " + url, last);
+        throw HostUnreachableException.classify(new IOException("Download failed: " + url, last), url);
     }
 
     /** Deletes {@code *.part} files older than {@code maxAge} under {@code root} (leftovers of killed runs). */
@@ -221,7 +255,7 @@ public final class Downloader {
         String current = policy.upgradesHttp() ? HttpUtils.secure(url) : url;
         for (int hop = 0; hop <= MAX_REDIRECTS; hop++) {
             policy.check(current);
-            HttpURLConnection conn = (HttpURLConnection) new URL(current).openConnection();
+            HttpURLConnection conn = (HttpURLConnection) ProxyConfig.current().open(new URL(current));
             conn.setConnectTimeout(connectTimeoutMs);
             conn.setReadTimeout(readTimeoutMs);
             conn.setInstanceFollowRedirects(false);

@@ -127,7 +127,7 @@ public final class ServerListVerifier {
         }
         return new ServerEntry(raw.id(), raw.name(), raw.address(), port, nz(raw.mcVersion()), nz(raw.neoforge()),
                 nz(raw.neoforgeSha256()).toLowerCase(Locale.ROOT), nz(raw.java()), nz(raw.packChannel()),
-                nz(raw.packUrl()), raw.inviteRequired(), nz(raw.motd()));
+                nz(raw.packUrl()), raw.inviteRequired(), nz(raw.motd()), nz(raw.mirror()).trim());
     }
 
     private static boolean blank(String s) {

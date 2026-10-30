@@ -1078,3 +1078,68 @@
     -fx-max-width: 160;
     -fx-font-size: 16px;
 }
+
+/* install progress: static bar (no animation), text >= 14px */
+.install-progress {
+    -fx-max-width: 520;
+}
+
+.progress-step {
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.progress-detail {
+    -fx-text-fill: -azur-on-surface-variant;
+    -fx-font-size: 14px;
+    -fx-text-alignment: center;
+}
+
+.install-progress .progress-bar {
+    -fx-pref-height: 14;
+    -fx-min-height: 14;
+    -fx-pref-width: 520;
+}
+
+.install-progress .progress-bar > .track {
+    -fx-background-radius: 7;
+    -fx-border-color: -azur-outline-variant;
+    -fx-border-radius: 7;
+}
+
+.install-progress .progress-bar > .bar {
+    -fx-background-radius: 7;
+    -fx-padding: 7;
+}
+
+.install-progress .progress-bar.static-indeterminate > .bar {
+    -fx-background-color: linear-gradient(from 0px 0px to 24px 24px, repeat, -azur-azure 0%, -azur-azure 50%, -azur-secondary-container 50%, -azur-secondary-container 100%);
+}
+
+/* selectable read-only text (errors, details): looks like a label */
+.selectable-text,
+.selectable-text .content,
+.selectable-text .scroll-pane,
+.selectable-text .scroll-pane > .viewport {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.selectable-text .content {
+    -fx-padding: 0;
+}
+
+.selectable-text {
+    -fx-highlight-fill: -azur-azure;
+    -fx-highlight-text-fill: -azur-on-primary;
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-size: 16px;
+}
+
+.home-error .selectable-text {
+    -fx-text-fill: -azur-on-error-container;
+}

@@ -88,7 +88,7 @@ public final class ProfileLoader {
             bad.add("packChannel must match " + CHANNEL);
         }
         if (p.mirrorBase() != null && !p.mirrorBase().isBlank() && !isHttps(p.mirrorBase())) {
-            bad.add("mirrorBase must be an https URL or empty");
+            bad.add("mirrorBase must be an https URL (or loopback http) or empty");
         }
         if (p.jvmArgs() == null) {
             bad.add("jvmArgs is required (may be empty)");
@@ -111,7 +111,8 @@ public final class ProfileLoader {
     private static boolean isHttps(String url) {
         try {
             URI uri = URI.create(url.trim());
-            return "https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null;
+            return ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null)
+                    || com.azur.launcher.net.HostPolicy.isLoopbackHttp(url.trim());
         } catch (IllegalArgumentException e) {
             return false;
         }

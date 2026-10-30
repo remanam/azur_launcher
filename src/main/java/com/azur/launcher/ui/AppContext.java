@@ -11,6 +11,7 @@ import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.config.PackSettings;
 import com.azur.launcher.game.GamePaths;
 import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.net.ProxyConfig;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -64,6 +65,7 @@ final class AppContext {
         this.config = config;
         this.accounts = accounts;
         this.authSettings = authSettings;
+        ProxyConfig.set(ProxyConfig.of(authSettings.proxyHost(), authSettings.proxyPort(), "", ""));
         this.playerTokens = PlayerTokenStore.system(dirs.playerTokenVaultFile());
         this.host = host;
         this.stage = stage;

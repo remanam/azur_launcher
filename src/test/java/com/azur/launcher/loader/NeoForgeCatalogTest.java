@@ -43,4 +43,17 @@ class NeoForgeCatalogTest {
         assertEquals("--installClient", command.get(command.size() - 2));
         assertEquals(Path.of("/g").toString(), command.get(command.size() - 1));
     }
+
+    @Test
+    void installerGetsTheLauncherProxy() {
+        com.azur.launcher.net.ProxyConfig.set(com.azur.launcher.net.ProxyConfig.of("proxy.test", 3128, "u", "p"));
+        try {
+            List<String> command = NeoForgeInstaller.command(Path.of("/jdk/bin/java"), Path.of("/c/i.jar"), Path.of("/g"));
+            org.junit.jupiter.api.Assertions.assertTrue(command.contains("-Dhttps.proxyHost=proxy.test"));
+            org.junit.jupiter.api.Assertions.assertTrue(command.contains("-Djdk.http.auth.tunneling.disabledSchemes="));
+            org.junit.jupiter.api.Assertions.assertTrue(command.indexOf("-jar") > command.indexOf("-Dhttps.proxyPort=3128"));
+        } finally {
+            com.azur.launcher.net.ProxyConfig.set(com.azur.launcher.net.ProxyConfig.NONE);
+        }
+    }
 }

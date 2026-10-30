@@ -56,6 +56,14 @@ final class HomeState {
         return s == null || s.isBlank();
     }
 
+    /** Button label while busy: checking the server, first install, or topping up an existing pack. */
+    static String busyLabelKey(boolean checking, boolean freshInstall) {
+        if (checking) {
+            return "home.btn.checking";
+        }
+        return freshInstall ? "home.btn.installing" : "home.btn.updating";
+    }
+
     /** Progress in whole percent, clamped to 0..100; -1 when the total is unknown. */
     static int percent(long done, long total) {
         if (total <= 0) {

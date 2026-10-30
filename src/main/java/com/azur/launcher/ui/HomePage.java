@@ -16,6 +16,7 @@ import com.azur.launcher.servers.ServerStatusService;
 import com.azur.launcher.sync.PackSyncService;
 
 import javafx.animation.KeyFrame;
+import javafx.animation.PauseTransition;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -33,7 +34,7 @@ import java.time.Clock;
 
 /**
  * Home = the server screen: logo, nickname, server with status, one pack line and ONE big button whose label follows
- * the state (Start / Update / Updating N% / Play / Retry). A failure is one sentence with an expandable detail.
+ * the state (Start / Update / Installing / Updating / Checking / Play / Retry). A failure is one sentence with an expandable detail.
  */
 final class HomePage {
 
@@ -55,10 +56,14 @@ final class HomePage {
     private final Label packLabel = UiKit.label("", "home-sub");
     private final Label bannerLabel = UiKit.label("", "home-sub");
     private final Button mainButton;
-    private final Label errorLabel = UiKit.label("", "home-error");
-    private final Label detailsLabel = UiKit.label("", "home-error-details");
+    private final SelectableText errorLabel = UiKit.selectable("", null);
+    private final SelectableText detailsLabel = UiKit.selectable("", "home-error-details");
     private final TitledPane details = new TitledPane(I18n.tr("home.error.details"), detailsLabel);
-    private final VBox errorBox = new VBox(8, errorLabel, details);
+    private final Button copyError = UiKit.copyButton(this::errorText);
+    private final VBox errorBox = new VBox(8, errorLabel, details, copyError);
+    private final InstallProgress installProgress = new InstallProgress();
+    private final InstallProgressView progressView = new InstallProgressView();
+    private final Timeline progressTicker = new Timeline(new KeyFrame(Duration.millis(100), e -> tick()));
     private final FirstRunWizard wizard;
 
     private ServerEntry server;
@@ -66,7 +71,7 @@ final class HomePage {
     private boolean updateAvailable;
     private boolean updating;
     private boolean failed;
-    private int percent = -1;
+    private InstallProgress.Step shownStep;
     private boolean wizardActive;
     private final Timeline refresher = new Timeline(
             new KeyFrame(Duration.millis(PackState.TTL_MS), event -> refreshState(false)));
@@ -86,9 +91,9 @@ final class HomePage {
         dot.getStyleClass().add("status-dot");
         details.setExpanded(false);
         details.getStyleClass().add("advanced-pane");
-        errorLabel.setWrapText(true);
-        detailsLabel.setWrapText(true);
+        errorBox.getStyleClass().add("home-error");
         errorBox.setMaxWidth(520);
+        progressTicker.setCycleCount(Timeline.INDEFINITE);
         bannerLabel.setWrapText(true);
         bannerLabel.setMaxWidth(520);
         showBanner("");
@@ -100,7 +105,7 @@ final class HomePage {
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, bannerLabel, mainButton, errorBox);
+        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, bannerLabel, mainButton, progressView.node(), errorBox);
         main.setAlignment(Pos.TOP_CENTER);
         main.getStyleClass().add("home-hero");
         root.setAlignment(Pos.TOP_CENTER);
@@ -204,38 +209,68 @@ final class HomePage {
         startGame();
     }
 
-    /** Installs the game and the pack (or updates it), reporting percent on the button. */
+    /** Installs the game and the pack (or updates it): step, bar, speed and ETA under the button. */
     private void install() {
         if (updating) {
             return;
         }
         updating = true;
         failed = false;
-        percent = -1;
+        installProgress.begin(!installed);
         showError(null, null);
+        progressView.show(installProgress.snapshot());
+        progressTicker.play();
         render();
         ServerEntry entry = server;
         ctx.io.submit(() -> {
-            PackOps.Outcome outcome = PackOps.download(ctx, entry,
-                    (phase, file, done, total) -> progress(done, total),
-                    (done, total, file) -> progress(done, total));
+            PackOps.Outcome outcome = PackOps.download(ctx, entry, installProgress);
             Platform.runLater(() -> finishInstall(outcome));
         });
     }
 
-    private void progress(long done, long total) {
-        int value = HomeState.percent(done, total);
-        Platform.runLater(() -> {
-            if (value != percent) {
-                percent = value;
-                render();
-            }
-        });
+    /** At most 10 redraws per second: the workers only write into the model, this timer reads it. */
+    private void tick() {
+        InstallProgress.Step before = shownStep;
+        InstallProgress.Snapshot snapshot = installProgress.snapshot();
+        progressView.show(snapshot);
+        wizard.progress().show(snapshot);
+        shownStep = snapshot.step();
+        if (before != shownStep) {
+            render();
+        }
+    }
+
+    private void stopProgress(boolean success) {
+        progressTicker.stop();
+        shownStep = null;
+        if (success) {
+            installProgress.finish();
+            InstallProgress.Snapshot done = installProgress.snapshot();
+            progressView.show(done);
+            wizard.progress().show(done);
+            PauseTransition hide = new PauseTransition(Duration.seconds(3));
+            hide.setOnFinished(e -> {
+                if (!updating) {
+                    progressView.hide();
+                    wizard.progress().hide();
+                }
+            });
+            hide.play();
+        } else {
+            progressView.hide();
+            wizard.progress().hide();
+        }
+    }
+
+    private String errorText() {
+        String detail = detailsLabel.getText();
+        return detail.isEmpty() ? errorLabel.getText() : errorLabel.getText() + "\n" + detail;
     }
 
     private void finishInstall(PackOps.Outcome outcome) {
         updating = false;
         PackSyncService.Result result = outcome.result();
+        stopProgress(result.ok());
         if (result.ok()) {
             packState.invalidate();
             installed = true;
@@ -271,7 +306,8 @@ final class HomePage {
         }
         HomeState.Action action = currentAction();
         if (action == HomeState.Action.UPDATING) {
-            return percent < 0 ? I18n.tr("home.btn.updating_nop") : I18n.tr(action.labelKey(), percent);
+            return I18n.tr(HomeState.busyLabelKey(installProgress.step() == InstallProgress.Step.CHECK,
+                    installProgress.fresh()));
         }
         return I18n.tr(action.labelKey());
     }
@@ -342,8 +378,10 @@ final class HomePage {
         boolean has = sentence != null;
         errorBox.setVisible(has);
         errorBox.setManaged(has);
-        errorLabel.setText(has ? sentence : "");
-        detailsLabel.setText(detail == null ? "" : detail);
+        errorLabel.show(has ? sentence : "");
+        detailsLabel.show(detail);
+        details.setVisible(detail != null && !detail.isEmpty());
+        details.setManaged(details.isVisible());
         details.setExpanded(false);
     }
 }

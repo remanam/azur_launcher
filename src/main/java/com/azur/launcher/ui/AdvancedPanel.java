@@ -5,6 +5,7 @@ import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.net.ProxyConfig;
 import com.azur.launcher.loader.InstallEntries;
 import com.azur.launcher.loader.NeoForgeCatalog;
 import com.azur.launcher.loader.NeoForgeList;
@@ -19,11 +20,11 @@ import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
 import javafx.scene.control.TextField;
@@ -46,7 +47,7 @@ final class AdvancedPanel {
     private final ComboBox<InstallEntries.Entry> entryBox = new ComboBox<>(visibleEntries);
     private final TextField searchField = new TextField();
     private final TextField manualField = new TextField();
-    private final Label installNote = UiKit.label("", "banner-warn");
+    private final SelectableText installNote = UiKit.selectable("", "banner-warn");
     private List<String> vanillaReleases = List.of();
     private List<String> neoForgeBuilds = List.of();
     private final Button installButton;
@@ -89,7 +90,7 @@ final class AdvancedPanel {
         return UiKit.card(UiKit.cardHeader("icon-refresh", I18n.tr("settings.repair")), hint, repair);
     }
 
-    /** Azure client id and the sign-in proxy (moved here from the Accounts page). */
+    /** Azure client id and the one download proxy used by every request (sign-in, game, NeoForge, pack). */
     private VBox networkCard() {
         AuthSettings settings = ctx.authSettings;
         TextField clientId = new TextField(settings.clientId());
@@ -97,8 +98,13 @@ final class AdvancedPanel {
         host.setPromptText(I18n.tr("accounts.proxy_host"));
         TextField port = new TextField(settings.proxyPort() > 0 ? Integer.toString(settings.proxyPort()) : "");
         port.setPromptText(I18n.tr("accounts.proxy_port"));
-        Label message = UiKit.label("", "hint");
-        message.setWrapText(true);
+        TextField user = new TextField();
+        user.setPromptText(I18n.tr("settings.proxy_user"));
+        PasswordField password = new PasswordField();
+        password.setPromptText(I18n.tr("settings.proxy_password"));
+        Label proxyHint = UiKit.label(I18n.tr("settings.proxy_hint"), "card-subtitle");
+        proxyHint.setWrapText(true);
+        SelectableText message = UiKit.selectable("", "hint");
         Button save = UiKit.button(I18n.tr("accounts.save_settings"), null, "button-border", () -> {
             if (!clientId.getText().isBlank() && !AuthSettings.isValidClientId(clientId.getText())) {
                 message.setText(I18n.tr("accounts.bad_client_id"));
@@ -106,6 +112,7 @@ final class AdvancedPanel {
             }
             settings.setClientId(clientId.getText());
             settings.setProxy(host.getText(), parsePort(port.getText()));
+            ProxyConfig.set(ProxyConfig.of(host.getText(), parsePort(port.getText()), user.getText(), password.getText()));
             try {
                 settings.save();
                 message.setText(I18n.tr("accounts.settings_saved"));
@@ -116,7 +123,8 @@ final class AdvancedPanel {
         HBox proxy = new HBox(8, host, port);
         HBox.setHgrow(host, Priority.ALWAYS);
         return UiKit.card(UiKit.cardHeader("icon-account", I18n.tr("accounts.network_title")),
-                UiKit.label(I18n.tr("accounts.client_id"), "hint"), clientId, proxy, save, message);
+                UiKit.label(I18n.tr("accounts.client_id"), "hint"), clientId,
+                UiKit.label(I18n.tr("settings.proxy_title"), "page-subtitle"), proxyHint, proxy, user, password, save, UiKit.withCopy(message));
     }
 
     private static int parsePort(String text) {
@@ -171,11 +179,8 @@ final class AdvancedPanel {
         Label manualLabel = UiKit.label(I18n.tr("home.neoforge_manual"), "option-title");
         HBox manual = new HBox(8, manualLabel, manualField, installButton);
         manual.setAlignment(Pos.CENTER_LEFT);
-        installNote.setWrapText(true);
-        installNote.setVisible(false);
-        installNote.setManaged(false);
         return UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("home.install_title")),
-                UiKit.label(I18n.tr("home.install_hint"), "card-subtitle"), pick, installNote, manual);
+                UiKit.label(I18n.tr("home.install_hint"), "card-subtitle"), pick, UiKit.withCopy(installNote), manual);
     }
 
     private VBox logCard() {
@@ -266,9 +271,7 @@ final class AdvancedPanel {
     }
 
     private void showNote(String text) {
-        installNote.setText(text == null ? "" : text);
-        installNote.setVisible(text != null);
-        installNote.setManaged(text != null);
+        installNote.show(text);
     }
 
     // ------------------------------------------------------------------ install
@@ -330,13 +333,7 @@ final class AdvancedPanel {
     }
 
     private void error(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(ctx.stage);
-        alert.setTitle(I18n.tr("common.error"));
-        alert.setHeaderText(I18n.tr("common.error"));
-        alert.setContentText(message);
-        UiKit.styleDialog(alert.getDialogPane(), ctx.config.isDarkMode());
-        alert.showAndWait();
+        UiKit.errorDialog(ctx.stage, message, ctx.config.isDarkMode());
     }
 
     /** One row in the install list. */

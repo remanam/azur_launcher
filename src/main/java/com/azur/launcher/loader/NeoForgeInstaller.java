@@ -5,7 +5,9 @@ import com.azur.launcher.game.JavaDetector;
 import com.azur.launcher.game.JavaRequirement;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.net.Checks;
+import com.azur.launcher.net.DownloadManager;
 import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.net.ProxyConfig;
 import com.azur.launcher.profile.InstalledState;
 import com.azur.launcher.profile.InstanceStore;
 import com.azur.launcher.profile.Profile;
@@ -32,10 +34,17 @@ public class NeoForgeInstaller {
 
     private final AppDirs dirs;
     private final Consumer<String> logger;
+    private DownloadManager.ProgressListener libraryProgress = DownloadManager.ProgressListener.NOOP;
 
     public NeoForgeInstaller(AppDirs dirs, Consumer<String> logger) {
         this.dirs = dirs;
         this.logger = logger == null ? msg -> { } : logger;
+    }
+
+    /** Reports the installer's libraries (file counts) while the launcher fetches them before the installer runs. */
+    public NeoForgeInstaller withLibraryProgress(DownloadManager.ProgressListener listener) {
+        this.libraryProgress = listener == null ? DownloadManager.ProgressListener.NOOP : listener;
+        return this;
     }
 
     /** Outcome of an installation; {@code message} is localised and safe to show. */
@@ -79,8 +88,9 @@ public class NeoForgeInstaller {
             Files.createDirectories(cache);
             Path installerJar = cache.resolve("neoforge-" + neoForgeVersion + "-installer.jar");
             String url = NeoForgeCatalog.installerUrl(neoForgeVersion);
-            String sha1 = HttpUtils.getString(url + ".sha1").trim();
-            HttpUtils.downloader().download(url, installerJar, new Checks(sha1, pinnedSha256, 0));
+            String sha1 = HttpUtils.getStringMirrored(url + ".sha1").trim();
+            HttpUtils.downloadMirrored(url, installerJar, new Checks(sha1, pinnedSha256, 0));
+            InstallerLibraries.fetch(installerJar, gameDir, logger, libraryProgress);
 
             JavaDetector.JavaInfo java = pickJava(mcVersion);
             if (java == null) {
@@ -120,7 +130,7 @@ public class NeoForgeInstaller {
     static List<String> command(Path javaExe, Path installerJar, Path gameDir) {
         List<String> command = new ArrayList<>();
         command.add(javaExe.toString());
-        command.add("-Djava.net.useSystemProxies=true");
+        command.addAll(ProxyConfig.current().jvmArgs());
         command.add("-jar");
         command.add(installerJar.toString());
         command.add("--installClient");

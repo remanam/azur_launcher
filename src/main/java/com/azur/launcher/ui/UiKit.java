@@ -1,7 +1,10 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.i18n.I18n;
+
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
@@ -10,9 +13,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.VBox;
+import javafx.stage.Window;
 
 import java.net.URL;
+import java.util.function.Supplier;
 
 /** Small factory methods for the CSS-styled building blocks used by every page. */
 final class UiKit {
@@ -24,6 +31,44 @@ final class UiKit {
         Label label = new Label(text);
         label.getStyleClass().add(styleClass);
         return label;
+    }
+
+    /** Selectable, copyable read-only text in the look of a label (errors, details, results). */
+    static SelectableText selectable(String text, String styleClass) {
+        return new SelectableText(text, styleClass);
+    }
+
+    /** Button that puts the text from {@code source} into the system clipboard. */
+    static Button copyButton(Supplier<String> source) {
+        return button(I18n.tr("common.copy"), null, "button-border", () -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(source.get());
+            Clipboard.getSystemClipboard().setContent(content);
+        });
+    }
+
+    /** The text with a «Copy» button under it; the whole block is hidden while the text is empty. */
+    static VBox withCopy(SelectableText text) {
+        VBox box = new VBox(6, text, copyButton(text::getText));
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.visibleProperty().bind(text.textProperty().isNotEmpty());
+        box.managedProperty().bind(box.visibleProperty());
+        return box;
+    }
+
+    /** Error dialog whose text can be selected and copied. */
+    static void errorDialog(Window owner, String message, boolean dark) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.initOwner(owner);
+        alert.setTitle(I18n.tr("common.error"));
+        alert.setHeaderText(I18n.tr("common.error"));
+        SelectableText text = selectable(message, null);
+        text.setPrefWidth(460);
+        VBox content = new VBox(10, text, copyButton(() -> message));
+        content.setAlignment(Pos.CENTER_LEFT);
+        alert.getDialogPane().setContent(content);
+        styleDialog(alert.getDialogPane(), dark);
+        alert.showAndWait();
     }
 
     static Region spacer() {

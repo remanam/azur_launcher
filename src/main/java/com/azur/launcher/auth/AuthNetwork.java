@@ -1,13 +1,13 @@
 package com.azur.launcher.auth;
 
+import com.azur.launcher.net.ProxyConfig;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
 
-/** Opens connections for auth traffic: https only, no redirects, optional proxy from {@link AuthSettings}. */
+/** Opens connections for auth traffic: https only, no redirects, the launcher-wide {@link ProxyConfig}. */
 public final class AuthNetwork {
 
     private static final String USER_AGENT = "Azur-Launcher/1.0.0";
@@ -45,10 +45,7 @@ public final class AuthNetwork {
             throw new IOException("Plain http is not allowed for auth traffic");
         }
         URL target = uri.toURL();
-        HttpURLConnection conn = (HttpURLConnection) (hasProxy()
-                ? target.openConnection(new Proxy(Proxy.Type.HTTP,
-                        new InetSocketAddress(settings.proxyHost(), settings.proxyPort())))
-                : target.openConnection());
+        HttpURLConnection conn = (HttpURLConnection) ProxyConfig.current().open(target);
         conn.setRequestMethod(method);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
@@ -58,7 +55,4 @@ public final class AuthNetwork {
         return conn;
     }
 
-    private boolean hasProxy() {
-        return settings != null && !settings.proxyHost().isEmpty() && settings.proxyPort() > 0;
-    }
 }

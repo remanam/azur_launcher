@@ -50,7 +50,7 @@ final class ServersPage {
     private final Label banner = UiKit.label("", "banner-warn");
     private final Map<String, RowView> rows = new HashMap<>();
     private final Map<String, String> packVersions = new HashMap<>();
-    private final Label message = UiKit.label("", "card-subtitle");
+    private final SelectableText message = UiKit.selectable("", "card-subtitle");
     private final ProgressBar progress = new ProgressBar(0);
     private final Button updateButton;
     private final Button verifyButton;
@@ -93,8 +93,7 @@ final class ServersPage {
         left.setMaxWidth(LIST_WIDTH);
         HBox.setHgrow(detail, Priority.ALWAYS);
         progress.setMaxWidth(Double.MAX_VALUE);
-        message.setWrapText(true);
-        root.getStyleClass().add("page");
+                root.getStyleClass().add("page");
         root.getChildren().addAll(left, detail);
         renderDetail();
         reload();
@@ -225,7 +224,7 @@ final class ServersPage {
                 kv("servers.invite", I18n.tr(e.inviteRequired() ? "servers.invite_yes" : "servers.invite_no")));
         HBox actions = new HBox(10, updateButton, verifyButton, downloadButton, repairButton, UiKit.spacer(), playButton);
         actions.setAlignment(Pos.CENTER_LEFT);
-        VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, progress, message);
+        VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, progress, UiKit.withCopy(message));
         VBox news = UiKit.card(UiKit.cardHeader("icon-terminal", I18n.tr("servers.news")),
                 UiKit.label(I18n.tr("servers.news_placeholder"), "card-subtitle"));
         detail.getChildren().addAll(info, pack, news);

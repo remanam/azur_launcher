@@ -20,7 +20,8 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
     "address": "play.example.org", "port": 25565,
     "mcVersion": "1.21.1",         "neoforge": "21.1.264",   "java": "21",
     "packChannel": "stable",       "packUrl": "https://dist.example.org:8780",
-    "inviteRequired": true,        "motd": "Short description"
+    "inviteRequired": true,        "motd": "Short description",
+    "mirror": "https://dist.example.org/mirror"
   }]
 }
 ```
@@ -29,6 +30,7 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
 - `neoforge` selects the installed game version for the server (its id must contain the build); `packUrl`, when set,
 - `neoforgeSha256` (optional): SHA-256 of the NeoForge installer when the build differs from the embedded profile; without it only the embedded build is accepted.
   replaces the address stored in the player's invite code.
+- `mirror` (optional): base URL of our own mirror of `maven.neoforged.net` and `libraries.minecraft.net` (layout `<mirror>/<host>/<path>`, e.g. `<mirror>/maven.neoforged.net/releases/net/neoforged/...`). The launcher tries it first for the NeoForge installer and its libraries and falls back to the official host; hashes are checked either way. https only (plain http only for 127.0.0.1 in local tests).
 - Unknown fields are ignored. A different `schema` is refused.
 
 ## Launcher behaviour

@@ -20,9 +20,10 @@ final class FirstRunWizard {
     private final Runnable play;
     private final StackPane root = new StackPane();
     private final Label nickError = UiKit.label("", "home-error");
+    private final InstallProgressView progress = new InstallProgressView();
     private int step;
     private final Button installButton;
-    private final Label installNote = UiKit.label("", "home-sub");
+    private final SelectableText installNote = UiKit.selectable("", "home-sub");
 
     FirstRunWizard(AppContext ctx, Runnable openAccounts, Runnable install, Runnable play) {
         this.ctx = ctx;
@@ -36,6 +37,11 @@ final class FirstRunWizard {
 
     Node node() {
         return root;
+    }
+
+    /** The install progress block of step 2 (Home feeds it). */
+    InstallProgressView progress() {
+        return progress;
     }
 
     int step() {
@@ -55,7 +61,7 @@ final class FirstRunWizard {
     void showInstall(String buttonText, boolean busy, String note) {
         installButton.setText(buttonText);
         installButton.setDisable(busy);
-        installNote.setText(note == null ? "" : note);
+        installNote.show(note);
     }
 
     private VBox accountStep() {
@@ -86,7 +92,7 @@ final class FirstRunWizard {
     }
 
     private VBox installStep() {
-        return step(2, "wizard.2.title", "wizard.2.hint", installButton, installNote);
+        return step(2, "wizard.2.title", "wizard.2.hint", installButton, progress.node(), UiKit.withCopy(installNote));
     }
 
     private VBox playStep() {

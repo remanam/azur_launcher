@@ -18,7 +18,6 @@ import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
 
 import javafx.application.Platform;
-import javafx.scene.control.Alert;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -181,12 +180,6 @@ final class PlayController implements GameStarter {
     }
 
     private void error(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(ctx.stage);
-        alert.setTitle(I18n.tr("common.error"));
-        alert.setHeaderText(I18n.tr("common.error"));
-        alert.setContentText(message);
-        UiKit.styleDialog(alert.getDialogPane(), ctx.config.isDarkMode());
-        alert.showAndWait();
+        UiKit.errorDialog(ctx.stage, message, ctx.config.isDarkMode());
     }
 }

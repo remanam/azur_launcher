@@ -72,7 +72,8 @@ public class DownloadManager {
         for (Task task : tasks) {
             pool.submit(() -> {
                 try {
-                    engine.download(task.url, task.target, Checks.of(task.sha1, task.size));
+                    engine.downloadFirst(Mirrors.candidates(task.url, HttpUtils.mirror()), task.target,
+                            Checks.of(task.sha1, task.size));
                 } catch (Exception e) {
                     failed.incrementAndGet();
                     logger.accept("Download failed: " + task.url + " -> " + e.getMessage());

@@ -40,11 +40,18 @@ public final class PinService {
     private final AppDirs dirs;
     private final GamePaths paths;
     private final Consumer<String> logger;
+    private DownloadManager.ProgressListener installerLibraries = DownloadManager.ProgressListener.NOOP;
 
     public PinService(AppDirs dirs, GamePaths paths, Consumer<String> logger) {
         this.dirs = dirs;
         this.paths = paths;
         this.logger = logger;
+    }
+
+    /** Reports file counts while the NeoForge installer's libraries are fetched. */
+    public PinService onInstallerLibraries(DownloadManager.ProgressListener listener) {
+        this.installerLibraries = listener;
+        return this;
     }
 
     /** Empty list means the installation matches the pin. */
@@ -83,7 +90,7 @@ public final class PinService {
             return;
         }
         Profile pin = instance.profile();
-        NeoForgeInstaller.InstallResult result = new NeoForgeInstaller(dirs, logger)
+        NeoForgeInstaller.InstallResult result = new NeoForgeInstaller(dirs, logger).withLibraryProgress(installerLibraries)
                 .install(pin.minecraft(), pin.neoforge(), pin.neoforgeInstallerSha256(), paths.root());
         if (!result.success()) {
             throw new IOException(result.message());

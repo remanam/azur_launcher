@@ -18,6 +18,8 @@ public final class HttpUtils {
     /** Own https hosts allowed in addition to the official ones; the set only grows, it never shrinks. */
     private static final Set<String> ownHosts = ConcurrentHashMap.newKeySet();
 
+    private static volatile String mirror = "";
+
     private static volatile Downloader downloader = Downloader.standard(HostPolicy.official());
 
     private HttpUtils() {
@@ -33,6 +35,24 @@ public final class HttpUtils {
      */
     public static void useMirror(String mirrorBase) {
         allowHosts(mirrorBase);
+        if (mirrorBase != null && !mirrorBase.isBlank()) {
+            mirror = mirrorBase.trim();
+        }
+    }
+
+    /** The own mirror base set by {@link #useMirror}, or empty. */
+    public static String mirror() {
+        return mirror;
+    }
+
+    /** GET with the mirror first (hosts in {@link Mirrors}), then the official URL. */
+    public static String getStringMirrored(String url) throws IOException {
+        return downloader.getStringFirst(Mirrors.candidates(url, mirror));
+    }
+
+    /** Verified download with the mirror first, then the official URL. */
+    public static void downloadMirrored(String url, Path target, Checks checks) throws IOException {
+        downloader.downloadFirst(Mirrors.candidates(url, mirror), target, checks);
     }
 
     /**

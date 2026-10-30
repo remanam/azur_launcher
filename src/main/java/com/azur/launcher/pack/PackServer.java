@@ -2,13 +2,13 @@ package com.azur.launcher.pack;
 
 import com.azur.launcher.net.Hashes;
 import com.azur.launcher.net.HostPolicy;
+import com.azur.launcher.net.ProxyConfig;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.ProxySelector;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -37,10 +37,9 @@ public final class PackServer {
     private final String token;
     private final byte[] publicKey;
     private final HostPolicy policy;
-    private final HttpClient http = HttpClient.newBuilder()
+    private final HttpClient http = ProxyConfig.configure(HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NEVER)
-            .connectTimeout(Duration.ofSeconds(15))
-            .proxy(ProxySelector.getDefault())
+            .connectTimeout(Duration.ofSeconds(15)))
             .build();
 
     public PackServer(InviteToken invite, String urlOverride, HostPolicy policy) throws PackException {
