@@ -8,9 +8,11 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PipedInputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +62,66 @@ class PackSyncServiceTest {
 
         @Override
         public void destroy() {
+        }
+    }
+
+    /** A process that never answers: the launcher must kill it instead of waiting for a machine-mode line. */
+    private static final class SilentProcess extends Process {
+        private final PipedInputStream in = new PipedInputStream();
+        private final java.io.PipedOutputStream writer = connect();
+        private volatile boolean killed;
+
+        /** An unconnected pipe fails at once, which would look like EOF; connected and never written it stays silent. */
+        private java.io.PipedOutputStream connect() {
+            try {
+                return new java.io.PipedOutputStream(in);
+            } catch (IOException e) {
+                throw new IllegalStateException(e);
+            }
+        }
+
+        @Override
+        public OutputStream getOutputStream() {
+            return OutputStream.nullOutputStream();
+        }
+
+        @Override
+        public InputStream getInputStream() {
+            return in;
+        }
+
+        @Override
+        public InputStream getErrorStream() {
+            return InputStream.nullInputStream();
+        }
+
+        @Override
+        public int waitFor() {
+            return 1;
+        }
+
+        @Override
+        public int exitValue() {
+            return 1;
+        }
+
+        @Override
+        public void destroy() {
+        }
+
+        @Override
+        public Process destroyForcibly() {
+            killed = true;
+            try {
+                in.close();
+            } catch (IOException ignored) {
+                // the reader thread is ending anyway
+            }
+            return this;
+        }
+
+        boolean killed() {
+            return killed;
         }
     }
 
@@ -120,6 +182,77 @@ class PackSyncServiceTest {
         assertTrue(SyncEvent.parse("{}").isEmpty());
         assertTrue(SyncEvent.parse("{not json").isEmpty());
         assertEquals("done", SyncEvent.parse(" {\"event\":\"done\"} ").get().event());
+    }
+
+    /** A binary dropped without the marker (older launcher) is replaced once, otherwise a stale updater wins forever. */
+    @Test
+    void localCopyWithoutMarkerIsAdoptedByTheJar(@TempDir Path dir) throws IOException {
+        String name = "azur-updater-linux-amd64";
+        Files.writeString(dir.resolve(name), "stale-from-an-older-launcher");
+        assertEquals("bin-A", text(UpdaterBinary.refreshLocalCopy(dir, name,
+                "bin-A".getBytes(StandardCharsets.UTF_8))));
+    }
+
+    /** The web UI greeting means the binary predates the machine mode: report it and kill the process. */
+    @Test
+    void webUiBannerIsReportedAsAStaleBinary() throws IOException {
+        String banner = "Azur Updater: http://127.0.0.1:54321/?k=secret\n(окно браузера открывается само; Ctrl+C - выход)\n";
+        PackSyncService service = new PackSyncService(Path.of("u"),
+                command -> new FakeProcess(banner, 0));
+        PackSyncService.Result result = service.sync("", dir, "azur1.X", (p, f, d, t) -> { });
+        assertFalse(result.ok());
+        assertEquals(PackSyncService.STALE, result.code());
+        assertEquals(-1, result.exit());
+    }
+
+    /** No answer at all must not hang the launcher: the process is killed after the first-event timeout. */
+    @Test
+    void silentUpdaterIsKilledAfterTheFirstEventTimeout() throws IOException {
+        SilentProcess silent = new SilentProcess();
+        PackSyncService service = new PackSyncService(Path.of("u"), command -> silent,
+                Duration.ofMillis(50), Duration.ofMillis(50));
+        PackSyncService.Result result = service.sync("", dir, "azur1.X", (p, f, d, t) -> { });
+        assertFalse(result.ok());
+        assertEquals(PackSyncService.STALE, result.code());
+        assertTrue(silent.killed());
+    }
+
+    /** The copy in the data folder follows the jar, but never overwrites what the updater put there itself. */
+    @Test
+    void localCopyFollowsTheJarWithoutKillingSelfUpdate(@TempDir Path dir) throws IOException {
+        String name = "azur-updater-linux-amd64";
+        byte[] shipped = "bin-A".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] newer = "bin-C".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals("bin-A", text(UpdaterBinary.refreshLocalCopy(dir, name, shipped)));
+        assertEquals("bin-A", text(UpdaterBinary.refreshLocalCopy(dir, name, shipped)));
+
+        // the updater replaced itself: the marker still names the shipped binary, so this copy wins
+        Files.writeString(dir.resolve(name), "bin-B");
+        assertEquals("bin-B", text(UpdaterBinary.refreshLocalCopy(dir, name, shipped)));
+
+        // a newer jar ships another binary: our own copy (equal to the marker) is replaced
+        Files.writeString(dir.resolve(name), "bin-A");
+        assertEquals("bin-C", text(UpdaterBinary.refreshLocalCopy(dir, name, newer)));
+        assertEquals("bin-C", text(UpdaterBinary.refreshLocalCopy(dir, name, newer)));
+
+        // jar without binaries, nothing installed: nothing to run
+        assertTrue(UpdaterBinary.refreshLocalCopy(dir.resolve("empty"), name, null) == null);
+    }
+
+    private static String text(Path file) throws IOException {
+        return new String(Files.readAllBytes(file), java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    @Test
+    void binaryBesideTheJarIsFound(@TempDir Path dir) throws IOException {
+        Path app = Files.createDirectories(dir.resolve("app"));
+        Path jar = Files.writeString(app.resolve("azur-launcher-all.jar"), "x");
+        String name = "azur-updater-linux-amd64";
+        assertEquals(Optional.empty(), UpdaterBinary.besideJar(jar, name));
+        Path inUpdaterDir = Files.writeString(Files.createDirectories(app.resolve("updater")).resolve(name), "x");
+        assertEquals(Optional.of(inUpdaterDir), UpdaterBinary.besideJar(jar, name));
+        assertEquals(Optional.empty(), UpdaterBinary.besideJar(null, name));
+        assertEquals(Optional.empty(), UpdaterBinary.besideJar(dir.resolve("missing.jar"), name));
     }
 
     @Test

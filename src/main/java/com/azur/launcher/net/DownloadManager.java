@@ -54,15 +54,6 @@ public class DownloadManager {
         this.downloader = downloader;
     }
 
-    public DownloadManager(Consumer<String> logger) {
-        this(defaultThreads(), logger, ProgressListener.NOOP);
-    }
-
-    public static int defaultThreads() {
-        int cores = Runtime.getRuntime().availableProcessors();
-        return Math.min(MAX_THREADS, Math.max(4, cores * 2));
-    }
-
     /** @return true when every task succeeded */
     public boolean downloadAll(List<Task> allTasks) {
         if (allTasks == null || allTasks.isEmpty()) {

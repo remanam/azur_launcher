@@ -34,17 +34,16 @@ public final class HostPolicy {
         return new HostPolicy(OFFICIAL, false);
     }
 
-    /** Official hosts plus the host of {@code mirrorBase} (must be https); blank means no mirror. */
-    public static HostPolicy withMirror(String mirrorBase) {
-        if (mirrorBase == null || mirrorBase.isBlank()) {
+    /**
+     * Official hosts plus the given own hosts (already lower case, https only); empty means official only.
+     * Used for the own mirror, the address of the signed server list and anything else we publish ourselves.
+     */
+    public static HostPolicy withHosts(Set<String> ownHosts) {
+        if (ownHosts == null || ownHosts.isEmpty()) {
             return official();
         }
-        URI uri = URI.create(mirrorBase.trim());
-        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
-            throw new IllegalArgumentException("Mirror base URL must be https: " + mirrorBase);
-        }
         Set<String> all = new HashSet<>(OFFICIAL);
-        all.add(uri.getHost().toLowerCase(Locale.ROOT));
+        all.addAll(ownHosts);
         return new HostPolicy(all, false);
     }
 

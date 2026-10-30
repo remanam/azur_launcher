@@ -1,8 +1,8 @@
-# Build output
-target/
+# Build output (Gradle)
 build/
 out/
 *.class
+target/
 
 # IDE and local data
 .idea/
@@ -10,10 +10,9 @@ out/
 .vscode/
 /Azur/
 
-# Maven wrapper jar (we build with a verified Maven, not the wrapper)
-.mvn/wrapper/maven-wrapper.jar
+# The wrapper jar is required to run ./gradlew; the repository rule "no jars" has to be overridden for it
+!gradle/wrapper/gradle-wrapper.jar
 
-# Separate outputs: debug build and release artifacts (release.sh / debug.sh each clean only their own)
-target-debug/
-dist-debug/
+# Release artifacts (packaging/release.sh cleans only these)
 dist-release/
+dist-debug/

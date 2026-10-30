@@ -1,8 +1,8 @@
 #!/bin/sh
-# DEV ONLY (never shipped: lives outside src/, not in any jar). Gives the debug launcher one local server entry.
+# DEV ONLY (never shipped: lives outside src/, not in any jar). Gives the launcher one local server entry for development.
 # Makes a throwaway Ed25519 key, signs a servers.json with one 127.0.0.1 entry, installs it as <data>/cache/servers.json
 # and the matching public key as <data>/servers_pubkey.txt (the documented override of the embedded key).
-# Same data format as production. Usage: packaging/dev-servers.sh [--serve]   (AZUR_HOME=<dir> = data dir of the debug run)
+# Same data format as production. Usage: packaging/dev-servers.sh [--serve]   (AZUR_HOME=<dir> = data dir of the dev run)
 set -eu
 cd "$(dirname "$0")/.."
 ROOT=$(cd .. && pwd)

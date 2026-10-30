@@ -66,6 +66,11 @@ public final class AppDirs {
         return root.resolve("accounts").resolve("accounts.json");
     }
 
+    /** Player token of the community API (registration, roles, pack invite); same vault format as the invite. */
+    public Path playerTokenVaultFile() {
+        return root.resolve("accounts").resolve("player.vault");
+    }
+
     /** Default game directory (versions, libraries, assets). */
     public Path gameDir() {
         return root.resolve("game");

@@ -93,6 +93,18 @@ public final class PinService {
     }
 
     /**
+     * Installs the pin and then fetches the game files it needs (client jar, libraries, assets) with byte progress.
+     * Valid files on disk are skipped, so repeating this after an interruption downloads only the rest.
+     */
+    public void installIfNeeded(Instance instance, int threads, DownloadManager.ProgressListener progress)
+            throws IOException {
+        installIfNeeded(instance);
+        String versionId = instance.profile().neoforgeVersionId();
+        VersionMeta meta = new VersionManager(paths, logger).getVersionMeta(versionId, false);
+        new GamePreparer(paths, logger, progress, threads).prepare(versionId, meta, false);
+    }
+
+    /**
      * Verify files: reinstall on pin mismatch, then re-download the version JSONs and re-hash every library,
      * asset and the client jar.
      */

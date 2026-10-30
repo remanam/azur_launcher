@@ -22,7 +22,16 @@ public final class AccountStore {
 
     public static final class Data {
         private List<MicrosoftAccount> microsoft = new ArrayList<>();
+        private List<OfflineAccount> offline = new ArrayList<>();
         private String selectedUuid = "";
+
+        public List<OfflineAccount> getOffline() {
+            return offline;
+        }
+
+        public void setOffline(List<OfflineAccount> offline) {
+            this.offline = offline == null ? new ArrayList<>() : offline;
+        }
 
         public List<MicrosoftAccount> getMicrosoft() {
             return microsoft;
@@ -73,6 +82,8 @@ public final class AccountStore {
         if (data.getMicrosoft() == null) {
             data.setMicrosoft(new ArrayList<>());
         }
+        data.setOffline(data.getOffline());
+        data.getOffline().removeIf(a -> a == null || !a.launchPermitted());
         if (data.getSelectedUuid() == null) {
             data.setSelectedUuid("");
         }
@@ -122,6 +133,40 @@ public final class AccountStore {
         return null;
     }
 
+    /** The selected account of either kind; null when none. */
+    public synchronized AuthAccount selected() {
+        MicrosoftAccount microsoft = selectedAccount();
+        if (microsoft != null) {
+            return microsoft;
+        }
+        String selected = data.getSelectedUuid();
+        for (OfflineAccount account : data.getOffline()) {
+            if (selected != null && selected.equalsIgnoreCase(account.getUuid())) {
+                return account;
+            }
+        }
+        return null;
+    }
+
+    public synchronized List<OfflineAccount> offlineAccounts() {
+        return new ArrayList<>(data.getOffline());
+    }
+
+    /** Adds (once per nickname) and selects an offline account. */
+    public synchronized void selectOffline(OfflineAccount account) {
+        data.getOffline().removeIf(existing -> existing.getUuid().equalsIgnoreCase(account.getUuid()));
+        data.getOffline().add(account);
+        data.setSelectedUuid(account.getUuid());
+    }
+
+    public synchronized void selectExisting(AuthAccount account) {
+        if (account instanceof MicrosoftAccount microsoft) {
+            select(microsoft);
+        } else if (account instanceof OfflineAccount offline) {
+            selectOffline(offline);
+        }
+    }
+
     public synchronized String selectedUuid() {
         return data.getSelectedUuid();
     }
@@ -158,12 +203,13 @@ public final class AccountStore {
             return;
         }
         data.getMicrosoft().removeIf(a -> a != null && uuid.equalsIgnoreCase(a.getUuid()));
+        data.getOffline().removeIf(a -> uuid.equalsIgnoreCase(a.getUuid()));
         if (uuid.equalsIgnoreCase(data.getSelectedUuid())) {
             data.setSelectedUuid("");
         }
     }
 
     public synchronized boolean isEmpty() {
-        return data.getMicrosoft().isEmpty();
+        return data.getMicrosoft().isEmpty() && data.getOffline().isEmpty();
     }
 }

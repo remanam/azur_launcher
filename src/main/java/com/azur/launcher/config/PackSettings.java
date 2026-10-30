@@ -18,6 +18,8 @@ public final class PackSettings {
 
     /** Address of the signed servers.json (https). Empty: only the cached list is shown. */
     private String serversUrl = "";
+    /** Address of the community API (https): registration, roles, pack invite. Empty: the feature is off. */
+    private String apiBase = "";
     /** Only read from files written before the invite code moved into the vault; never written again. */
     private String invite;
     /** Explicit path of the azur-updater executable; empty: data folder or the bundled build. */
@@ -29,6 +31,14 @@ public final class PackSettings {
 
     public void setServersUrl(String serversUrl) {
         this.serversUrl = serversUrl.trim();
+    }
+
+    public String getApiBase() {
+        return apiBase == null ? "" : apiBase;
+    }
+
+    public void setApiBase(String apiBase) {
+        this.apiBase = apiBase.trim();
     }
 
     /** The plain invite of an old pack.json (migration); cleared once taken so that it is not saved again. */

@@ -1,18 +1,35 @@
 #!/bin/sh
-# One command for the RELEASE of this OS: cross-platform jar (primary), guarded jar, staged inputs, jpackage (optional), guard over the image.
+# One command for the RELEASE of this OS: Gradle build, jpackage (optional), then the copy into dist-release/.
 # Usage: packaging/release.sh [type ...]    (default: app-image + dmg on macOS, app-image + deb on Linux)
-# Maven proxy only through the environment (MAVEN_OPTS / HTTPS_PROXY), never in files. Add -o via MVN_FLAGS=-o when offline.
+# Extra Gradle flags: GRADLE_FLAGS="--offline --no-daemon". Proxy only through the environment, never in files.
 set -eu
 cd "$(dirname "$0")/.."
-MVN=${MVN:-mvn}
-VERSION=$(sed -n 's:^    <version>\(.*\)</version>$:\1:p' pom.xml | head -1)
-# `clean` removes only target/ (release); the debug build lives in target-debug/ and dist-debug/, release outputs in dist-release/
-"$MVN" ${MVN_FLAGS:-} -Pdist,fat clean package
+VERSION=$(sed -n "s/^version = '\(.*\)'$/\1/p" build.gradle | head -1)
+STAGE=build/dist
+
+./gradlew ${GRADLE_FLAGS:-} --quiet clean releaseJar
+
+# jpackage input: the fat jar (it already carries JavaFX for every platform) plus the updater binaries of this OS.
+rm -rf "$STAGE"
+mkdir -p "$STAGE/input" "$STAGE/updater-src"
+cp build/libs/azur-launcher-all.jar "$STAGE/input/azur-launcher.jar"
+if ls ../tools/updater/dist-bin/azur-updater-* >/dev/null 2>&1; then
+  cp ../tools/updater/dist-bin/azur-updater-* "$STAGE/updater-src/"
+fi
+
 sh packaging/jpackage.sh "$VERSION" "$@"
-"$MVN" ${MVN_FLAGS:-} -Pdist surefire:test@image-guard
+
 rm -rf dist-release
 mkdir -p dist-release
-cp target/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
-cp -R target/dist/out/. dist-release/
-mkdir -p ../launcher_builds && cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
+cp build/libs/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
+mkdir -p ../launcher_builds
+cp build/libs/azur-launcher-all.jar ../launcher_builds/azur-launcher-beta.jar
+cp -R "$STAGE/out/." dist-release/
+# the updater binaries belong next to the jar for the installer-free distribution
+if [ -d build/dist/updater-src ]; then
+  mkdir -p dist-release/updater && cp build/dist/updater-src/azur-updater-* dist-release/updater/ 2>/dev/null || true
+fi
+mkdir -p ../launcher_builds/updater
+cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
+if [ -d dist-release/updater ]; then cp dist-release/updater/* ../launcher_builds/updater/; fi
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"

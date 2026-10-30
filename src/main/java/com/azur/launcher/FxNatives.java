@@ -42,23 +42,39 @@ final class FxNatives {
             if (!Files.isRegularFile(jar)) {
                 return;
             }
-            String prefix = ROOT + platform(System.getProperty("os.name", ""), System.getProperty("os.arch", "")) + "/";
+            String os = System.getProperty("os.name", "");
+            String arch = System.getProperty("os.arch", "");
+            String platform = platform(os, arch);
+            String prefix = ROOT + platform + "/";
             try (JarFile file = new JarFile(jar.toFile())) {
+                boolean hasNatives = false;
                 Path target = null;
                 for (JarEntry entry : java.util.Collections.list(file.entries())) {
-                    if (entry.isDirectory() || !entry.getName().startsWith(prefix)) {
+                    if (entry.isDirectory() || !entry.getName().startsWith(ROOT)) {
+                        continue;
+                    }
+                    hasNatives = true;
+                    if (!entry.getName().startsWith(prefix)) {
                         continue;
                     }
                     if (target == null) {
-                        target = AppDirs.system().cacheDir().resolve("fxnatives").resolve(
-                                prefix.substring(ROOT.length(), prefix.length() - 1) + "-" + jar.toFile().length());
+                        target = AppDirs.system().cacheDir().resolve("fxnatives")
+                                .resolve(platform + "-" + jar.toFile().length());
                         Files.createDirectories(target);
                     }
-                    extract(file, entry, target.resolve(entry.getName().substring(prefix.length())));
+                    try {
+                        extract(file, entry, target.resolve(entry.getName().substring(prefix.length())));
+                    } catch (IOException e) {
+                        // One locked or unwritable native must not hide the others; JavaFX reports the first missing one.
+                        System.err.println("JavaFX native " + entry.getName() + " was not extracted: " + e);
+                    }
                 }
                 if (target != null) {
                     String old = System.getProperty("java.library.path", "");
                     System.setProperty("java.library.path", target + (old.isEmpty() ? "" : java.io.File.pathSeparator + old));
+                } else if (hasNatives) {
+                    System.err.println("This jar carries no JavaFX natives for " + platform + " (os.name=" + os
+                            + ", os.arch=" + arch + "). Build the cross-platform jar with: ./gradlew releaseJar");
                 }
             }
         } catch (IOException | URISyntaxException | RuntimeException e) {

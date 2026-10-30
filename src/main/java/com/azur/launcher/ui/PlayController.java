@@ -71,7 +71,7 @@ final class PlayController implements GameStarter {
         if (phase == Phase.PREPARING) {
             return;
         }
-        AuthAccount account = ctx.debugAccount != null ? ctx.debugAccount : ctx.accounts.selectedAccount();
+        AuthAccount account = ctx.accounts.selected();
         if (account == null) {
             error(I18n.tr("home.sign_in_needed"));
             return;

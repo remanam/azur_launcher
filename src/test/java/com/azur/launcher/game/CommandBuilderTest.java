@@ -69,4 +69,44 @@ class CommandBuilderTest {
         String logged = GameLauncher.maskSecrets(List.of("java", "--accessToken", "secret-token", "--uuid", "u"));
         assertEquals("java --accessToken *** --uuid u", logged);
     }
+
+    /** The logged command line never shows the token of an offline or a Microsoft account. */
+    @Test
+    void loggedCommandNeverContainsTheAccessToken() {
+        String msToken = "ms-secret-token-123";
+        String offlineToken = com.azur.launcher.auth.OfflineAccount.of("Alex_1").getAccessToken();
+        for (String token : List.of(msToken, offlineToken)) {
+            LaunchProfile profile = new LaunchProfile();
+            profile.setVersionId("v");
+            profile.setJavaExecutable(java.nio.file.Path.of("/jdk/bin/java"));
+            profile.setNativesDir(java.nio.file.Path.of("/n"));
+            profile.setClasspath("a.jar");
+            profile.setAccount(new LaunchContext() {
+                public String username() {
+                    return "Alex_1";
+                }
+
+                public String uuid() {
+                    return "u-1";
+                }
+
+                public String accessToken() {
+                    return token;
+                }
+
+                public String userType() {
+                    return "msa";
+                }
+            });
+            com.azur.launcher.model.VersionMeta meta = new com.google.gson.Gson().fromJson("""
+                    {"mainClass":"M","arguments":{"jvm":[],"game":["--accessToken","${auth_access_token}"]}}
+                    """, com.azur.launcher.model.VersionMeta.class);
+            String logged = GameLauncher.maskSecrets(CommandBuilder.build(profile, meta));
+            assertEquals(false, logged.contains("--accessToken " + token) || logged.contains(" " + token + " "),
+                    "token must be masked: " + logged);
+            assertEquals(false, token.length() > 1 && logged.contains(token));
+            assertEquals(true, logged.contains("--accessToken ***"));
+            assertEquals(false, logged.toLowerCase(java.util.Locale.ROOT).contains("proxy"));
+        }
+    }
 }

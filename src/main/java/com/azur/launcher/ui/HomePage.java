@@ -1,6 +1,6 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.auth.MicrosoftAccount;
+import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
@@ -159,7 +159,7 @@ final class HomePage {
     // ------------------------------------------------------------------ state
 
     private void updateHero() {
-        MicrosoftAccount account = ctx.accounts.selectedAccount();
+        AuthAccount account = ctx.accounts.selected();
         greeting.setText(I18n.tr("home.greeting", account == null ? I18n.tr("home.guest") : account.getUsername()));
         LocalVersion version = installedBox.getValue();
         heroTitle.setText(version == null ? I18n.tr("home.no_version_selected") : version.id());

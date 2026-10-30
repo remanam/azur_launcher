@@ -1,10 +1,11 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.auth.AccountProvider;
+import com.azur.launcher.api.CommunityApi;
+import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.AuthException;
 import com.azur.launcher.auth.AuthNetwork;
 import com.azur.launcher.auth.AuthSettings;
-import com.azur.launcher.auth.DebugAccounts;
+import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.auth.MicrosoftAccount;
 import com.azur.launcher.auth.MicrosoftAuthService;
 import com.azur.launcher.i18n.I18n;
@@ -27,7 +28,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 
-/** Microsoft accounts: list, select, remove and the device-code sign-in dialog. */
+/** Microsoft and offline accounts: list, select, remove and the device-code sign-in dialog. */
 final class AccountsPage {
 
     private final AppContext ctx;
@@ -45,16 +46,14 @@ final class AccountsPage {
         root.getChildren().addAll(
                 UiKit.label(I18n.tr("accounts.title"), "page-title"),
                 UiKit.label(I18n.tr("accounts.subtitle"), "page-subtitle"),
-                hint, signInRow(), accountList, settingsBox());
+                hint, signInRow(), accountList, communityBox(), settingsBox());
         ctx.onAccountsChanged(this::render);
         render();
     }
 
-    /** Sign-in button; the debug build adds its extra account button next to it in the same secondary style. */
+    /** Microsoft sign-in button with the offline-account button next to it. */
     private HBox signInRow() {
-        HBox row = new HBox(10, signInButton);
-        DebugAccounts.provider().ifPresent(provider -> row.getChildren().add(debugButton(provider)));
-        return row;
+        return new HBox(10, signInButton, offlineButton());
     }
 
     /** Azure client id and auth proxy fields. */
@@ -86,6 +85,70 @@ final class AccountsPage {
                 new HBox(8, host, port), save, message);
     }
 
+    /** Community API: registration by code; the API decides roles, the whitelist flag and the pack invite. */
+    private VBox communityBox() {
+        TextField apiBase = new TextField(ctx.pack.getApiBase());
+        apiBase.setPromptText("https://api.example.com");
+        apiBase.textProperty().addListener((obs, old, text) -> {
+            ctx.pack.setApiBase(text);
+            ctx.savePack();
+        });
+        TextField code = new TextField();
+        code.setPromptText(I18n.tr("community.code_hint"));
+        Label message = UiKit.label("", "hint");
+        message.setWrapText(true);
+        Button register = UiKit.button(I18n.tr("community.register"), null, "button-border", () -> { });
+        register.setOnAction(event -> register(code.getText(), message, register));
+        return new VBox(6, UiKit.label(I18n.tr("community.title"), "page-subtitle"),
+                UiKit.label(I18n.tr("community.hint"), "hint"), apiBase, code, register, message);
+    }
+
+    /**
+     * Registers this player with a code from the owner: the token goes into the vault, then {@code /v1/me} decides
+     * what the launcher shows and which pack invite it uses. The Microsoft sign-in is untouched by this.
+     */
+    private void register(String code, Label message, Button button) {
+        AuthAccount account = ctx.accounts.selected();
+        if (account == null) {
+            message.setText(I18n.tr("community.sign_in_first"));
+            return;
+        }
+        if (code == null || code.isBlank()) {
+            message.setText(I18n.tr("community.code_required"));
+            return;
+        }
+        String base = ctx.pack.getApiBase().trim();
+        if (base.isBlank()) {
+            message.setText(I18n.tr("community.address_required"));
+            return;
+        }
+        button.setDisable(true);
+        message.setText(I18n.tr("community.registering"));
+        ctx.io.submit(() -> {
+            String text;
+            try {
+                CommunityApi api = new CommunityApi(base);
+                CommunityApi.Session registered = api.register(code, account.getUuid(), account.getUsername());
+                ctx.playerTokens.write(registered.token());
+                CommunityApi.Session session = api.me(registered.token());
+                ctx.applyCommunity(session);
+                text = I18n.tr("community.registered",
+                        session.nick().isBlank() ? account.getUsername() : session.nick(),
+                        session.roles().isEmpty() ? "-" : String.join(", ", session.roles()),
+                        I18n.tr(session.whitelisted() ? "community.whitelisted" : "community.not_whitelisted"));
+            } catch (Exception e) {
+                text = I18n.tr("community.failed",
+                        e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage());
+                ctx.log("Community API: " + text);
+            }
+            String shown = text;
+            Platform.runLater(() -> {
+                message.setText(shown);
+                button.setDisable(false);
+            });
+        });
+    }
+
     private static int parsePort(String text) {
         try {
             int value = Integer.parseInt(text.trim());
@@ -95,18 +158,22 @@ final class AccountsPage {
         }
     }
 
-    /** Debug build only: signs in with an account that needs no Microsoft check. */
-    private Button debugButton(AccountProvider provider) {
-        Button button = UiKit.button(provider.buttonLabel(), null, "button-border", () -> {
-            TextInputDialog dialog = new TextInputDialog(provider.defaultName());
+    /** Nickname-only account for friends' offline-mode servers: asks for a valid nick, then selects it. */
+    private Button offlineButton() {
+        return UiKit.button(I18n.tr("accounts.offline"), null, "button-border", () -> {
+            TextInputDialog dialog = new TextInputDialog();
             dialog.initOwner(ctx.stage);
-            dialog.setHeaderText(provider.buttonLabel());
+            dialog.setHeaderText(I18n.tr("accounts.offline"));
+            dialog.setContentText(I18n.tr("accounts.offline_nick"));
             dialog.showAndWait().ifPresent(name -> {
-                ctx.debugAccount = provider.create(name);
-                ctx.fireAccountsChanged();
+                if (!OfflineAccount.isValidName(name.trim())) {
+                    new Alert(Alert.AlertType.WARNING, I18n.tr("accounts.offline_bad_nick")).showAndWait();
+                    return;
+                }
+                ctx.accounts.selectOffline(OfflineAccount.of(name));
+                persistAndNotify();
             });
         });
-        return button;
     }
 
     Node node() {
@@ -115,21 +182,28 @@ final class AccountsPage {
 
     private void render() {
         accountList.getChildren().clear();
-        var accounts = ctx.accounts.microsoftAccounts();
-        if (accounts.isEmpty()) {
+        var microsoft = ctx.accounts.microsoftAccounts();
+        var offline = ctx.accounts.offlineAccounts();
+        if (microsoft.isEmpty() && offline.isEmpty()) {
             accountList.getChildren().add(UiKit.label(I18n.tr("accounts.empty"), "empty-hint"));
             return;
         }
-        MicrosoftAccount selected = ctx.accounts.selectedAccount();
-        for (MicrosoftAccount account : accounts) {
-            boolean active = selected != null && selected.getUuid().equalsIgnoreCase(account.getUuid());
-            accountList.getChildren().add(row(account, active));
+        AuthAccount selected = ctx.accounts.selected();
+        for (MicrosoftAccount account : microsoft) {
+            accountList.getChildren().add(row(account, "accounts.msa", isActive(selected, account)));
+        }
+        for (OfflineAccount account : offline) {
+            accountList.getChildren().add(row(account, "accounts.offline_tag", isActive(selected, account)));
         }
     }
 
-    private HBox row(MicrosoftAccount account, boolean active) {
+    private static boolean isActive(AuthAccount selected, AuthAccount account) {
+        return selected != null && selected.getUuid().equalsIgnoreCase(account.getUuid());
+    }
+
+    private HBox row(AuthAccount account, String kindKey, boolean active) {
         Label name = UiKit.label(account.getUsername(), "two-line-title");
-        Label tag = UiKit.label(I18n.tr(active ? "accounts.active" : "accounts.msa"), "tag");
+        Label tag = UiKit.label(I18n.tr(active ? "accounts.active" : kindKey), "tag");
         if (active) {
             tag.getStyleClass().add("tag-installed");
         }
@@ -146,7 +220,7 @@ final class AccountsPage {
         HBox actions = new HBox(8);
         if (!active) {
             actions.getChildren().add(UiKit.button(I18n.tr("accounts.use"), null, "button-border", () -> {
-                ctx.accounts.select(account);
+                ctx.accounts.selectExisting(account);
                 persistAndNotify();
             }));
         }

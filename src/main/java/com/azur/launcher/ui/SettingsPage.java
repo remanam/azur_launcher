@@ -2,6 +2,7 @@ package com.azur.launcher.ui;
 
 import com.azur.launcher.game.JavaDetector;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.net.HttpUtils;
 
 import javafx.application.Platform;
 import javafx.scene.Node;
@@ -125,7 +126,11 @@ final class SettingsPage {
     }
 
     private Node serversUrlRow() {
-        return textRow("settings.servers_url", "settings.servers_url_hint", ctx.pack.getServersUrl(), ctx.pack::setServersUrl);
+        // A new address must also become an allowed host, otherwise the download layer blocks it.
+        return textRow("settings.servers_url", "settings.servers_url_hint", ctx.pack.getServersUrl(), value -> {
+            ctx.pack.setServersUrl(value);
+            HttpUtils.allowHosts(value);
+        });
     }
 
     private Node inviteRow() {

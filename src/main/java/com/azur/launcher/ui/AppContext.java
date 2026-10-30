@@ -1,14 +1,16 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AccountStore;
-import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.AuthSettings;
+import com.azur.launcher.api.CommunityApi;
 import com.azur.launcher.auth.InviteStore;
+import com.azur.launcher.auth.PlayerTokenStore;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.config.PackSettings;
 import com.azur.launcher.game.GamePaths;
+import com.azur.launcher.net.HttpUtils;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -33,8 +35,8 @@ final class AppContext {
     final LauncherConfig config;
     final AccountStore accounts;
     final AuthSettings authSettings;
-    /** Set only by the debug build's account provider; always null in release. */
-    AuthAccount debugAccount;
+    /** Token of the community API (registration, roles, pack invite); empty until the player registers. */
+    final PlayerTokenStore playerTokens;
     final HostServices host;
     final Stage stage;
     /** Server list and pack sync settings (invite, servers.json address, updater path). */
@@ -62,9 +64,13 @@ final class AppContext {
         this.config = config;
         this.accounts = accounts;
         this.authSettings = authSettings;
+        this.playerTokens = PlayerTokenStore.system(dirs.playerTokenVaultFile());
         this.host = host;
         this.stage = stage;
         this.pack = PackSettings.load(dirs.packSettingsFile());
+        // The signed server list and our own mirror live on our https host; allow it before the first request
+        // (the policy is a central allowlist, so a host not added here is never fetched).
+        HttpUtils.allowHosts(this.pack.getServersUrl());
         this.invites = InviteStore.system(dirs.inviteVaultFile());
         this.invite = invites.read();
         migrateLegacyInvite();
@@ -91,6 +97,22 @@ final class AppContext {
                 setInvite(legacy);
             }
             savePack();
+        }
+    }
+
+    /**
+     * Applies what the community API reported: the pack invite (token + address + key) when it is present. Nothing
+     * else is overwritten - the Microsoft account and the server list stay the source of truth.
+     */
+    void applyCommunity(CommunityApi.Session session) {
+        if (session == null) {
+            return;
+        }
+        if (session.pack() != null && !session.pack().invite().isBlank()) {
+            setInvite(session.pack().invite());
+        }
+        if (session.server() != null && !session.server().address().isBlank()) {
+            log("Community API: server " + session.server().address() + ":" + session.server().port());
         }
     }
 

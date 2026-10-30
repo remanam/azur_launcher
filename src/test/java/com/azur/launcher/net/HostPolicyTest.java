@@ -1,7 +1,6 @@
 package com.azur.launcher.net;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
@@ -21,12 +20,14 @@ class HostPolicyTest {
         assertFalse(p.allows("https://piston-meta.mojang.com:8443/x"));
     }
 
+    /** Own hosts (mirror, address of the signed server list) are added next to the official ones, never instead. */
     @Test
-    void mirrorMustBeHttpsAndIsAllowedExplicitly() {
-        HostPolicy p = HostPolicy.withMirror("https://mirror.azur.example/pack/");
-        assertTrue(p.allows("https://mirror.azur.example/pack/a"));
+    void ownHostsAreAddedNextToTheOfficialOnes() {
+        HostPolicy p = HostPolicy.withHosts(java.util.Set.of("pack.azur.example"));
+        assertTrue(p.allows("https://pack.azur.example/servers.signed.json"));
+        assertTrue(p.allows("https://libraries.minecraft.net/a.jar"));
         assertFalse(p.allows("https://other.example/a"));
-        assertThrows(IllegalArgumentException.class, () -> HostPolicy.withMirror("http://mirror.azur.example/"));
-        assertFalse(HostPolicy.withMirror("").allows("https://mirror.azur.example/a"));
+        assertFalse(p.allows("http://pack.azur.example/servers.signed.json"));
+        assertFalse(HostPolicy.withHosts(java.util.Set.of()).allows("https://pack.azur.example/a"));
     }
 }
