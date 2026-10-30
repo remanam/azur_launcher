@@ -1,7 +1,6 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AccountStore;
-import com.azur.launcher.auth.AuthSettings;
 import com.azur.launcher.api.CommunityApi;
 import com.azur.launcher.auth.InviteStore;
 import com.azur.launcher.auth.PlayerTokenStore;
@@ -12,6 +11,7 @@ import com.azur.launcher.config.PackSettings;
 import com.azur.launcher.game.GamePaths;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.net.ProxyConfig;
+import com.azur.launcher.net.ProxySettings;
 
 import javafx.application.HostServices;
 import javafx.application.Platform;
@@ -35,7 +35,7 @@ final class AppContext {
     final ConfigManager configManager;
     final LauncherConfig config;
     final AccountStore accounts;
-    final AuthSettings authSettings;
+    final ProxySettings proxySettings;
     /** Token of the community API (registration, roles, pack invite); empty until the player registers. */
     final PlayerTokenStore playerTokens;
     final HostServices host;
@@ -58,14 +58,14 @@ final class AppContext {
     private DoubleConsumer progressView = value -> { };
 
     AppContext(AppDirs dirs, ConfigManager configManager, LauncherConfig config, AccountStore accounts,
-               AuthSettings authSettings,
+               ProxySettings proxySettings,
                HostServices host, Stage stage) {
         this.dirs = dirs;
         this.configManager = configManager;
         this.config = config;
         this.accounts = accounts;
-        this.authSettings = authSettings;
-        ProxyConfig.set(ProxyConfig.of(authSettings.proxyHost(), authSettings.proxyPort(), "", ""));
+        this.proxySettings = proxySettings;
+        ProxyConfig.set(ProxyConfig.of(proxySettings.proxyHost(), proxySettings.proxyPort(), "", ""));
         this.playerTokens = PlayerTokenStore.system(dirs.playerTokenVaultFile());
         this.host = host;
         this.stage = stage;
@@ -104,7 +104,7 @@ final class AppContext {
 
     /**
      * Applies what the community API reported: the pack invite (token + address + key) when it is present. Nothing
-     * else is overwritten - the Microsoft account and the server list stay the source of truth.
+     * else is overwritten - the player account and the server list stay the source of truth.
      */
     void applyCommunity(CommunityApi.Session session) {
         if (session == null) {

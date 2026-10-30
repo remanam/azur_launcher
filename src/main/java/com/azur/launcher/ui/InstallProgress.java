@@ -3,6 +3,7 @@ package com.azur.launcher.ui;
 import com.azur.launcher.i18n.I18n;
 
 import java.util.ArrayDeque;
+import java.util.Arrays;
 import java.util.Locale;
 import java.util.function.LongSupplier;
 
@@ -29,8 +30,38 @@ final class InstallProgress {
         }
     }
 
-    /** What the view draws; {@code fraction} is -1 when unknown (indeterminate bar). */
-    record Snapshot(Step step, double fraction, String detail) {
+    /**
+     * What the view draws. {@code fraction} is the fraction of the current step, -1 when unknown (no counters);
+     * {@code overall} is the whole run 0..1 (monotonic); {@code stepNo} of {@code stepCount} is the position of the step.
+     */
+    record Snapshot(Step step, double fraction, String detail, double overall, int stepNo, int stepCount) {
+        boolean indeterminate() {
+            return fraction < 0;
+        }
+    }
+
+    /** Steps in the order they run, with their share of the whole run in percent (pack bytes dominate). */
+    private static final Step[] ORDER = {Step.LIBRARIES, Step.NEOFORGE, Step.MINECRAFT, Step.CHECK, Step.PACK};
+    private static final double[] BAND_START = {0, 8, 15, 35, 37};
+    private static final double[] BAND_END = {8, 15, 35, 37, 100};
+
+    /** Whole-run progress 0..1 for a step and its own fraction (-1 = unknown: the start of the step's band). */
+    static double overall(Step step, double stepFraction) {
+        if (step == Step.DONE) {
+            return 1.0;
+        }
+        int i = Arrays.asList(ORDER).indexOf(step);
+        if (i < 0 || (stepFraction < 0 && step == Step.CHECK)) {
+            return 0;
+        }
+        double f = Math.max(0, Math.min(1.0, stepFraction));
+        return (BAND_START[i] + (BAND_END[i] - BAND_START[i]) * f) / 100.0;
+    }
+
+    /** 1-based position of the step in the run, 0 for DONE and unknown. */
+    static int stepNo(Step step) {
+        int i = Arrays.asList(ORDER).indexOf(step);
+        return i < 0 ? 0 : i + 1;
     }
 
     static final long WINDOW_NANOS = 2_000_000_000L;
@@ -43,6 +74,7 @@ final class InstallProgress {
     private long done;
     private long total;
     private boolean fresh;
+    private double overall;
 
     InstallProgress(LongSupplier nanoClock) {
         this.clock = nanoClock;
@@ -55,6 +87,7 @@ final class InstallProgress {
     /** Starts a run; {@code freshInstall}: nothing was installed before (wording «Устанавливаем» vs «Обновляем»). */
     synchronized void begin(boolean freshInstall) {
         fresh = freshInstall;
+        overall = 0;
         reset(Step.CHECK);
     }
 
@@ -134,20 +167,22 @@ final class InstallProgress {
     }
 
     synchronized Snapshot snapshot() {
+        int count = ORDER.length;
         if (step == Step.DONE) {
-            return new Snapshot(step, 1.0, "");
+            return new Snapshot(step, 1.0, "", 1.0, count, count);
         }
-        if (total <= 0) {
-            return new Snapshot(step, -1, "");
+        double fraction = total <= 0 ? -1 : Math.max(0, Math.min(1.0, (double) done / total));
+        overall = Math.max(overall, overall(step, fraction));
+        int no = stepNo(step);
+        if (fraction < 0) {
+            return new Snapshot(step, -1, "", overall, no, count);
         }
-        double fraction = Math.max(0, Math.min(1.0, (double) done / total));
-        int percent = (int) Math.round(fraction * 100);
         if (!bytes) {
-            return new Snapshot(step, fraction, I18n.tr("progress.files", percent, done, total));
+            return new Snapshot(step, fraction, I18n.tr("progress.files", done, total), overall, no, count);
         }
         long eta = etaSeconds();
-        return new Snapshot(step, fraction, I18n.tr("progress.bytes", percent, mb(done), mb(total),
-                mb(speed()), eta < 0 ? "-" : eta(eta)));
+        return new Snapshot(step, fraction, I18n.tr("progress.bytes", 0, mb(done), mb(total),
+                mb(speed()), eta < 0 ? "-" : eta(eta)), overall, no, count);
     }
 
     /** Megabytes with one decimal, dot separator whatever the system locale. */

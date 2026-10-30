@@ -1,11 +1,11 @@
 package com.azur.launcher.ui;
 
-import com.azur.launcher.auth.AuthSettings;
 import com.azur.launcher.game.LocalVersion;
 import com.azur.launcher.game.LocalVersionScanner;
 import com.azur.launcher.game.VersionManager;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.net.ProxyConfig;
+import com.azur.launcher.net.ProxySettings;
 import com.azur.launcher.loader.InstallEntries;
 import com.azur.launcher.loader.NeoForgeCatalog;
 import com.azur.launcher.loader.NeoForgeList;
@@ -90,10 +90,9 @@ final class AdvancedPanel {
         return UiKit.card(UiKit.cardHeader("icon-refresh", I18n.tr("settings.repair")), hint, repair);
     }
 
-    /** Azure client id and the one download proxy used by every request (sign-in, game, NeoForge, pack). */
+    /** The one download proxy used by every request (game, NeoForge, pack). */
     private VBox networkCard() {
-        AuthSettings settings = ctx.authSettings;
-        TextField clientId = new TextField(settings.clientId());
+        ProxySettings settings = ctx.proxySettings;
         TextField host = new TextField(settings.proxyHost());
         host.setPromptText(I18n.tr("accounts.proxy_host"));
         TextField port = new TextField(settings.proxyPort() > 0 ? Integer.toString(settings.proxyPort()) : "");
@@ -106,11 +105,6 @@ final class AdvancedPanel {
         proxyHint.setWrapText(true);
         SelectableText message = UiKit.selectable("", "hint");
         Button save = UiKit.button(I18n.tr("accounts.save_settings"), null, "button-border", () -> {
-            if (!clientId.getText().isBlank() && !AuthSettings.isValidClientId(clientId.getText())) {
-                message.setText(I18n.tr("accounts.bad_client_id"));
-                return;
-            }
-            settings.setClientId(clientId.getText());
             settings.setProxy(host.getText(), parsePort(port.getText()));
             ProxyConfig.set(ProxyConfig.of(host.getText(), parsePort(port.getText()), user.getText(), password.getText()));
             try {
@@ -123,7 +117,6 @@ final class AdvancedPanel {
         HBox proxy = new HBox(8, host, port);
         HBox.setHgrow(host, Priority.ALWAYS);
         return UiKit.card(UiKit.cardHeader("icon-account", I18n.tr("accounts.network_title")),
-                UiKit.label(I18n.tr("accounts.client_id"), "hint"), clientId,
                 UiKit.label(I18n.tr("settings.proxy_title"), "page-subtitle"), proxyHint, proxy, user, password, save, UiKit.withCopy(message));
     }
 

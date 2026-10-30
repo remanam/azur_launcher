@@ -11,11 +11,10 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-/** First start, three screens: nickname or Microsoft, pack install, Play. Shown only while no account exists. */
+/** First start, three screens: nickname, pack install, Play. Shown only while no account exists. */
 final class FirstRunWizard {
 
     private final AppContext ctx;
-    private final Runnable openAccounts;
     private final Runnable install;
     private final Runnable play;
     private final StackPane root = new StackPane();
@@ -25,9 +24,8 @@ final class FirstRunWizard {
     private final Button installButton;
     private final SelectableText installNote = UiKit.selectable("", "home-sub");
 
-    FirstRunWizard(AppContext ctx, Runnable openAccounts, Runnable install, Runnable play) {
+    FirstRunWizard(AppContext ctx, Runnable install, Runnable play) {
         this.ctx = ctx;
-        this.openAccounts = openAccounts;
         this.install = install;
         this.play = play;
         installButton = UiKit.button(I18n.tr("wizard.install"), null, "launch-button", install);
@@ -87,8 +85,7 @@ final class FirstRunWizard {
             ctx.fireAccountsChanged();
             showStep(2);
         });
-        Button microsoft = UiKit.button(I18n.tr("wizard.ms"), null, "button-border", openAccounts);
-        return step(1, "wizard.1.title", "wizard.1.hint", nick, nickError, next, microsoft);
+        return step(1, "wizard.1.title", "wizard.1.hint", nick, nickError, next);
     }
 
     private VBox installStep() {

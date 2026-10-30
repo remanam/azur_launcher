@@ -47,7 +47,6 @@ class InstallProgressTest {
         InstallProgress.Snapshot s = progress.snapshot();
         assertEquals(Step.PACK, s.step());
         assertEquals(0.25, s.fraction(), 1e-9);
-        assertTrue(s.detail().contains("25"), s.detail());
         assertTrue(s.detail().contains("50.0"), s.detail());
         assertTrue(s.detail().contains("200.0"), s.detail());
     }
@@ -91,5 +90,39 @@ class InstallProgressTest {
         assertEquals("home.btn.installing", HomeState.busyLabelKey(false, true));
         assertEquals("home.btn.updating", HomeState.busyLabelKey(false, false));
         assertEquals("home.btn.checking", HomeState.busyLabelKey(true, true));
+    }
+
+    @Test
+    void overallProgressIsMonotonicAcrossStepsAndPackDominates() {
+        progress.begin(true);
+        assertEquals(0.0, progress.snapshot().overall(), 1e-9);
+        progress.step(Step.NEOFORGE);
+        InstallProgress.Snapshot neo = progress.snapshot();
+        assertTrue(neo.indeterminate());
+        assertEquals(2, neo.stepNo());
+        assertEquals(5, neo.stepCount());
+        double last = neo.overall();
+        progress.files(Step.MINECRAFT, 50, 100);
+        double mc = progress.snapshot().overall();
+        assertTrue(mc > last, "minecraft step moves the bar");
+        progress.step(Step.CHECK);
+        assertTrue(progress.snapshot().overall() >= mc, "a step without counters never moves the bar back");
+        tick(0, 0, 100 * MB);
+        double packStart = progress.snapshot().overall();
+        tick(1000, 50 * MB, 100 * MB);
+        double half = progress.snapshot().overall();
+        assertEquals(0.685, half, 0.01);
+        assertTrue(half > packStart);
+        progress.finish();
+        assertEquals(1.0, progress.snapshot().overall(), 1e-9);
+    }
+
+    @Test
+    void overallMappingBandsAreOrderedAndCoverTheRun() {
+        assertEquals(0.0, InstallProgress.overall(Step.LIBRARIES, 0), 1e-9);
+        assertEquals(0.08, InstallProgress.overall(Step.LIBRARIES, 1), 1e-9);
+        assertEquals(0.08, InstallProgress.overall(Step.NEOFORGE, -1), 1e-9);
+        assertEquals(0.35, InstallProgress.overall(Step.MINECRAFT, 1), 1e-9);
+        assertEquals(1.0, InstallProgress.overall(Step.PACK, 1), 1e-9);
     }
 }

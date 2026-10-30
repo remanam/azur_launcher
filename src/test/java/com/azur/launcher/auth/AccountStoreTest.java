@@ -35,8 +35,8 @@ class AccountStoreTest {
         }
     }
 
-    private static MicrosoftAccount alex() {
-        return new MicrosoftAccount("Alex", "uuid-1", "SECRET-ACCESS", "SECRET-REFRESH", "xuid", "client", 123L);
+    private static OfflineAccount alex() {
+        return OfflineAccount.of("Alex");
     }
 
     @Test
@@ -45,14 +45,14 @@ class AccountStoreTest {
         MemoryKeychain keychain = new MemoryKeychain();
         AccountStore store = new AccountStore(legacy, keychain, "machine");
         assertTrue(store.isEmpty());
-        store.select(alex());
+        store.selectOffline(alex());
         store.save();
         assertEquals(1, keychain.items.size());
 
         AccountStore reloaded = new AccountStore(legacy, keychain, "machine");
-        assertEquals("Alex", reloaded.selectedAccount().getUsername());
-        reloaded.remove("uuid-1");
-        assertNull(reloaded.selectedAccount());
+        assertEquals("Alex", reloaded.selected().getUsername());
+        reloaded.remove(alex().getUuid());
+        assertNull(reloaded.selected());
         assertTrue(reloaded.isEmpty());
     }
 
@@ -60,24 +60,23 @@ class AccountStoreTest {
     void vaultFileHoldsNoPlainTokensAndIsOwnerOnly(@TempDir Path dir) throws IOException {
         Path legacy = dir.resolve("accounts.json");
         AccountStore store = new AccountStore(legacy, null, "machine");
-        store.select(alex());
+        store.selectOffline(alex());
         store.save();
         Path vault = dir.resolve("accounts.vault");
         String raw = new String(Files.readAllBytes(vault), StandardCharsets.ISO_8859_1);
-        assertFalse(raw.contains("SECRET"));
-        assertFalse(raw.contains("Alex"));
+                assertFalse(raw.contains("Alex"));
         if (Files.getFileStore(vault).supportsFileAttributeView("posix")) {
             assertEquals(java.util.Set.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
                     Files.getPosixFilePermissions(vault));
         }
-        assertEquals("Alex", new AccountStore(legacy, null, "machine").selectedAccount().getUsername());
+        assertEquals("Alex", new AccountStore(legacy, null, "machine").selected().getUsername());
     }
 
     @Test
     void derivedKeyVaultDoesNotOpenOnAnotherMachine(@TempDir Path dir) throws IOException {
         Path legacy = dir.resolve("accounts.json");
         AccountStore store = new AccountStore(legacy, null, "machine-A");
-        store.select(alex());
+        store.selectOffline(alex());
         store.save();
         assertTrue(new AccountStore(legacy, null, "machine-B").isEmpty());
     }
@@ -86,7 +85,7 @@ class AccountStoreTest {
     void tamperedVaultIsIgnored(@TempDir Path dir) throws IOException {
         Path legacy = dir.resolve("accounts.json");
         AccountStore store = new AccountStore(legacy, null, "m");
-        store.select(alex());
+        store.selectOffline(alex());
         store.save();
         Path vault = dir.resolve("accounts.vault");
         byte[] bytes = Files.readAllBytes(vault);
@@ -98,14 +97,13 @@ class AccountStoreTest {
     @Test
     void plainLegacyJsonIsMigratedAndRemoved(@TempDir Path dir) throws IOException {
         Path legacy = dir.resolve("accounts.json");
-        Files.writeString(legacy, "{\"microsoft\":[{\"name\":\"Old\",\"uuid\":\"u-9\",\"accessToken\":\"t\","
-                + "\"refreshToken\":\"r\",\"notAfter\":5}],\"selectedUuid\":\"u-9\"}");
+        Files.writeString(legacy, "{\"offline\":[{\"name\":\"Old\",\"uuid\":\""
+                + OfflineAccount.uuidFor("Old") + "\"}],\"selectedUuid\":\"" + OfflineAccount.uuidFor("Old") + "\"}");
         AccountStore store = new AccountStore(legacy, null, "m");
-        assertEquals("Old", store.selectedAccount().getUsername());
-        assertEquals(0L, store.selectedAccount().getOwnershipVerifiedAt());
+        assertEquals("Old", store.selected().getUsername());
         assertFalse(Files.exists(legacy));
         assertTrue(Files.exists(dir.resolve("accounts.vault")));
-        assertEquals("Old", new AccountStore(legacy, null, "m").selectedAccount().getUsername());
+        assertEquals("Old", new AccountStore(legacy, null, "m").selected().getUsername());
     }
 
     @Test

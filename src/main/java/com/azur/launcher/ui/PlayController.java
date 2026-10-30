@@ -1,11 +1,6 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AuthAccount;
-import com.azur.launcher.auth.AuthException;
-import com.azur.launcher.auth.AuthNetwork;
-import com.azur.launcher.auth.MicrosoftAccount;
-import com.azur.launcher.auth.MicrosoftAuthService;
-import com.azur.launcher.auth.SessionManager;
 import com.azur.launcher.game.GameLauncher;
 import com.azur.launcher.game.PinService;
 import com.azur.launcher.i18n.I18n;
@@ -90,7 +85,6 @@ final class PlayController implements GameStarter {
         ctx.io.submit(() -> {
             try {
                 Instance instance = instanceFor(server);
-                refreshAccountIfNeeded(account);
                 if (!account.launchPermitted()) {
                     throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
                 }
@@ -146,27 +140,6 @@ final class PlayController implements GameStarter {
 
     private DownloadManager.ProgressListener progress() {
         return (done, total, current) -> ctx.setProgress(total == 0 ? -1 : done / (double) total);
-    }
-
-    /** Verifies/refreshes a Microsoft session; a still-valid cached one is used when the auth hosts are unreachable. */
-    private void refreshAccountIfNeeded(AuthAccount account) throws AuthException {
-        if (!(account instanceof MicrosoftAccount microsoft)) {
-            return;
-        }
-        SessionManager.State state = SessionManager.prepare(microsoft,
-                new MicrosoftAuthService(AuthNetwork.quick(ctx.authSettings)), ctx.authSettings.clientId(),
-                ctx::setStatus);
-        if (state == SessionManager.State.CACHED_UNREACHABLE) {
-            ctx.setStatus(I18n.tr("auth.using_cached_session"));
-            ctx.log("Auth hosts unreachable, launching with the cached session");
-        }
-        if (state != SessionManager.State.VALID) {
-            try {
-                ctx.accounts.save();
-            } catch (Exception e) {
-                ctx.log("Cannot save accounts: " + e.getMessage());
-            }
-        }
     }
 
     private void onExit(int code) {

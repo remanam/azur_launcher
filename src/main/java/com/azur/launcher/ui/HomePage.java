@@ -1,7 +1,6 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AuthAccount;
-import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
@@ -43,13 +42,10 @@ final class HomePage {
     private final AppContext ctx;
     private final PlayController play;
     private final PackState packState;
-    private final Runnable openAccounts;
     private final ServerStatusService status;
     private final StackPane root = new StackPane();
     private final VBox main = new VBox(24);
     private final Label nickLabel = UiKit.label("", "home-sub");
-    private final Label offlineTag = UiKit.label("", "tag");
-    private final Button signInLink;
     private final Region dot = new Region();
     private final Label serverLabel = UiKit.label("", "home-title");
     private final Label statusLabel = UiKit.label("", "home-sub");
@@ -76,16 +72,14 @@ final class HomePage {
     private final Timeline refresher = new Timeline(
             new KeyFrame(Duration.millis(PackState.TTL_MS), event -> refreshState(false)));
 
-    HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAccounts) {
+    HomePage(AppContext ctx, PlayController play, PackState packState) {
         this.ctx = ctx;
         this.play = play;
         this.packState = packState;
-        this.openAccounts = openAccounts;
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
-        signInLink = UiKit.button(I18n.tr("home.sign_in_ms"), null, "button-text", openAccounts);
-        wizard = new FirstRunWizard(ctx, openAccounts, this::install, this::playFromWizard);
+        wizard = new FirstRunWizard(ctx, this::install, this::playFromWizard);
         wizardActive = HomeState.wizardNeeded(ctx.accounts.selected() != null);
 
         dot.getStyleClass().add("status-dot");
@@ -101,7 +95,7 @@ final class HomePage {
 
         Region logo = new Region();
         logo.getStyleClass().add("home-logo");
-        HBox nickRow = new HBox(12, nickLabel, offlineTag, signInLink);
+        HBox nickRow = new HBox(12, nickLabel);
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
@@ -116,6 +110,12 @@ final class HomePage {
         loadServer();
         refresher.setCycleCount(Timeline.INDEFINITE);
         refresher.play();
+        if (FakeProgressFeed.enabled()) {
+            Platform.runLater(() -> {
+                wizard.showStep(2);
+                install();
+            });
+        }
     }
 
     /** The Home page became visible: re-read the state (the pack answer is cached, so this is cheap). */
@@ -223,7 +223,8 @@ final class HomePage {
         render();
         ServerEntry entry = server;
         ctx.io.submit(() -> {
-            PackOps.Outcome outcome = PackOps.download(ctx, entry, installProgress);
+            PackOps.Outcome outcome = FakeProgressFeed.enabled() ? FakeProgressFeed.run(installProgress)
+                    : PackOps.download(ctx, entry, installProgress);
             Platform.runLater(() -> finishInstall(outcome));
         });
     }
@@ -334,12 +335,6 @@ final class HomePage {
             wizard.showStep(2);
         }
         nickLabel.setText(account == null ? "" : I18n.tr("home.player", account.getUsername()));
-        boolean offline = account instanceof OfflineAccount;
-        offlineTag.setText(I18n.tr("home.offline_tag"));
-        offlineTag.setVisible(offline);
-        offlineTag.setManaged(offline);
-        signInLink.setVisible(offline);
-        signInLink.setManaged(offline);
         render();
     }
 

@@ -66,7 +66,6 @@ class OfflineAccountTest {
         AccountStore reloaded = new AccountStore(legacy, null, "machine");
         assertEquals(2, reloaded.offlineAccounts().size());
         assertEquals("Alice", reloaded.selected().getUsername());
-        assertNull(reloaded.selectedAccount(), "the Microsoft view stays empty");
         reloaded.selectExisting(OfflineAccount.of("Bob"));
         assertEquals("Bob", reloaded.selected().getUsername());
         reloaded.remove(OfflineAccount.uuidFor("Bob"));

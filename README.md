@@ -6,7 +6,7 @@ Status: stage 1 of the plan in `CLAUDE.md` (no Chinese, RU/EN interface, platfor
 Pack sync, pinned NeoForge install, signed server list and the release/debug split come in the next stages.
 
 ## What it does now
-- Microsoft sign-in (device code) with a licence check; only licensed Java Edition accounts can play.
+- Nickname-only account for our offline-mode server (Microsoft sign-in removed 2026-10-30).
 - Installs a vanilla version or NeoForge (official installer) and launches it with a per-version game folder.
 - Settings: memory, Java runtime, download threads, JVM arguments, language (ru/en/system), theme.
 

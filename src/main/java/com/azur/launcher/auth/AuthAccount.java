@@ -22,13 +22,6 @@ public interface AuthAccount {
         return "{}";
     }
 
-    /** True only when the account may start the game right now (verified licence, usable token). */
+    /** True only when the account may start the game right now (a valid nickname). */
     boolean launchPermitted();
-
-    default boolean needsRefresh() {
-        return false;
-    }
-
-    default void refresh(MicrosoftAuthService service) throws AuthException {
-    }
 }

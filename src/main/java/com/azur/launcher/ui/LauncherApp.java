@@ -1,11 +1,11 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AccountStore;
-import com.azur.launcher.auth.AuthSettings;
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.net.ProxySettings;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -51,7 +51,8 @@ public class LauncherApp extends Application {
         LauncherConfig config = configManager.load();
         I18n.setLanguage(config.getLanguage());
         ctx = new AppContext(dirs, configManager, config, AccountStore.system(dirs.accountsFile()),
-                new AuthSettings(dirs.accountsFile().resolveSibling("auth-settings.json")),
+                new ProxySettings(dirs.accountsFile().resolveSibling("proxy-settings.json"),
+                        dirs.accountsFile().resolveSibling("auth-settings.json")),
                 getHostServices(), stage);
 
         for (String font : FONTS) {
@@ -96,7 +97,7 @@ public class LauncherApp extends Application {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
         PlayController play = new PlayController(ctx);
-        homePage = new HomePage(ctx, play, PackState.live(ctx), () -> navigate(Page.ACCOUNTS));
+        homePage = new HomePage(ctx, play, PackState.live(ctx));
         area.getChildren().addAll(homePage.node(), new ServersPage(ctx, play).node(),
                 new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build, play).node(), new AboutPage().node());
         showPage(area, current);

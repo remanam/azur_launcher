@@ -18,8 +18,8 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Our own community service: registration by code, roles, whitelist status and the pack invite. The Minecraft sign-in
- * stays with Microsoft; this API only grants access to our infrastructure, it can never replace the Minecraft login.
+ * Our own community service: registration by code, roles, whitelist status and the pack invite. This API only grants
+ * access to our infrastructure; the player account stays a plain nickname.
  * Contract (see docs/API.md): {@code POST /v1/register}, {@code GET /v1/me}, {@code POST /v1/token/rotate}.
  */
 public final class CommunityApi {
