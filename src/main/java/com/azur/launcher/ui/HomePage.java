@@ -25,6 +25,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.TextArea;
+import javafx.scene.control.TitledPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -38,11 +39,11 @@ final class HomePage {
 
     private final AppContext ctx;
     private final VersionManager versionManager;
-    private final VBox root = new VBox(14);
+    private final VBox root = new VBox(28);
 
-    private final Label heroTitle = UiKit.label("", "hero-title");
-    private final Label heroSubtitle = UiKit.label("", "hero-subtitle");
-    private final Label greeting = UiKit.label("", "greeting");
+    private final Label heroTitle = UiKit.label("", "home-title");
+    private final Label heroSubtitle = UiKit.label("", "home-sub");
+    private final Label greeting = UiKit.label("", "home-greeting");
     private final ComboBox<LocalVersion> installedBox = new ComboBox<>();
     private final ObservableList<InstallEntries.Entry> entries = FXCollections.observableArrayList();
     private final FilteredList<InstallEntries.Entry> visibleEntries = new FilteredList<>(entries);
@@ -69,7 +70,7 @@ final class HomePage {
         installButton = UiKit.button(I18n.tr("home.install"), "icon-plus", "button-raised", this::install);
 
         root.getStyleClass().add("page");
-        root.getChildren().addAll(greetingBlock(), heroCard(), installedCard(), installCard(), logCard());
+        root.getChildren().addAll(heroCard(), advanced());
 
         logArea.setText(ctx.logText());
         ctx.bindLog(line -> logArea.appendText(line + "\n"));
@@ -86,18 +87,21 @@ final class HomePage {
 
     // ------------------------------------------------------------------ layout
 
-    private VBox greetingBlock() {
-        return new VBox(3, greeting, UiKit.label(I18n.tr("home.greeting_sub"), "greeting-sub"));
+    private VBox heroCard() {
+        heroSubtitle.setWrapText(true);
+        VBox hero = new VBox(14, greeting, heroTitle, heroSubtitle, launchButton);
+        hero.getStyleClass().add("home-hero");
+        hero.setAlignment(Pos.CENTER);
+        return hero;
     }
 
-    private HBox heroCard() {
-        heroSubtitle.setWrapText(true);
-        VBox text = new VBox(5, heroTitle, heroSubtitle);
-        HBox.setHgrow(text, Priority.ALWAYS);
-        HBox hero = new HBox(16, UiKit.avatar("A", "hero-avatar", "hero-avatar-text"), text, launchButton);
-        hero.getStyleClass().add("hero-card");
-        hero.setAlignment(Pos.CENTER_LEFT);
-        return hero;
+    /** Everything except Play lives in one collapsed section, so the page stays calm. */
+    private TitledPane advanced() {
+        TitledPane pane = new TitledPane(I18n.tr("home.advanced"),
+                new VBox(14, installedCard(), installCard(), logCard()));
+        pane.setExpanded(false);
+        pane.getStyleClass().add("home-advanced");
+        return pane;
     }
 
     private VBox installedCard() {

@@ -35,11 +35,11 @@ public class LauncherApp extends Application {
     static final String VERSION = "1.0.0";
     private static final String[] FONTS = {"philosopher_bold", "pt_sans_web_regular", "pt_sans_web_bold"};
 
-    private enum Page { SERVERS, HOME, ACCOUNTS, SETTINGS, ABOUT }
+    private enum Page { HOME, SERVERS, ACCOUNTS, SETTINGS, ABOUT }
 
     private AppContext ctx;
     private StackPane sceneRoot;
-    private Page current = Page.SERVERS;
+    private Page current = Page.HOME;
 
     @Override
     public void start(Stage stage) {
@@ -94,7 +94,7 @@ public class LauncherApp extends Application {
         area.getStyleClass().add("content-area");
         PlayController play = new PlayController(ctx);
         HomePage homePage = new HomePage(ctx, play);
-        area.getChildren().addAll(new ServersPage(ctx, play).node(), homePage.node(),
+        area.getChildren().addAll(homePage.node(), new ServersPage(ctx, play).node(),
                 new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build).node(), new AboutPage().node());
         showPage(area, current);
         return area;
@@ -113,8 +113,8 @@ public class LauncherApp extends Application {
         VBox drawer = new VBox(2);
         drawer.getStyleClass().add("nav-drawer");
         HBox[] items = new HBox[Page.values().length];
-        items[Page.SERVERS.ordinal()] = navItem("icon-versions", I18n.tr("nav.servers"));
         items[Page.HOME.ordinal()] = navItem("icon-home", I18n.tr("nav.home"));
+        items[Page.SERVERS.ordinal()] = navItem("icon-versions", I18n.tr("nav.servers"));
         items[Page.ACCOUNTS.ordinal()] = navItem("icon-account", I18n.tr("nav.accounts"));
         items[Page.SETTINGS.ordinal()] = navItem("icon-settings", I18n.tr("nav.settings"));
         items[Page.ABOUT.ordinal()] = navItem("icon-info", I18n.tr("nav.about"));
