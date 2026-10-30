@@ -37,6 +37,8 @@ final class PlayController implements GameStarter {
     private final List<Consumer<Phase>> listeners = new ArrayList<>();
     private volatile Phase phase = Phase.IDLE;
     private GameLauncher game;
+    /** The server Home shows; {@code null} = the embedded default instance. */
+    private volatile ServerEntry server;
 
     PlayController(AppContext ctx) {
         this.ctx = ctx;
@@ -57,8 +59,17 @@ final class PlayController implements GameStarter {
         startFor(request == null ? null : request.server());
     }
 
+    void setServer(ServerEntry value) {
+        server = value;
+    }
+
+    /** Play for the server Home shows. */
     void startDefault() {
-        startFor(null);
+        startFor(server);
+    }
+
+    void repairCurrent() {
+        repair(server);
     }
 
     private void startFor(ServerEntry server) {

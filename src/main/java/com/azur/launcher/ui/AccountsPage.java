@@ -4,7 +4,6 @@ import com.azur.launcher.api.CommunityApi;
 import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.AuthException;
 import com.azur.launcher.auth.AuthNetwork;
-import com.azur.launcher.auth.AuthSettings;
 import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.auth.MicrosoftAccount;
 import com.azur.launcher.auth.MicrosoftAuthService;
@@ -46,7 +45,7 @@ final class AccountsPage {
         root.getChildren().addAll(
                 UiKit.label(I18n.tr("accounts.title"), "page-title"),
                 UiKit.label(I18n.tr("accounts.subtitle"), "page-subtitle"),
-                hint, signInRow(), accountList, communityBox(), settingsBox());
+                hint, signInRow(), accountList, communityBox());
         ctx.onAccountsChanged(this::render);
         render();
     }
@@ -54,35 +53,6 @@ final class AccountsPage {
     /** Microsoft sign-in button with the offline-account button next to it. */
     private HBox signInRow() {
         return new HBox(10, signInButton, offlineButton());
-    }
-
-    /** Azure client id and auth proxy fields. */
-    private VBox settingsBox() {
-        AuthSettings settings = ctx.authSettings;
-        TextField clientId = new TextField(settings.clientId());
-        TextField host = new TextField(settings.proxyHost());
-        host.setPromptText(I18n.tr("accounts.proxy_host"));
-        TextField port = new TextField(settings.proxyPort() > 0 ? Integer.toString(settings.proxyPort()) : "");
-        port.setPromptText(I18n.tr("accounts.proxy_port"));
-        Label message = UiKit.label("", "hint");
-        message.setWrapText(true);
-        Button save = UiKit.button(I18n.tr("accounts.save_settings"), null, "button-border", () -> {
-            if (!clientId.getText().isBlank() && !AuthSettings.isValidClientId(clientId.getText())) {
-                message.setText(I18n.tr("accounts.bad_client_id"));
-                return;
-            }
-            settings.setClientId(clientId.getText());
-            settings.setProxy(host.getText(), parsePort(port.getText()));
-            try {
-                settings.save();
-                message.setText(I18n.tr("accounts.settings_saved"));
-            } catch (Exception e) {
-                message.setText(e.getMessage());
-            }
-        });
-        return new VBox(6, UiKit.label(I18n.tr("accounts.network_title"), "page-subtitle"),
-                UiKit.label(I18n.tr("accounts.client_id"), "hint"), clientId,
-                new HBox(8, host, port), save, message);
     }
 
     /** Community API: registration by code; the API decides roles, the whitelist flag and the pack invite. */
@@ -147,15 +117,6 @@ final class AccountsPage {
                 button.setDisable(false);
             });
         });
-    }
-
-    private static int parsePort(String text) {
-        try {
-            int value = Integer.parseInt(text.trim());
-            return value > 0 && value < 65536 ? value : 0;
-        } catch (NumberFormatException e) {
-            return 0;
-        }
     }
 
     /** Nickname-only account for friends' offline-mode servers: asks for a valid nick, then selects it. */

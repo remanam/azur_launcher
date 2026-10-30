@@ -3,7 +3,6 @@ package com.azur.launcher.ui;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
-import com.azur.launcher.game.PinService;
 import com.azur.launcher.profile.Instance;
 import com.azur.launcher.profile.InstanceStore;
 import com.azur.launcher.profile.ServerProfiles;
@@ -12,7 +11,6 @@ import com.azur.launcher.servers.ServerListService;
 import com.azur.launcher.servers.ServerPing;
 import com.azur.launcher.servers.ServerStatusService;
 import com.azur.launcher.sync.PackSyncService;
-import com.azur.launcher.sync.UpdaterBinary;
 
 import javafx.application.Platform;
 import javafx.geometry.Pos;
@@ -81,6 +79,7 @@ final class ServersPage {
                 play.start(new LaunchRequest(selected));
             }
         });
+        playButton.getStyleClass().add("compact");
         play.onPhase(this::showPhase);
 
         Button reload = UiKit.button(I18n.tr("home.refresh"), "icon-refresh", "button-border", this::reload);
@@ -259,38 +258,18 @@ final class ServersPage {
         if (entry == null || busy) {
             return;
         }
-        String invite = ctx.invite();
         setBusy(true);
         message.setText(I18n.tr("download.starting"));
         ctx.io.submit(() -> {
-            Outcome outcome;
-            try {
-                Instance instance = new InstanceStore(ctx.dirs)
-                        .ensure(ServerProfiles.derive(entry, InstanceStore.bundledProfile()));
-                ctx.setStatus(I18n.tr("download.starting"));
-                new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).installIfNeeded(instance,
-                        ctx.config.getDownloadThreads(),
-                        (done, total, current) -> Platform.runLater(
-                                () -> showProgress("download", current, done, total)));
-                if (invite.isBlank()) {
-                    outcome = new Outcome(new PackSyncService.Result(0, "", "", ""), false, false);
-                } else {
-                    ctx.setStatus(I18n.tr("sync.starting"));
-                    PackSyncService service = new PackSyncService(
-                            UpdaterBinary.resolve(ctx.pack.getUpdaterPath(), ctx.dirs.binDir()),
-                            PackSyncService.systemStarter(ctx.dirs.updaterHome()));
-                    outcome = update(service, entry, instance.gameDir(), invite);
-                }
-            } catch (IOException e) {
-                ctx.log("Download client: " + e.getMessage());
-                outcome = new Outcome(new PackSyncService.Result(-1, "download", e.getMessage(), ""), false, false);
-            }
-            Outcome finished = outcome;
-            Platform.runLater(() -> finishDownload(finished));
+            ctx.setStatus(I18n.tr("download.starting"));
+            PackOps.Outcome outcome = PackOps.download(ctx, entry,
+                    (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)),
+                    (done, total, current) -> Platform.runLater(() -> showProgress("download", current, done, total)));
+            Platform.runLater(() -> finishDownload(outcome));
         });
     }
 
-    private void finishDownload(Outcome outcome) {
+    private void finishDownload(PackOps.Outcome outcome) {
         setBusy(false);
         progress.setVisible(false);
         progress.setManaged(false);
@@ -306,10 +285,6 @@ final class ServersPage {
         ctx.log("Download client failed: exit " + result.exit() + " " + result.code() + " " + result.message());
     }
 
-    /** What one pack operation ended with; {@code localCopy} = the update failed, the installed pack still verifies. */
-    private record Outcome(PackSyncService.Result result, boolean verifyOnly, boolean localCopy) {
-    }
-
     private void run(boolean verifyOnly) {
         ServerEntry entry = selected;
         if (entry == null || busy) {
@@ -323,39 +298,20 @@ final class ServersPage {
         setBusy(true);
         message.setText(I18n.tr(verifyOnly ? "sync.verifying" : "sync.starting"));
         ctx.io.submit(() -> {
-            Outcome outcome;
+            PackOps.Outcome outcome;
             try {
                 Path instance = instanceDir(entry);
-                PackSyncService service = new PackSyncService(
-                        UpdaterBinary.resolve(ctx.pack.getUpdaterPath(), ctx.dirs.binDir()),
-                        PackSyncService.systemStarter(ctx.dirs.updaterHome()));
-                outcome = verifyOnly ? new Outcome(service.verify(instance), true, false)
-                        : update(service, entry, instance, invite);
+                PackSyncService service = PackOps.newService(ctx);
+                outcome = verifyOnly ? new PackOps.Outcome(service.verify(instance), true, false)
+                        : PackOps.update(service, entry, instance, invite,
+                                (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)));
             } catch (IOException e) {
                 ctx.log("Pack sync: " + e.getMessage());
-                outcome = new Outcome(new PackSyncService.Result(-1, "binary", e.getMessage(), ""), verifyOnly, false);
+                outcome = new PackOps.Outcome(new PackSyncService.Result(-1, "binary", e.getMessage(), ""), verifyOnly, false);
             }
-            Outcome finished = outcome;
+            PackOps.Outcome finished = outcome;
             Platform.runLater(() -> finish(entry, finished));
         });
-    }
-
-    /**
-     * Updates the pack. When the pack server cannot be reached but the installed files still verify, the player keeps
-     * using the local copy (restricted networks, outages) and updates in the next window instead of being blocked.
-     */
-    private Outcome update(PackSyncService service, ServerEntry entry, Path instance, String invite) throws IOException {
-        PackSyncService.Result result = service.sync(entry.packUrl(), instance, invite,
-                (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)));
-        if (result.ok() || !"network".equals(result.code())) {
-            return new Outcome(result, false, false);
-        }
-        PackSyncService.Result local = service.verify(instance);
-        if (!local.ok()) {
-            return new Outcome(result, false, false);
-        }
-        ctx.log("Pack server unreachable, the installed pack verifies: continuing on the local copy");
-        return new Outcome(new PackSyncService.Result(0, "", result.message(), local.packVersion()), false, true);
     }
 
     /** The game folder of the server's instance (profile written from the signed entry on first use). */
@@ -371,7 +327,7 @@ final class ServersPage {
         message.setText(I18n.tr("sync." + phase, file));
     }
 
-    private void finish(ServerEntry entry, Outcome outcome) {
+    private void finish(ServerEntry entry, PackOps.Outcome outcome) {
         setBusy(false);
         progress.setVisible(false);
         progress.setManaged(false);

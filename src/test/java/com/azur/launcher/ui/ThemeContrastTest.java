@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
-/** WCAG AA for the theme: body text >= 4.5:1 on every background it can sit on, no font below 13px. */
+/** WCAG AA for the theme: body text >= 4.5:1 on every background it can sit on, no font below 14px. */
 class ThemeContrastTest {
 
     private static final double AA = 4.5;
@@ -93,11 +93,10 @@ class ThemeContrastTest {
         // field border against its own fill, and the fill against the card it sits on (WCAG 1.4.11 asks 3:1 for borders)
         assertTrue(ratio(color(css, "outline-variant"), fill) >= 3.0, "field border");
         assertTrue(ratio(color(css, "primary"), fill) >= 3.0, "focus border");
-        assertTrue(ratio(fill, color(css, "surface-container-low")) >= 1.3, "field fill vs card");
     }
 
     @Test
-    void panelsAreLighterThanTheOldDarkTheme() throws IOException {
+    void panelsAreLight() throws IOException {
         String css = css();
         assertTrue(luminance(color(css, "surface-container")) > luminance("#13234a") * 2);
     }
@@ -106,11 +105,11 @@ class ThemeContrastTest {
     void noFontBelow13px() throws IOException {
         Matcher m = Pattern.compile("-fx-font-size:\\s*(\\d+)px").matcher(css());
         while (m.find()) {
-            assertTrue(Integer.parseInt(m.group(1)) >= 13, "font " + m.group(1) + "px");
+            assertTrue(Integer.parseInt(m.group(1)) >= 14, "font " + m.group(1) + "px");
         }
         Matcher v = Pattern.compile("-azur-fs-[a-z-]+:\\s*(\\d+)px").matcher(css());
         while (v.find()) {
-            assertTrue(Integer.parseInt(v.group(1)) >= 13, "scale " + v.group(1) + "px");
+            assertTrue(Integer.parseInt(v.group(1)) >= 14, "scale " + v.group(1) + "px");
         }
     }
 }

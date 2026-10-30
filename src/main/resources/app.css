@@ -1,58 +1,58 @@
 /*
- * Azur Launcher theme. One dark palette (the same as the pack updater): navy panels, gold accents, azure highlights.
+ * Azur Launcher theme. One light palette (the only theme): pale blue-white panels, deep blue accents, gold kept for tags.
  * Fonts: Philosopher (headings) and PT Sans (text), both SIL OFL 1.1, loaded in LauncherApp from /fonts.
  * Every colour below is a variable; components reference only the variables.
  */
 
 .root {
     -fx-font-family: "PT Sans", "Segoe UI", sans-serif;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 
-    /* type scale (px, literal because JavaFX cannot use looked-up sizes for fonts or radii): small 13, body 14, card title 18, title 28, display 30 */
+    /* type scale (px, literal because JavaFX cannot use looked-up sizes for fonts or radii): caption 14, body 16, card title 18, title 28, display 30 */
 
 
     /* panels */
-    -azur-surface: #1d3869;
-    -azur-surface-container-low: #25437c;
-    -azur-surface-container: #2b4d8e;
-    -azur-surface-container-high: #33589c;
-    -azur-surface-container-highest: #162b58;
-    -azur-surface-variant: #2f5296;
+    -azur-surface: #ffffff;
+    -azur-surface-container-low: #f3f5fb;
+    -azur-surface-container: #eaeef7;
+    -azur-surface-container-high: #e0e6f3;
+    -azur-surface-container-highest: #ffffff;
+    -azur-surface-variant: #e6ebf6;
 
     /* text */
-    -azur-on-surface: #f6f1e2;
-    -azur-on-surface-variant: #e4e9f6;
-    -azur-on-surface-variant-transparent-38: #b9bccd80;
-    -azur-muted: #d0d8ee;
+    -azur-on-surface: #1b2438;
+    -azur-on-surface-variant: #2b3550;
+    -azur-on-surface-variant-transparent-38: #4a547080;
+    -azur-muted: #4a5470;
 
     /* gold */
-    -azur-primary: #f2d58f;
-    -azur-on-primary: #14274f;
-    -azur-primary-container: #c9a227;
-    -azur-on-primary-container: #14274f;
-    -azur-primary-fixed-dim: #f3dc9c;
-    -azur-on-primary-fixed: #14274f;
-    -azur-primary-transparent-50: #f2d58f66;
-    -azur-surface-tint: #e8c877;
+    -azur-primary: #1f4e9c;
+    -azur-on-primary: #ffffff;
+    -azur-primary-container: #1f4e9c;
+    -azur-on-primary-container: #ffffff;
+    -azur-primary-fixed-dim: #163d7d;
+    -azur-on-primary-fixed: #ffffff;
+    -azur-primary-transparent-50: #1f4e9c22;
+    -azur-surface-tint: #1f4e9c;
 
     /* azure */
-    -azur-secondary-container: #2f5aa6;
-    -azur-on-secondary-container: #f6f1e2;
-    -azur-secondary-container-transparent-50: #3b82e040;
-    -azur-azure: #3b82e0;
+    -azur-secondary-container: #dbe6fa;
+    -azur-on-secondary-container: #14274f;
+    -azur-secondary-container-transparent-50: #2f6fd040;
+    -azur-azure: #2f6fd0;
 
     /* borders */
-    -azur-outline: #b8903f;
-    -azur-outline-variant: #6f93d4;
+    -azur-outline: #6b7a99;
+    -azur-outline-variant: #6f7d9c;
 
     /* errors, status */
-    -azur-error: #ff8a80;
-    -azur-on-error: #3a0a0d;
-    -azur-error-container: #6b2127;
-    -azur-on-error-container: #ffd9d6;
-    -azur-online: #6fd28c;
+    -azur-error: #b3261e;
+    -azur-on-error: #ffffff;
+    -azur-error-container: #fde7e4;
+    -azur-on-error-container: #7a1410;
+    -azur-online: #1a7f37;
 
-    -azur-depth-color: rgba(0, 0, 0, 0.45);
+    -azur-depth-color: rgba(20, 30, 60, 0.18);
 }
 
 .label {
@@ -60,7 +60,7 @@
 }
 
 .window-root {
-    -fx-background-color: linear-gradient(to bottom, #2c5aa8 0%, #2450a0 45%, #1d4288 100%);
+    -fx-background-color: linear-gradient(to bottom, #f6f7fb 0%, #f1f4fa 45%, #eaeef7 100%);
     -fx-background-radius: 8;
     -fx-border-color: -azur-outline;
     -fx-border-radius: 8;
@@ -95,7 +95,7 @@
 .title-bar-title {
     -fx-text-fill: -azur-primary;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .window-button {
@@ -147,7 +147,7 @@
 
 .nav-item > .label {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .nav-item .icon {
@@ -174,7 +174,7 @@
 
 .nav-footer-label {
     -fx-text-fill: -azur-muted;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
     -fx-padding: 6 12 6 12;
 }
 
@@ -205,7 +205,7 @@
 
 .page-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .card {
@@ -225,17 +225,17 @@
 
 .card-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .two-line-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .two-line-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .tag {
@@ -243,7 +243,7 @@
     -fx-text-fill: -azur-on-secondary-container;
     -fx-background-radius: 3;
     -fx-padding: 1 6 1 6;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .hint {
@@ -261,7 +261,7 @@
 
 .hint.info > .label {
     -fx-text-fill: -azur-on-primary-fixed;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .hint.info .icon {
@@ -272,60 +272,58 @@
     -fx-padding: 12;
 }
 
-.launch-button {
-    -fx-min-width: 203;
-    -fx-max-width: 203;
-    -fx-min-height: 57;
-    -fx-max-height: 57;
-    -fx-padding: 0;
+.button.launch-button {
+    -fx-min-width: 320;
+    -fx-max-width: 320;
+    -fx-min-height: 56;
+    -fx-pref-height: 56;
+    -fx-max-height: 56;
+    -fx-padding: 0 24 0 24;
     -fx-alignment: center;
     -fx-graphic-text-gap: 10;
-    -fx-background-color: linear-gradient(to bottom, #f3dc9c, #c9a227);
-    -fx-background-radius: 4 0 0 4;
-    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -azur-on-primary-container 20%, -azur-on-primary-container 80%, transparent 80%, transparent 100%);
-    -fx-border-width: 0 3 0 0;
-    -fx-text-fill: -azur-on-primary-container;
-    -fx-font-family: "Philosopher";
-    -fx-font-size: 17px;
+    -fx-background-color: -azur-primary;
+    -fx-background-radius: 8;
+    -fx-text-fill: -azur-on-primary;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
     -fx-cursor: hand;
 }
 
-.launch-button .icon {
-    -fx-background-color: -azur-on-primary-container;
+.button.launch-button .icon {
+    -fx-background-color: -azur-on-primary;
 }
 
-.launch-button:hover {
-    -fx-background-color: linear-gradient(to bottom, #fbeab8, #e0b93a);
-    -fx-text-fill: -azur-on-primary-fixed;
+.button.launch-button:hover,
+.button.launch-button:focused {
+    -fx-background-color: -azur-primary-fixed-dim;
 }
 
-.launch-button:hover .icon {
-    -fx-background-color: -azur-on-primary-fixed;
+.button.launch-button:disabled {
+    -fx-opacity: 0.7;
 }
 
-.launch-button.stopping {
+.button.launch-button.stopping {
     -fx-background-color: -azur-error-container;
     -fx-text-fill: -azur-on-error-container;
-    -fx-border-color: linear-gradient(to bottom, transparent 0%, transparent 20%, -azur-on-error-container 20%, -azur-on-error-container 80%, transparent 80%, transparent 100%);
 }
 
-.launch-button.stopping .icon {
+.button.launch-button.stopping .icon {
     -fx-background-color: -azur-on-error-container;
 }
 
-.launch-button.stopping:hover {
+.button.launch-button.stopping:hover {
     -fx-background-color: -azur-error;
     -fx-text-fill: -azur-on-error;
 }
 
-.launch-button.stopping:hover .icon {
+.button.launch-button.stopping:hover .icon {
     -fx-background-color: -azur-on-error;
 }
 
 .button {
     -fx-cursor: hand;
     -fx-background-radius: 6;
-    -fx-min-height: 38;
+    -fx-min-height: 44;
     -fx-padding: 8 18 8 18;
     -fx-background-color: transparent;
     -fx-text-fill: -azur-on-surface;
@@ -351,9 +349,9 @@
 
 .button-border {
     -fx-background-color: transparent;
-    -fx-border-color: -azur-primary-container;
+    -fx-border-color: -azur-outline;
     -fx-border-radius: 6;
-    -fx-border-width: 1;
+    -fx-border-width: 1.5;
     -fx-text-fill: -azur-primary;
     -fx-graphic-text-gap: 6;
 }
@@ -392,10 +390,10 @@
     -fx-prompt-text-fill: -azur-muted;
     -fx-highlight-fill: -azur-azure;
     -fx-highlight-text-fill: #ffffff;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
     -fx-padding: 0 12 0 12;
-    -fx-min-height: 38;
-    -fx-pref-height: 38;
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
 }
 
 .text-field:hover,
@@ -459,7 +457,7 @@
 .combo-box .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
     -fx-padding: 0 10 0 12;
 }
 
@@ -559,24 +557,24 @@
 
 .option-title {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .option-subtitle {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .value-label {
     -fx-text-fill: -azur-primary;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
     -fx-min-width: 74;
     -fx-alignment: center-right;
 }
 
 .log-area {
     -fx-font-family: "Cascadia Mono", "Consolas", "JetBrains Mono", monospace;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
     -fx-background-color: -azur-surface-container;
     -fx-background-radius: 6;
     -fx-text-fill: -azur-on-surface;
@@ -611,7 +609,7 @@
 
 .status-text {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .download-progress {
@@ -633,7 +631,7 @@
 
 .context-menu .menu-item .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .context-menu .menu-item:focused {
@@ -773,7 +771,7 @@
 
 .dialog-pane .header-panel .label {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
     -fx-font-weight: bold;
 }
 
@@ -799,7 +797,7 @@
 .path-value {
     -fx-text-fill: -azur-on-surface;
     -fx-font-family: "Menlo", "Consolas", monospace;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .greeting {
@@ -810,11 +808,11 @@
 
 .greeting-sub {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .hero-card {
-    -fx-background-color: linear-gradient(to bottom right, #2a4f95, #2f58a2);
+    -fx-background-color: linear-gradient(to bottom right, #ffffff, #f3f5fb);
     -fx-border-color: -azur-outline;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
@@ -847,7 +845,7 @@
 
 .hero-subtitle {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .account-card {
@@ -879,13 +877,13 @@
 
 .empty-hint {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
     -fx-padding: 18;
 }
 
 .check-box {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .check-box .box {
@@ -964,13 +962,13 @@
 
 .kv-key {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
     -fx-min-width: 130;
 }
 
 .kv-value {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .banner-warn {
@@ -978,17 +976,17 @@
     -fx-background-radius: 5;
     -fx-padding: 8 12 8 12;
     -fx-text-fill: -azur-on-error-container;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .about-text {
     -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 16px;
 }
 
 .about-small {
     -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 13px;
+    -fx-font-size: 14px;
 }
 
 .about-logo {
@@ -1003,42 +1001,70 @@
 }
 
 .home-hero {
-    -fx-padding: 56 0 24 0;
+    -fx-padding: 24 0 24 0;
 }
 
-.home-greeting {
-    -fx-text-fill: -azur-on-surface-variant;
-    -fx-font-size: 16px;
+.home-logo {
+    -fx-min-width: 96;
+    -fx-min-height: 96;
+    -fx-max-width: 96;
+    -fx-max-height: 96;
+    -fx-background-image: url("img/logo.png");
+    -fx-background-size: contain;
+    -fx-background-repeat: no-repeat;
+    -fx-background-position: center;
 }
 
 .home-title {
     -fx-text-fill: -azur-primary;
     -fx-font-family: "Philosopher";
-    -fx-font-size: 36px;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
 }
 
 .home-sub {
-    -fx-text-fill: -azur-on-surface;
-    -fx-font-size: 15px;
+    -fx-text-fill: -azur-on-surface-variant;
+    -fx-font-size: 16px;
     -fx-text-alignment: center;
 }
 
-.home-advanced > .title {
-    -fx-font-size: 15px;
+.home-error {
+    -fx-text-fill: -azur-on-error-container;
+    -fx-background-color: -azur-error-container;
+    -fx-background-radius: 8;
+    -fx-padding: 12 16 12 16;
+    -fx-font-size: 16px;
 }
 
-.home-advanced > .title {
+.home-error-details {
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: 14px;
+}
+
+.wizard-step {
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: 14px;
+}
+
+.advanced-pane > .title {
     -fx-background-color: -azur-surface-container-low;
     -fx-background-radius: 8;
     -fx-padding: 10 14 10 14;
 }
 
-.home-advanced > .title > .text {
+.advanced-pane > .title > .text {
     -fx-fill: -azur-on-surface;
+    -fx-font-size: 16px;
 }
 
-.home-advanced > .content {
+.advanced-pane > .content {
     -fx-background-color: transparent;
     -fx-border-width: 0;
-    -fx-padding: 14 0 0 0;
+    -fx-padding: 24 0 0 0;
+}
+
+.button.launch-button.compact {
+    -fx-min-width: 160;
+    -fx-max-width: 160;
+    -fx-font-size: 16px;
 }

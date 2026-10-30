@@ -7,6 +7,13 @@ cd "$(dirname "$0")/.."
 VERSION=$(sed -n "s/^version = '\(.*\)'$/\1/p" build.gradle | head -1)
 STAGE=build/dist
 
+# Offline by default with the repo-wide Gradle home; GRADLE_ONLINE=1 (plus a proxy in GRADLE_OPTS) for new dependencies.
+if [ "${GRADLE_ONLINE:-0}" != "1" ]; then
+  GRADLE_USER_HOME="${GRADLE_USER_HOME:-$(cd .. && pwd)/.gradle-home}"
+  export GRADLE_USER_HOME
+  GRADLE_FLAGS="--offline ${GRADLE_FLAGS:-}"
+fi
+
 ./gradlew ${GRADLE_FLAGS:-} --quiet clean releaseJar
 
 # jpackage input: the fat jar (it already carries JavaFX for every platform) plus the updater binaries of this OS.

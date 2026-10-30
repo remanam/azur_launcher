@@ -1,360 +1,321 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AuthAccount;
-import com.azur.launcher.game.LocalVersion;
-import com.azur.launcher.game.LocalVersionScanner;
-import com.azur.launcher.game.VersionManager;
+import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.i18n.I18n;
-import com.azur.launcher.loader.InstallEntries;
-import com.azur.launcher.loader.NeoForgeCatalog;
-import com.azur.launcher.loader.NeoForgeList;
+import com.azur.launcher.launch.LaunchRequest;
+import com.azur.launcher.net.HttpUtils;
+import com.azur.launcher.profile.Instance;
 import com.azur.launcher.profile.InstanceStore;
 import com.azur.launcher.profile.Profile;
-import com.azur.launcher.loader.NeoForgeInstaller;
-import com.azur.launcher.model.VersionManifest;
+import com.azur.launcher.profile.ServerProfiles;
+import com.azur.launcher.servers.ServerEntry;
+import com.azur.launcher.servers.ServerListService;
+import com.azur.launcher.servers.ServerPing;
+import com.azur.launcher.servers.ServerStatusService;
+import com.azur.launcher.sync.PackSyncService;
 
 import javafx.application.Platform;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.collections.transformation.FilteredList;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
-import javafx.scene.control.TextArea;
 import javafx.scene.control.TitledPane;
-import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.time.Clock;
 
-/** Home page: pick an installed version, install new ones (vanilla or NeoForge), launch and watch the log. */
+/**
+ * Home = the server screen: logo, nickname, server with status, one pack line and ONE big button whose label follows
+ * the state (Start / Update / Updating N% / Play / Retry). A failure is one sentence with an expandable detail.
+ */
 final class HomePage {
 
+    private static final long PING_INTERVAL_MS = 15_000;
+
     private final AppContext ctx;
-    private final VersionManager versionManager;
-    private final VBox root = new VBox(28);
-
-    private final Label heroTitle = UiKit.label("", "home-title");
-    private final Label heroSubtitle = UiKit.label("", "home-sub");
-    private final Label greeting = UiKit.label("", "home-greeting");
-    private final ComboBox<LocalVersion> installedBox = new ComboBox<>();
-    private final ObservableList<InstallEntries.Entry> entries = FXCollections.observableArrayList();
-    private final FilteredList<InstallEntries.Entry> visibleEntries = new FilteredList<>(entries);
-    private final ComboBox<InstallEntries.Entry> entryBox = new ComboBox<>(visibleEntries);
-    private final TextField searchField = new TextField();
-    private final TextField manualField = new TextField();
-    private final Label installNote = UiKit.label("", "banner-warn");
-    private List<String> vanillaReleases = List.of();
-    private List<String> neoForgeBuilds = List.of();
-    private final Button installButton;
-    private final Button launchButton;
-    private final TextArea logArea = new TextArea();
-
     private final PlayController play;
-    private volatile boolean busy;
+    private final PackState packState;
+    private final Runnable openAccounts;
+    private final ServerStatusService status;
+    private final StackPane root = new StackPane();
+    private final VBox main = new VBox(24);
+    private final Label nickLabel = UiKit.label("", "home-sub");
+    private final Label offlineTag = UiKit.label("", "tag");
+    private final Button signInLink;
+    private final Region dot = new Region();
+    private final Label serverLabel = UiKit.label("", "home-title");
+    private final Label statusLabel = UiKit.label("", "home-sub");
+    private final Label packLabel = UiKit.label("", "home-sub");
+    private final Button mainButton;
+    private final Label errorLabel = UiKit.label("", "home-error");
+    private final Label detailsLabel = UiKit.label("", "home-error-details");
+    private final TitledPane details = new TitledPane(I18n.tr("home.error.details"), detailsLabel);
+    private final VBox errorBox = new VBox(8, errorLabel, details);
+    private final FirstRunWizard wizard;
 
-    HomePage(AppContext ctx, PlayController play) {
+    private ServerEntry server;
+    private boolean installed;
+    private boolean updateAvailable;
+    private boolean updating;
+    private boolean failed;
+    private int percent = -1;
+    private boolean wizardActive;
+
+    HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAccounts) {
         this.ctx = ctx;
         this.play = play;
-        this.versionManager = new VersionManager(ctx.gamePaths(), ctx::log);
+        this.packState = packState;
+        this.openAccounts = openAccounts;
+        this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
+        mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
+        mainButton.setDefaultButton(true);
+        signInLink = UiKit.button(I18n.tr("home.sign_in_ms"), null, "button-text", openAccounts);
+        wizard = new FirstRunWizard(ctx, openAccounts, this::install, this::playFromWizard);
+        wizardActive = HomeState.wizardNeeded(ctx.accounts.selected() != null);
 
-        launchButton = UiKit.button(I18n.tr("home.play"), "icon-play", "launch-button", play::startDefault);
-        launchButton.setDefaultButton(true);
-        installButton = UiKit.button(I18n.tr("home.install"), "icon-plus", "button-raised", this::install);
+        dot.getStyleClass().add("status-dot");
+        details.setExpanded(false);
+        details.getStyleClass().add("advanced-pane");
+        errorLabel.setWrapText(true);
+        detailsLabel.setWrapText(true);
+        errorBox.setMaxWidth(520);
+        showError(null, null);
 
-        root.getStyleClass().add("page");
-        root.getChildren().addAll(heroCard(), advanced());
+        Region logo = new Region();
+        logo.getStyleClass().add("home-logo");
+        HBox nickRow = new HBox(12, nickLabel, offlineTag, signInLink);
+        nickRow.setAlignment(Pos.CENTER);
+        HBox serverRow = new HBox(12, dot, serverLabel);
+        serverRow.setAlignment(Pos.CENTER);
+        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, mainButton, errorBox);
+        main.setAlignment(Pos.TOP_CENTER);
+        main.getStyleClass().add("home-hero");
+        root.setAlignment(Pos.TOP_CENTER);
 
-        logArea.setText(ctx.logText());
-        ctx.bindLog(line -> logArea.appendText(line + "\n"));
-        ctx.onAccountsChanged(this::updateHero);
-        play.onPhase(this::showPhase);
-        refreshInstalled();
-        updateHero();
-        loadManifest();
+        ctx.onAccountsChanged(this::renderAccount);
+        play.onPhase(phase -> render());
+        renderAccount();
+        loadServer();
     }
 
     Node node() {
         return UiKit.pageScroll(root);
     }
 
-    // ------------------------------------------------------------------ layout
+    // ------------------------------------------------------------------ data
 
-    private VBox heroCard() {
-        heroSubtitle.setWrapText(true);
-        VBox hero = new VBox(14, greeting, heroTitle, heroSubtitle, launchButton);
-        hero.getStyleClass().add("home-hero");
-        hero.setAlignment(Pos.CENTER);
-        return hero;
-    }
-
-    /** Everything except Play lives in one collapsed section, so the page stays calm. */
-    private TitledPane advanced() {
-        TitledPane pane = new TitledPane(I18n.tr("home.advanced"),
-                new VBox(14, installedCard(), installCard(), logCard()));
-        pane.setExpanded(false);
-        pane.getStyleClass().add("home-advanced");
-        return pane;
-    }
-
-    private VBox installedCard() {
-        installedBox.setMaxWidth(Double.MAX_VALUE);
-        installedBox.setPromptText(I18n.tr("home.no_versions"));
-        installedBox.setCellFactory(list -> new VersionCell());
-        installedBox.setButtonCell(new VersionCell());
-        installedBox.valueProperty().addListener((obs, old, value) -> updateHero());
-        Button folder = UiKit.button(I18n.tr("home.open_folder"), "icon-folder", "button-border",
-                () -> ctx.openInSystem(ctx.gameDir()));
-        Button refresh = UiKit.button(I18n.tr("home.refresh"), "icon-refresh", "button-border", () -> {
-            refreshInstalled();
-            loadManifest();
-        });
-        HBox row = new HBox(8, installedBox, refresh, folder);
-        HBox.setHgrow(installedBox, Priority.ALWAYS);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return UiKit.card(UiKit.cardHeader("icon-versions", I18n.tr("home.installed")), row);
-    }
-
-    private VBox installCard() {
-        searchField.setPromptText(I18n.tr("home.search"));
-        searchField.textProperty().addListener((obs, old, text) -> {
-            visibleEntries.setPredicate(entry -> InstallEntries.matches(entry, text));
-            entryBox.getSelectionModel().selectFirst();
-        });
-        HBox.setHgrow(searchField, Priority.ALWAYS);
-        entryBox.setMaxWidth(Double.MAX_VALUE);
-        entryBox.setPromptText(I18n.tr("home.versions_unavailable"));
-        entryBox.setCellFactory(list -> new EntryCell());
-        entryBox.setButtonCell(new EntryCell());
-        HBox.setHgrow(entryBox, Priority.ALWAYS);
-        HBox pick = new HBox(8, searchField, entryBox);
-        pick.setAlignment(Pos.CENTER_LEFT);
-        manualField.setPromptText(I18n.tr("home.neoforge_manual_hint"));
-        manualField.setPrefWidth(300);
-        Label manualLabel = UiKit.label(I18n.tr("home.neoforge_manual"), "option-title");
-        HBox manual = new HBox(8, manualLabel, manualField, installButton);
-        manual.setAlignment(Pos.CENTER_LEFT);
-        installNote.setWrapText(true);
-        installNote.setVisible(false);
-        installNote.setManaged(false);
-        return UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("home.install_title")),
-                UiKit.label(I18n.tr("home.install_hint"), "card-subtitle"), pick, installNote, manual);
-    }
-
-    private VBox logCard() {
-        logArea.setEditable(false);
-        logArea.setWrapText(false);
-        logArea.getStyleClass().add("log-area");
-        logArea.setPrefRowCount(9);
-        VBox.setVgrow(logArea, Priority.ALWAYS);
-        Button clear = UiKit.button(I18n.tr("home.clear_log"), null, "button-text", logArea::clear);
-        VBox card = UiKit.card(UiKit.cardHeader("icon-terminal", I18n.tr("home.log"), clear), logArea);
-        card.getStyleClass().add("log-card");
-        return card;
-    }
-
-    // ------------------------------------------------------------------ state
-
-    private void updateHero() {
-        AuthAccount account = ctx.accounts.selected();
-        greeting.setText(I18n.tr("home.greeting", account == null ? I18n.tr("home.guest") : account.getUsername()));
-        LocalVersion version = installedBox.getValue();
-        heroTitle.setText(version == null ? I18n.tr("home.no_version_selected") : version.id());
-        heroSubtitle.setText(account == null ? I18n.tr("home.sign_in_needed")
-                : I18n.tr("home.playing_as", account.getUsername()));
-    }
-
-    /** Re-reads the versions folder (local disk only, so it is cheap) and keeps the selection when possible. */
-    private void refreshInstalled() {
-        List<LocalVersion> all = new ArrayList<>(LocalVersionScanner.scan(ctx.gameDir()));
-        all.removeIf(version -> !version.launchable());
-        String wanted = installedBox.getValue() != null ? installedBox.getValue().id() : ctx.config.getVersionId();
-        installedBox.getItems().setAll(all);
-        for (LocalVersion version : all) {
-            if (version.id().equals(wanted)) {
-                installedBox.setValue(version);
-                return;
-            }
-        }
-        if (!all.isEmpty()) {
-            installedBox.setValue(all.get(all.size() - 1));
-        }
-    }
-
-    private void loadManifest() {
+    private void loadServer() {
         ctx.io.submit(() -> {
+            ServerEntry first = null;
             try {
-                VersionManifest manifest = versionManager.getManifest(false);
-                List<String> releases = manifest.getVersions().stream()
-                        .filter(entry -> "release".equals(entry.getType()))
-                        .map(VersionManifest.VersionEntry::getId).toList();
-                Platform.runLater(() -> {
-                    vanillaReleases = releases;
-                    rebuildEntries();
-                });
+                ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
+                        ServerListService.loadKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
+                        HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
+                first = service.load().list().servers().stream().findFirst().orElse(null);
             } catch (Exception e) {
-                ctx.log("Version list unavailable: " + e.getMessage());
-                ctx.setStatus(I18n.tr("home.versions_unavailable"));
+                ctx.log("Home: server list unavailable: " + e.getMessage());
             }
-        });
-        loadNeoForge();
-    }
-
-    /** NeoForge builds with a timeout; on failure the last saved list is used and the reason is shown in the page. */
-    private void loadNeoForge() {
-        ctx.io.submit(() -> {
-            NeoForgeList.Result result = new NeoForgeList(ctx.dirs.cacheDir().resolve("neoforge-versions.txt"))
-                    .load(NeoForgeCatalog::allVersions);
-            if (!result.fresh()) {
-                ctx.log("NeoForge list unavailable: " + result.error());
-            }
+            ServerEntry entry = first;
             Platform.runLater(() -> {
-                neoForgeBuilds = result.versions();
-                showNote(result.fresh() ? null : I18n.tr(
-                        result.versions().isEmpty() ? "home.neoforge_unavailable" : "home.neoforge_cached",
-                        result.error()));
-                rebuildEntries();
+                server = entry;
+                play.setServer(entry);
+                refreshState();
             });
         });
     }
 
-    private void rebuildEntries() {
-        InstallEntries.Entry keep = entryBox.getValue();
-        String pinnedMc = null;
-        String pinnedNeoForge = null;
-        try {
-            Profile pin = InstanceStore.bundledProfile();
-            pinnedMc = pin.minecraft();
-            pinnedNeoForge = pin.neoforge();
-        } catch (java.io.IOException e) {
-            ctx.log("Pinned profile unreadable: " + e.getMessage());
+    /** Re-reads installed / update state off the UI thread, then redraws. */
+    private void refreshState() {
+        ctx.io.submit(() -> {
+            boolean isInstalled = false;
+            boolean hasUpdate = false;
+            try {
+                Instance instance = instance();
+                isInstalled = packState.installed(instance);
+                hasUpdate = isInstalled && packState.updateAvailable(instance);
+            } catch (Exception e) {
+                ctx.log("Home: state unavailable: " + e.getMessage());
+            }
+            boolean i = isInstalled;
+            boolean u = hasUpdate;
+            Platform.runLater(() -> {
+                installed = i;
+                updateAvailable = u;
+                renderServer();
+                render();
+                if (server != null) {
+                    status.request(server, result -> Platform.runLater(() -> showPing(result)));
+                }
+            });
+        });
+    }
+
+    private Instance instance() throws java.io.IOException {
+        InstanceStore store = new InstanceStore(ctx.dirs);
+        return server == null ? store.loadDefault()
+                : store.ensure(ServerProfiles.derive(server, InstanceStore.bundledProfile()));
+    }
+
+    // ------------------------------------------------------------------ actions
+
+    private void onMainButton() {
+        switch (currentAction()) {
+            case PLAY -> startGame();
+            case START, UPDATE, RETRY -> install();
+            case UPDATING -> { }
         }
-        entries.setAll(InstallEntries.build(vanillaReleases, neoForgeBuilds, pinnedMc, pinnedNeoForge));
-        if (keep != null && entries.contains(keep)) {
-            entryBox.setValue(keep);
+    }
+
+    private void startGame() {
+        if (server == null) {
+            play.startDefault();
         } else {
-            entryBox.getSelectionModel().selectFirst();
+            play.start(new LaunchRequest(server));
         }
     }
 
-    private void showNote(String text) {
-        installNote.setText(text == null ? "" : text);
-        installNote.setVisible(text != null);
-        installNote.setManaged(text != null);
+    private void playFromWizard() {
+        wizardActive = false;
+        render();
+        startGame();
     }
 
-    // ------------------------------------------------------------------ install
-
+    /** Installs the game and the pack (or updates it), reporting percent on the button. */
     private void install() {
-        if (busy) {
+        if (updating) {
             return;
         }
-        String mc;
-        String neoForge;
-        String manual = manualField.getText().trim();
-        if (!manual.isEmpty()) {
-            if (!InstallEntries.isValidNeoForge(manual)) {
-                showNote(I18n.tr("home.neoforge_manual_bad"));
-                return;
-            }
-            neoForge = manual;
-            mc = InstallEntries.mcFor(manual);
-        } else {
-            InstallEntries.Entry entry = entryBox.getValue();
-            if (entry == null) {
-                return;
-            }
-            mc = entry.mc();
-            neoForge = entry.neoforge();
-        }
-        setBusy(true);
-        ctx.setStatus(I18n.tr("home.installing"));
+        updating = true;
+        failed = false;
+        percent = -1;
+        showError(null, null);
+        render();
+        ServerEntry entry = server;
         ctx.io.submit(() -> {
-            String installedId = mc;
-            try {
-                versionManager.getVersionMeta(mc, false);
-                if (neoForge != null) {
-                    NeoForgeInstaller.InstallResult result =
-                            new NeoForgeInstaller(ctx.dirs, ctx::log).install(mc, neoForge, ctx.gameDir());
-                    ctx.log(result.message());
-                    if (!result.success()) {
-                        Platform.runLater(() -> error(result.message()));
-                        return;
-                    }
-                    installedId = result.versionId();
-                }
-                String selectId = installedId;
-                ctx.config.setVersionId(selectId);
-                Platform.runLater(this::refreshInstalled);
-                ctx.setStatus(I18n.tr("home.install_done", selectId));
-            } catch (Exception e) {
-                ctx.log("Install failed: " + e.getMessage());
-                Platform.runLater(() -> error(e.getMessage()));
-            } finally {
-                Platform.runLater(() -> setBusy(false));
+            PackOps.Outcome outcome = PackOps.download(ctx, entry,
+                    (phase, file, done, total) -> progress(done, total),
+                    (done, total, file) -> progress(done, total));
+            Platform.runLater(() -> finishInstall(outcome));
+        });
+    }
+
+    private void progress(long done, long total) {
+        int value = HomeState.percent(done, total);
+        Platform.runLater(() -> {
+            if (value != percent) {
+                percent = value;
+                render();
             }
         });
     }
 
-    private void setBusy(boolean value) {
-        busy = value;
-        installButton.setDisable(value);
-        launchButton.setDisable(value || play.phase() == PlayController.Phase.PREPARING);
-    }
-
-    // ------------------------------------------------------------------ launch
-
-    /** Mirrors the shared play state on the button; the launch itself is {@link PlayController}. */
-    private void showPhase(PlayController.Phase phase) {
-        boolean running = phase == PlayController.Phase.RUNNING;
-        boolean preparing = phase == PlayController.Phase.PREPARING;
-        launchButton.setDisable(preparing);
-        launchButton.setText(I18n.tr(running ? "home.stop" : "home.play"));
-        launchButton.getStyleClass().remove("stopping");
-        if (running) {
-            launchButton.getStyleClass().add("stopping");
-        }
-        installButton.setDisable(phase != PlayController.Phase.IDLE || busy);
-    }
-
-    private void error(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.initOwner(ctx.stage);
-        alert.setTitle(I18n.tr("common.error"));
-        alert.setHeaderText(I18n.tr("common.error"));
-        alert.setContentText(message);
-        UiKit.styleDialog(alert.getDialogPane(), ctx.config.isDarkMode());
-        alert.showAndWait();
-    }
-
-    /** One row in the install list. */
-    private static final class EntryCell extends ListCell<InstallEntries.Entry> {
-        @Override
-        protected void updateItem(InstallEntries.Entry entry, boolean empty) {
-            super.updateItem(entry, empty);
-            if (empty || entry == null) {
-                setText(null);
-                return;
+    private void finishInstall(PackOps.Outcome outcome) {
+        updating = false;
+        PackSyncService.Result result = outcome.result();
+        if (result.ok()) {
+            installed = true;
+            updateAvailable = false;
+            showError(null, null);
+            if (wizardActive) {
+                wizard.showStep(3);
             }
-            String text = entry.isVanilla() ? I18n.tr("home.entry_vanilla", entry.mc())
-                    : I18n.tr("home.entry_neoforge", entry.neoforge(), entry.mc());
-            setText(entry.pinned() ? I18n.tr("home.entry_pinned", text) : text);
+            render();
+            return;
+        }
+        failed = true;
+        String key = "sync.err." + result.code();
+        String reason = I18n.tr(key).equals(key) ? result.message() : I18n.tr(key);
+        ctx.log("Home install failed: exit " + result.exit() + " " + result.code() + " " + result.message());
+        showError(I18n.tr("sync.failed", reason), result.code() + ": " + result.message());
+        render();
+    }
+
+    // ------------------------------------------------------------------ rendering
+
+    private HomeState.Action currentAction() {
+        return HomeState.action(installed, updateAvailable, updating, failed);
+    }
+
+    private String buttonText() {
+        PlayController.Phase phase = play.phase();
+        if (phase == PlayController.Phase.RUNNING) {
+            return I18n.tr("home.stop");
+        }
+        if (phase == PlayController.Phase.PREPARING) {
+            return I18n.tr("home.preparing");
+        }
+        HomeState.Action action = currentAction();
+        if (action == HomeState.Action.UPDATING) {
+            return percent < 0 ? I18n.tr("home.btn.updating_nop") : I18n.tr(action.labelKey(), percent);
+        }
+        return I18n.tr(action.labelKey());
+    }
+
+    private void render() {
+        PlayController.Phase phase = play.phase();
+        String text = buttonText();
+        mainButton.setText(text);
+        mainButton.setDisable(currentAction() == HomeState.Action.UPDATING || phase == PlayController.Phase.PREPARING);
+        mainButton.getStyleClass().remove("stopping");
+        if (phase == PlayController.Phase.RUNNING) {
+            mainButton.getStyleClass().add("stopping");
+        }
+        wizard.showInstall(text, updating, failed ? errorLabel.getText() : null);
+        root.getChildren().setAll(wizardActive ? wizard.node() : main);
+    }
+
+    private void renderAccount() {
+        AuthAccount account = ctx.accounts.selected();
+        if (account == null) {
+            wizardActive = true;
+            wizard.showStep(1);
+        } else if (wizardActive && wizard.step() == 1) {
+            wizard.showStep(2);
+        }
+        nickLabel.setText(account == null ? "" : I18n.tr("home.player", account.getUsername()));
+        boolean offline = account instanceof OfflineAccount;
+        offlineTag.setText(I18n.tr("home.offline_tag"));
+        offlineTag.setVisible(offline);
+        offlineTag.setManaged(offline);
+        signInLink.setVisible(offline);
+        signInLink.setManaged(offline);
+        render();
+    }
+
+    private void renderServer() {
+        serverLabel.setText(server == null ? I18n.tr("home.default_server") : server.name());
+        if (server == null) {
+            statusLabel.setText("");
+        } else {
+            statusLabel.setText(I18n.tr("servers.checking"));
+        }
+        try {
+            Profile pin = server == null ? InstanceStore.bundledProfile()
+                    : ServerProfiles.derive(server, InstanceStore.bundledProfile());
+            packLabel.setText(I18n.tr("home.pack_line", pin.minecraft(), pin.neoforge()));
+        } catch (Exception e) {
+            packLabel.setText("");
         }
     }
 
-    /** One row in the installed-version combo. */
-    private static final class VersionCell extends ListCell<LocalVersion> {
-        @Override
-        protected void updateItem(LocalVersion version, boolean empty) {
-            super.updateItem(version, empty);
-            setText(empty || version == null ? null : version.id());
-        }
+    private void showPing(ServerPing.Result result) {
+        dot.getStyleClass().removeAll("online", "down");
+        dot.getStyleClass().add(result.online() ? "online" : "down");
+        statusLabel.setText(result.online()
+                ? I18n.tr("servers.online", result.playersOnline(), result.playersMax(), result.latencyMs())
+                : I18n.tr("servers.down"));
+    }
+
+    private void showError(String sentence, String detail) {
+        boolean has = sentence != null;
+        errorBox.setVisible(has);
+        errorBox.setManaged(has);
+        errorLabel.setText(has ? sentence : "");
+        detailsLabel.setText(detail == null ? "" : detail);
+        details.setExpanded(false);
     }
 }

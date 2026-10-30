@@ -30,15 +30,16 @@ final class SettingsPage {
     private final ComboBox<String> javaBox = new ComboBox<>();
     private List<JavaDetector.JavaInfo> detected = List.of();
 
-    SettingsPage(AppContext ctx, Runnable onLanguageChanged) {
+    SettingsPage(AppContext ctx, Runnable onLanguageChanged, PlayController play) {
         this.ctx = ctx;
         this.onLanguageChanged = onLanguageChanged;
 
         VBox header = new VBox(3, UiKit.label(I18n.tr("settings.title"), "page-title"),
                 UiKit.label(I18n.tr("settings.subtitle"), "page-subtitle"));
-        VBox options = new VBox(0, memoryRow(), javaRow(), threadsRow(), jvmArgsRow(), languageRow(),
-                serversUrlRow(), inviteRow(), updaterRow(), folderRow());
-        VBox page = new VBox(14, header, UiKit.card(options));
+        VBox options = new VBox(0, languageRow(), serversUrlRow(), inviteRow(), javaRow(), threadsRow(), jvmArgsRow(),
+                folderRow());
+        AdvancedPanel advanced = new AdvancedPanel(ctx, play, memoryRow(), updaterRow());
+        VBox page = new VBox(24, header, UiKit.card(options), advanced.node());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
         detectJava();

@@ -37,6 +37,8 @@ public class LauncherApp extends Application {
 
     private enum Page { HOME, SERVERS, ACCOUNTS, SETTINGS, ABOUT }
 
+    private HBox[] navItems;
+
     private AppContext ctx;
     private StackPane sceneRoot;
     private Page current = Page.HOME;
@@ -93,9 +95,9 @@ public class LauncherApp extends Application {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
         PlayController play = new PlayController(ctx);
-        HomePage homePage = new HomePage(ctx, play);
+        HomePage homePage = new HomePage(ctx, play, PackState.local(ctx), () -> navigate(Page.ACCOUNTS));
         area.getChildren().addAll(homePage.node(), new ServersPage(ctx, play).node(),
-                new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build).node(), new AboutPage().node());
+                new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build, play).node(), new AboutPage().node());
         showPage(area, current);
         return area;
     }
@@ -109,6 +111,15 @@ public class LauncherApp extends Application {
         }
     }
 
+    private void navigate(Page page) {
+        StackPane area = (StackPane) ((BorderPane) sceneRoot.getChildren().get(0)).getCenter();
+        showPage(area, page);
+        for (HBox other : navItems) {
+            other.getStyleClass().remove("selected");
+        }
+        navItems[page.ordinal()].getStyleClass().add("selected");
+    }
+
     private VBox navigation() {
         VBox drawer = new VBox(2);
         drawer.getStyleClass().add("nav-drawer");
@@ -120,15 +131,9 @@ public class LauncherApp extends Application {
         items[Page.ABOUT.ordinal()] = navItem("icon-info", I18n.tr("nav.about"));
         for (Page page : Page.values()) {
             HBox item = items[page.ordinal()];
-            item.setOnMouseClicked(event -> {
-                StackPane area = (StackPane) ((BorderPane) sceneRoot.getChildren().get(0)).getCenter();
-                showPage(area, page);
-                for (HBox other : items) {
-                    other.getStyleClass().remove("selected");
-                }
-                item.getStyleClass().add("selected");
-            });
+            item.setOnMouseClicked(event -> navigate(page));
         }
+        navItems = items;
         items[current.ordinal()].getStyleClass().add("selected");
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
