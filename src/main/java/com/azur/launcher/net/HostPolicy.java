@@ -52,6 +52,24 @@ public final class HostPolicy {
         return new HostPolicy(hosts, true);
     }
 
+    /**
+     * Local-test exception (docs: CLAUDE.md): plain http is accepted ONLY for the loopback literals 127.0.0.1,
+     * [::1] and localhost, so a pack server on the developer's own machine can be used. No other http host passes.
+     */
+    public static boolean isLoopbackHttp(String url) {
+        try {
+            return isLoopbackHttp(URI.create(url));
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private static boolean isLoopbackHttp(URI uri) {
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        return "http".equalsIgnoreCase(uri.getScheme())
+                && (host.equals("127.0.0.1") || host.equals("[::1]") || host.equals("localhost"));
+    }
+
     /** Production policies upgrade {@code http://} to {@code https://} before checking. */
     boolean upgradesHttp() {
         return !looseForTests;
@@ -75,6 +93,12 @@ public final class HostPolicy {
             throw new BlockedHostException("Malformed URL: " + url);
         }
         String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        if (!looseForTests && isLoopbackHttp(uri)) {
+            if (uri.getRawUserInfo() != null) {
+                throw new BlockedHostException("Credentials in URL: " + url);
+            }
+            return;
+        }
         if (!looseForTests) {
             if (!"https".equalsIgnoreCase(uri.getScheme())) {
                 throw new BlockedHostException("Only https is allowed: " + url);

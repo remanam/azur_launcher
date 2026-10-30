@@ -227,7 +227,9 @@ class PackClientInteropTest {
             assertTrue(service.rollback(game).ok());
 
             PackSyncService production = new PackSyncService(work.resolve("home3"), HostPolicy::official, true);
-            PackSyncService.Result blocked = production.sync(null, instance("p"), invite, (p, f, d, t) -> { });
+            InviteToken real = InviteToken.parse(invite);
+            String foreign = InviteToken.encode("http://127.0.0.1.evil.example:8780", real.token(), real.publicKey());
+            PackSyncService.Result blocked = production.sync(null, instance("p"), foreign, (p, f, d, t) -> { });
             assertEquals(PackException.NETWORK, blocked.code());
 
             go.run("revoke", "--name", "v");

@@ -30,4 +30,21 @@ class HostPolicyTest {
         assertFalse(p.allows("http://pack.azur.example/servers.signed.json"));
         assertFalse(HostPolicy.withHosts(java.util.Set.of()).allows("https://pack.azur.example/a"));
     }
+
+    /** Local-test exception: plain http only for loopback literals. */
+    @Test
+    void loopbackHttpIsTheOnlyHttpException() {
+        HostPolicy p = HostPolicy.official();
+        assertTrue(p.allows("http://127.0.0.1/status"));
+        assertTrue(p.allows("http://127.0.0.1:8781/manifest.json"));
+        assertTrue(p.allows("http://localhost:8781/x"));
+        assertTrue(p.allows("http://[::1]:8781/x"));
+        assertFalse(p.allows("http://example.com/x"));
+        assertFalse(p.allows("http://127.0.0.1.evil.com/x"));
+        assertFalse(p.allows("http://user@127.0.0.1/x"));
+        assertFalse(p.allows("http://192.168.1.5/x"));
+        assertFalse(p.allows("https://127.0.0.1/x"));
+        assertTrue(HttpUtils.secure("http://127.0.0.1:8781/x").startsWith("http://"));
+        assertTrue(HttpUtils.secure("http://example.com/x").startsWith("https://"));
+    }
 }

@@ -74,9 +74,9 @@ public final class HttpUtils {
         downloader.download(url, target, Checks.of(expectedSha1, expectedSize));
     }
 
-    /** Upgrades {@code http://} to {@code https://}; the policy then decides about the host. */
+    /** Upgrades {@code http://} to {@code https://} (loopback excepted, see {@link HostPolicy}); the policy then decides. */
     public static String secure(String url) {
-        if (url != null && url.regionMatches(true, 0, "http://", 0, 7)) {
+        if (url != null && url.regionMatches(true, 0, "http://", 0, 7) && !HostPolicy.isLoopbackHttp(url)) {
             return "https://" + url.substring(7);
         }
         return url;
