@@ -24,7 +24,7 @@ final class HomeState {
 
     /**
      * @param installed       the pack/game is installed for the server
-     * @param updateAvailable a newer pack exists (supplied by the updater; false when unknown)
+     * @param updateAvailable a newer pack exists (see {@link #updateAvailable})
      * @param updating        an install or update is running
      * @param failed          the last install or update failed
      */
@@ -39,6 +39,21 @@ final class HomeState {
             return Action.START;
         }
         return updateAvailable ? Action.UPDATE : Action.PLAY;
+    }
+
+    /** The game is installed and, when the server has a pack (invite known), a pack version is recorded. */
+    static boolean installed(boolean gameInstalled, boolean packExpected, String installedPackVersion) {
+        return gameInstalled && (!packExpected || !blank(installedPackVersion));
+    }
+
+    /** An update exists only when both versions are known and differ; an unreachable server never nags. */
+    static boolean updateAvailable(String installedPackVersion, String remotePackVersion) {
+        return !blank(installedPackVersion) && !blank(remotePackVersion)
+                && !installedPackVersion.equals(remotePackVersion);
+    }
+
+    private static boolean blank(String s) {
+        return s == null || s.isBlank();
     }
 
     /** Progress in whole percent, clamped to 0..100; -1 when the total is unknown. */

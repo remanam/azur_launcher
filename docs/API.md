@@ -58,7 +58,7 @@ Header `Authorization: Bearer <player_token>`, body `{}`.
 ## What the launcher does with the answer
 
 1. Stores `player_token` in the vault (never in `pack.json`, never in logs).
-2. `GET /v1/me` right after registration; `pack.invite` is written to the invite vault and used for `azur-updater sync`.
+2. `GET /v1/me` right after registration; `pack.invite` is written to the invite vault and used for the pack sync (`PackSyncService`).
 3. `whitelisted=false` is shown to the player as "not added yet", not as an error.
 4. `roles` are displayed only; no client-side permission depends on them.
 

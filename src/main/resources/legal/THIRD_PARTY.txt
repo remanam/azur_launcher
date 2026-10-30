@@ -15,8 +15,8 @@ MCLQE Launcher (upstream of this fork)
 Fonts: Philosopher (Jovanny Lemonad), PT Sans (ParaType)
   SIL Open Font License 1.1, texts are shown in About and stored next to the fonts.
 
-azur-updater (separate program started by the launcher; installer builds ship it in the app folder)
-  Same project, same GPL-3.0 licence; Go standard library only (BSD-3-Clause). Source: tools/updater.
+Pack client (package com.azur.launcher.pack): part of this launcher, same GPL-3.0 licence; it speaks the
+  protocol of the pack server tools/updater (reference implementation in Go).
 
 Downloaded at run time, not part of this package: Minecraft client and libraries (Mojang, subject to the
 Minecraft EULA), NeoForge (LGPL-2.1 and other licences of its libraries).

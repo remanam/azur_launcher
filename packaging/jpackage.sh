@@ -1,7 +1,6 @@
 #!/bin/sh
 # Builds the installer packages of the RELEASE launcher with jpackage (JDK 21) from the staged input.
-# Normally started by packaging/release.sh, which stages build/dist/input (fat jar) and optionally
-# build/dist/updater-src (azur-updater binaries from tools/updater/build.sh).
+# Normally started by packaging/release.sh, which stages build/dist/input (the fat jar; the pack client is inside it).
 # Usage: packaging/jpackage.sh <version> [type ...]      types: app-image dmg pkg deb rpm (default by OS)
 # Windows: packaging/jpackage.ps1.  Output: build/dist/out.  Packages are UNSIGNED (signing is a separate owner step).
 set -eu
@@ -20,14 +19,6 @@ IN=build/dist/input
 OUT=build/dist/out
 [ -f "$IN/azur-launcher.jar" ] || { echo "Missing $IN/azur-launcher.jar: run packaging/release.sh (or ./gradlew releaseJar)" >&2; exit 2; }
 if ls "$IN" | grep -qi debug; then echo "A debug artifact is in $IN: refusing to package" >&2; exit 3; fi
-
-# the updater binaries of this OS go next to the jars: $APPDIR/updater (UpdaterBinary looks there)
-mkdir -p "$IN/updater"
-FOUND=0
-for f in build/dist/updater-src/azur-updater-"$OS"-*; do
-  [ -f "$f" ] && cp "$f" "$IN/updater/" && FOUND=1
-done
-[ "$FOUND" = 1 ] || echo "WARNING: no azur-updater binary for $OS (run tools/updater/build.sh first); the package will not be able to update packs" >&2
 
 # licence texts next to the jars (the app image has no licence option; installers show LICENSE in their wizard)
 cp LICENSE "$IN/LICENSE.txt"

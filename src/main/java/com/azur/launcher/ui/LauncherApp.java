@@ -42,6 +42,7 @@ public class LauncherApp extends Application {
     private AppContext ctx;
     private StackPane sceneRoot;
     private Page current = Page.HOME;
+    private HomePage homePage;
 
     @Override
     public void start(Stage stage) {
@@ -95,7 +96,7 @@ public class LauncherApp extends Application {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
         PlayController play = new PlayController(ctx);
-        HomePage homePage = new HomePage(ctx, play, PackState.local(ctx), () -> navigate(Page.ACCOUNTS));
+        homePage = new HomePage(ctx, play, PackState.live(ctx), () -> navigate(Page.ACCOUNTS));
         area.getChildren().addAll(homePage.node(), new ServersPage(ctx, play).node(),
                 new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build, play).node(), new AboutPage().node());
         showPage(area, current);
@@ -114,6 +115,9 @@ public class LauncherApp extends Application {
     private void navigate(Page page) {
         StackPane area = (StackPane) ((BorderPane) sceneRoot.getChildren().get(0)).getCenter();
         showPage(area, page);
+        if (page == Page.HOME && homePage != null) {
+            homePage.onShown();
+        }
         for (HBox other : navItems) {
             other.getStyleClass().remove("selected");
         }

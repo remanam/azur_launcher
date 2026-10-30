@@ -7,7 +7,6 @@ import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.sync.PackSyncService;
 import com.azur.launcher.sync.SyncProgress;
-import com.azur.launcher.sync.UpdaterBinary;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -35,16 +34,15 @@ final class PackOps {
             if (entry == null || invite.isBlank()) {
                 return new Outcome(new PackSyncService.Result(0, "", "", ""), false, false);
             }
-            return update(newService(ctx), entry, instance.gameDir(), invite, sync);
+            return update(PackSyncService.standard(ctx.dirs), entry, instance.gameDir(), invite, sync);
         } catch (IOException e) {
             ctx.log("Download client: " + e.getMessage());
             return new Outcome(new PackSyncService.Result(-1, "download", e.getMessage(), ""), false, false);
         }
     }
 
-    static PackSyncService newService(AppContext ctx) throws IOException {
-        return new PackSyncService(UpdaterBinary.resolve(ctx.pack.getUpdaterPath(), ctx.dirs.binDir()),
-                PackSyncService.systemStarter(ctx.dirs.updaterHome()));
+    static PackSyncService newService(AppContext ctx) {
+        return PackSyncService.standard(ctx.dirs);
     }
 
     /**
@@ -52,7 +50,7 @@ final class PackOps {
      * using the local copy (restricted networks, outages) instead of being blocked.
      */
     static Outcome update(PackSyncService service, ServerEntry entry, Path instance, String invite,
-                          SyncProgress progress) throws IOException {
+                          SyncProgress progress) {
         PackSyncService.Result result = service.sync(entry.packUrl(), instance, invite, progress);
         if (result.ok() || !"network".equals(result.code())) {
             return new Outcome(result, false, false);

@@ -38,7 +38,7 @@ final class SettingsPage {
                 UiKit.label(I18n.tr("settings.subtitle"), "page-subtitle"));
         VBox options = new VBox(0, languageRow(), serversUrlRow(), inviteRow(), javaRow(), threadsRow(), jvmArgsRow(),
                 folderRow());
-        AdvancedPanel advanced = new AdvancedPanel(ctx, play, memoryRow(), updaterRow());
+        AdvancedPanel advanced = new AdvancedPanel(ctx, play, memoryRow());
         VBox page = new VBox(24, header, UiKit.card(options), advanced.node());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
@@ -152,10 +152,6 @@ final class SettingsPage {
             }
         });
         return UiKit.optionItem(I18n.tr("settings.invite"), I18n.tr("settings.invite_hint"), field);
-    }
-
-    private Node updaterRow() {
-        return textRow("settings.updater", "settings.updater_hint", ctx.pack.getUpdaterPath(), ctx.pack::setUpdaterPath);
     }
 
     private Node textRow(String titleKey, String hintKey, String value, java.util.function.Consumer<String> setter) {

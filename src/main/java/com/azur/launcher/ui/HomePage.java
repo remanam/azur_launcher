@@ -15,6 +15,8 @@ import com.azur.launcher.servers.ServerPing;
 import com.azur.launcher.servers.ServerStatusService;
 import com.azur.launcher.sync.PackSyncService;
 
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -25,6 +27,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
 import java.time.Clock;
 
@@ -50,6 +53,7 @@ final class HomePage {
     private final Label serverLabel = UiKit.label("", "home-title");
     private final Label statusLabel = UiKit.label("", "home-sub");
     private final Label packLabel = UiKit.label("", "home-sub");
+    private final Label bannerLabel = UiKit.label("", "home-sub");
     private final Button mainButton;
     private final Label errorLabel = UiKit.label("", "home-error");
     private final Label detailsLabel = UiKit.label("", "home-error-details");
@@ -64,6 +68,8 @@ final class HomePage {
     private boolean failed;
     private int percent = -1;
     private boolean wizardActive;
+    private final Timeline refresher = new Timeline(
+            new KeyFrame(Duration.millis(PackState.TTL_MS), event -> refreshState(false)));
 
     HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAccounts) {
         this.ctx = ctx;
@@ -83,6 +89,9 @@ final class HomePage {
         errorLabel.setWrapText(true);
         detailsLabel.setWrapText(true);
         errorBox.setMaxWidth(520);
+        bannerLabel.setWrapText(true);
+        bannerLabel.setMaxWidth(520);
+        showBanner("");
         showError(null, null);
 
         Region logo = new Region();
@@ -91,7 +100,7 @@ final class HomePage {
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, mainButton, errorBox);
+        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, bannerLabel, mainButton, errorBox);
         main.setAlignment(Pos.TOP_CENTER);
         main.getStyleClass().add("home-hero");
         root.setAlignment(Pos.TOP_CENTER);
@@ -100,6 +109,13 @@ final class HomePage {
         play.onPhase(phase -> render());
         renderAccount();
         loadServer();
+        refresher.setCycleCount(Timeline.INDEFINITE);
+        refresher.play();
+    }
+
+    /** The Home page became visible: re-read the state (the pack answer is cached, so this is cheap). */
+    void onShown() {
+        refreshState(false);
     }
 
     Node node() {
@@ -123,28 +139,32 @@ final class HomePage {
             Platform.runLater(() -> {
                 server = entry;
                 play.setServer(entry);
-                refreshState();
+                refreshState(false);
             });
         });
     }
 
     /** Re-reads installed / update state off the UI thread, then redraws. */
-    private void refreshState() {
+    private void refreshState(boolean force) {
+        if (updating) {
+            return;
+        }
+        ServerEntry entry = server;
         ctx.io.submit(() -> {
-            boolean isInstalled = false;
-            boolean hasUpdate = false;
+            PackState.Snapshot snap = new PackState.Snapshot(false, false, "");
             try {
-                Instance instance = instance();
-                isInstalled = packState.installed(instance);
-                hasUpdate = isInstalled && packState.updateAvailable(instance);
+                snap = packState.read(instance(), entry, force);
             } catch (Exception e) {
                 ctx.log("Home: state unavailable: " + e.getMessage());
             }
-            boolean i = isInstalled;
-            boolean u = hasUpdate;
+            PackState.Snapshot shot = snap;
             Platform.runLater(() -> {
-                installed = i;
-                updateAvailable = u;
+                if (updating) {
+                    return;
+                }
+                installed = shot.installed();
+                updateAvailable = shot.updateAvailable();
+                showBanner(shot.banner());
                 renderServer();
                 render();
                 if (server != null) {
@@ -217,6 +237,7 @@ final class HomePage {
         updating = false;
         PackSyncService.Result result = outcome.result();
         if (result.ok()) {
+            packState.invalidate();
             installed = true;
             updateAvailable = false;
             showError(null, null);
@@ -308,6 +329,13 @@ final class HomePage {
         statusLabel.setText(result.online()
                 ? I18n.tr("servers.online", result.playersOnline(), result.playersMax(), result.latencyMs())
                 : I18n.tr("servers.down"));
+    }
+
+    private void showBanner(String text) {
+        boolean has = !text.isEmpty();
+        bannerLabel.setText(has ? I18n.tr("home.maintenance", text) : "");
+        bannerLabel.setVisible(has);
+        bannerLabel.setManaged(has);
     }
 
     private void showError(String sentence, String detail) {

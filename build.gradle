@@ -70,26 +70,6 @@ processResources {
 }
 
 /**
- * The updater inside the jar must be built from the current Go sources. An older build has no machine mode: it
- * ignores `azur-updater sync --json`, starts its local web UI and never prints a JSON event, so pack sync hangs
- * (and that page answers 400). Such a jar is refused instead of shipped.
- */
-def updaterSources = fileTree('../tools/updater') { include '**/*.go' }
-
-def assertUpdaterFresh = {
-    def binaries = fileTree('../tools/updater/dist-bin') { include 'azur-updater-*' }.files
-    if (binaries.isEmpty()) {
-        throw new GradleException('tools/updater/dist-bin has no azur-updater binaries: run tools/updater/build.sh')
-    }
-    long newestSource = updaterSources.files.collect { it.lastModified() }.max() ?: 0L
-    def stale = binaries.findAll { it.lastModified() < newestSource }
-    if (!stale.isEmpty()) {
-        throw new GradleException('azur-updater binaries are older than the Go sources (' +
-                stale.collect { it.name }.sort().join(', ') + '): run tools/updater/build.sh, then rebuild the jar')
-    }
-}
-
-/**
  * Fat jar: launcher classes and the classes of every runtime dependency at the root, JavaFX natives per platform
  * under natives/<platform>/ (FxNatives extracts the set of the running machine before JavaFX starts).
  */
@@ -119,20 +99,6 @@ def configureFatJar = { Jar task, String directory ->
         task.from({ platformConfigs[platform].collect { zipTree(it) } }) {
             include '*.dll', '*.so', '*.dylib'
             into "natives/${platform}"
-        }
-    }
-    // The pack updater travels inside the jar (UpdaterBinary extracts the copy of the running platform into
-    // <data>/bin), so one file is enough for the players. Build the binaries with tools/updater/build.sh first.
-    def updaterBin = file('../tools/updater/dist-bin')
-    if (updaterBin.isDirectory()) {
-        task.from(updaterBin) {
-            include 'azur-updater-*'
-            into 'updater'
-        }
-        task.doFirst { assertUpdaterFresh() }
-    } else {
-        task.doFirst {
-            logger.warn('WARNING: ../tools/updater/dist-bin is missing: the jar carries no azur-updater (run tools/updater/build.sh)')
         }
     }
 }

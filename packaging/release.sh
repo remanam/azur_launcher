@@ -16,13 +16,10 @@ fi
 
 ./gradlew ${GRADLE_FLAGS:-} --quiet clean releaseJar
 
-# jpackage input: the fat jar (it already carries JavaFX for every platform) plus the updater binaries of this OS.
+# jpackage input: the fat jar (it already carries JavaFX for every platform).
 rm -rf "$STAGE"
-mkdir -p "$STAGE/input" "$STAGE/updater-src"
+mkdir -p "$STAGE/input"
 cp build/libs/azur-launcher-all.jar "$STAGE/input/azur-launcher.jar"
-if ls ../tools/updater/dist-bin/azur-updater-* >/dev/null 2>&1; then
-  cp ../tools/updater/dist-bin/azur-updater-* "$STAGE/updater-src/"
-fi
 
 sh packaging/jpackage.sh "$VERSION" "$@"
 
@@ -32,11 +29,5 @@ cp build/libs/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
 mkdir -p ../launcher_builds
 cp build/libs/azur-launcher-all.jar ../launcher_builds/azur-launcher-beta.jar
 cp -R "$STAGE/out/." dist-release/
-# the updater binaries belong next to the jar for the installer-free distribution
-if [ -d build/dist/updater-src ]; then
-  mkdir -p dist-release/updater && cp build/dist/updater-src/azur-updater-* dist-release/updater/ 2>/dev/null || true
-fi
-mkdir -p ../launcher_builds/updater
 cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
-if [ -d dist-release/updater ]; then cp dist-release/updater/* ../launcher_builds/updater/; fi
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"

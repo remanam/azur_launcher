@@ -22,8 +22,6 @@ public final class PackSettings {
     private String apiBase = "";
     /** Only read from files written before the invite code moved into the vault; never written again. */
     private String invite;
-    /** Explicit path of the azur-updater executable; empty: data folder or the bundled build. */
-    private String updaterPath = "";
 
     public String getServersUrl() {
         return serversUrl == null ? "" : serversUrl;
@@ -46,14 +44,6 @@ public final class PackSettings {
         String legacy = invite == null ? "" : invite.trim();
         invite = null;
         return legacy;
-    }
-
-    public String getUpdaterPath() {
-        return updaterPath == null ? "" : updaterPath;
-    }
-
-    public void setUpdaterPath(String updaterPath) {
-        this.updaterPath = updaterPath.trim();
     }
 
     public static PackSettings load(Path file) {

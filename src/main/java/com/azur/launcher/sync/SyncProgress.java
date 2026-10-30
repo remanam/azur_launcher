@@ -1,6 +1,6 @@
 package com.azur.launcher.sync;
 
-/** Receives progress while the updater process runs; called on the thread that reads its output. */
+/** Receives progress during a pack sync; called on the sync thread. */
 @FunctionalInterface
 public interface SyncProgress {
 

@@ -33,4 +33,22 @@ class HomeStateTest {
         assertTrue(HomeState.wizardNeeded(false));
         assertFalse(HomeState.wizardNeeded(true));
     }
+
+    @Test
+    void installedNeedsPackVersionWhenServerHasPack() {
+        assertTrue(HomeState.installed(true, false, ""));
+        assertFalse(HomeState.installed(false, false, "1"));
+        assertFalse(HomeState.installed(true, true, ""));
+        assertFalse(HomeState.installed(true, true, null));
+        assertTrue(HomeState.installed(true, true, "1.2"));
+    }
+
+    @Test
+    void updateOnlyWhenBothVersionsKnownAndDiffer() {
+        assertTrue(HomeState.updateAvailable("1.0", "1.1"));
+        assertFalse(HomeState.updateAvailable("1.1", "1.1"));
+        assertFalse(HomeState.updateAvailable("1.0", ""));
+        assertFalse(HomeState.updateAvailable("", "1.1"));
+        assertFalse(HomeState.updateAvailable("1.0", null));
+    }
 }

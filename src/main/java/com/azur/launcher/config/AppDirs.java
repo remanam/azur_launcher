@@ -110,12 +110,7 @@ public final class AppDirs {
         return root.resolve("servers_pubkey.txt");
     }
 
-    /** Where the azur-updater executable is looked for or extracted to. */
-    public Path binDir() {
-        return root.resolve("bin");
-    }
-
-    /** The updater's own state (backups, journals); separate from the launcher config. */
+    /** The pack client's own state (backups, journals); separate from the launcher config. */
     public Path updaterHome() {
         return root.resolve("updater");
     }

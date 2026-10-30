@@ -307,7 +307,7 @@ final class ServersPage {
                                 (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)));
             } catch (IOException e) {
                 ctx.log("Pack sync: " + e.getMessage());
-                outcome = new PackOps.Outcome(new PackSyncService.Result(-1, "binary", e.getMessage(), ""), verifyOnly, false);
+                outcome = new PackOps.Outcome(new PackSyncService.Result(-1, "unknown", e.getMessage(), ""), verifyOnly, false);
             }
             PackOps.Outcome finished = outcome;
             Platform.runLater(() -> finish(entry, finished));
