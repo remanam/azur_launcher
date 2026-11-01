@@ -11,6 +11,7 @@ import com.azur.launcher.profile.Instance;
 import com.azur.launcher.profile.InstanceStore;
 import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
+import com.azur.launcher.sync.PackSyncService;
 
 import javafx.application.Platform;
 
@@ -32,6 +33,8 @@ final class PlayController implements GameStarter {
     private final List<Consumer<Phase>> listeners = new ArrayList<>();
     private volatile Phase phase = Phase.IDLE;
     private GameLauncher game;
+    private volatile boolean cancelled;
+    private final InstallProgress installProgress = new InstallProgress();
     /** The server Home shows; {@code null} = the embedded default instance. */
     private volatile ServerEntry server;
 
@@ -67,6 +70,10 @@ final class PlayController implements GameStarter {
         repair(server);
     }
 
+    InstallProgress installProgress() {
+        return installProgress;
+    }
+
     private void startFor(ServerEntry server) {
         if (phase == Phase.RUNNING) {
             GameLauncher running = game;
@@ -75,6 +82,8 @@ final class PlayController implements GameStarter {
             return;
         }
         if (phase == Phase.PREPARING) {
+            cancelled = true;
+            ctx.setStatus(I18n.tr("play.cancelling"));
             return;
         }
         AuthAccount account = ctx.accounts.selected();
@@ -86,32 +95,115 @@ final class PlayController implements GameStarter {
             error(I18n.tr("play.no_server"));
             return;
         }
+        cancelled = false;
         setPhase(Phase.PREPARING);
-        ctx.io.submit(() -> {
-            try {
-                Instance instance = instanceFor(server);
-                if (server.pack().present() && PackOps.newService(ctx).installedVersion(instance.gameDir()).isBlank()) {
-                    throw new IllegalStateException(I18n.tr("play.no_pack"));
-                }
-                if (!account.launchPermitted()) {
-                    throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
-                }
-                ctx.setStatus(I18n.tr("play.checking"));
-                new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).installIfNeeded(instance);
-                GameLauncher launcher = new GameLauncher(ctx.gamePaths(), ctx::log, progress()).withInstance(instance);
-                launcher.addExitSink(code -> Platform.runLater(() -> onExit(code, launcher)));
-                game = launcher;
-                launcher.launch(ctx.config, account);
-                ctx.setProgress(-1);
-                ctx.setStatus(I18n.tr("home.running"));
-                setPhase(Phase.RUNNING);
-            } catch (Exception e) {
-                ctx.log("Launch failed: " + e.getMessage());
-                ctx.setProgress(-1);
-                setPhase(Phase.IDLE);
-                Platform.runLater(() -> error(e.getMessage()));
+        ctx.io.submit(() -> prepareAndLaunch(server, account));
+    }
+
+    private void prepareAndLaunch(ServerEntry server, AuthAccount account) {
+        try {
+            Instance instance = instanceFor(server);
+            if (!account.launchPermitted()) {
+                throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
             }
-        });
+            installProgress.begin(new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).check(instance).size() > 0);
+            PlayFlow.run(new FlowSteps(server, instance, account), step -> {
+                if (cancelled) {
+                    throw new java.util.concurrent.CancellationException();
+                }
+                ctx.log("Play step: " + step);
+                ctx.setStatus(I18n.tr("play.step." + step.name().toLowerCase()));
+            });
+        } catch (java.util.concurrent.CancellationException e) {
+            ctx.log("Play cancelled by the player");
+            fail(I18n.tr("play.cancelled"), false);
+        } catch (PlayFlow.StepFailed e) {
+            ctx.log("Launch failed at " + e.step() + ": " + e.getMessage());
+            fail(describe(e), true);
+        } catch (Exception e) {
+            ctx.log("Launch failed: " + e.getMessage());
+            fail(e.getMessage(), true);
+        }
+    }
+
+    private void fail(String message, boolean dialog) {
+        ctx.setProgress(-1);
+        installProgress.finish();
+        setPhase(Phase.IDLE);
+        if (dialog) {
+            Platform.runLater(() -> error(message));
+        } else {
+            ctx.setStatus(message);
+        }
+    }
+
+    /** One readable sentence per failed step: network, maintenance, no disk space, proxy. */
+    static String describe(PlayFlow.StepFailed e) {
+        String raw = String.valueOf(e.getMessage());
+        String lower = raw.toLowerCase();
+        String reason = lower.contains("no space left") || lower.contains("not enough space")
+                ? I18n.tr("play.err.disk") : raw;
+        return I18n.tr("play.err." + e.step().name().toLowerCase(), reason);
+    }
+
+    /** The real work of every PlayFlow step; the pack decision uses the cheap /status probe. */
+    private final class FlowSteps implements PlayFlow.Steps {
+        private final ServerEntry server;
+        private final Instance instance;
+        private final AuthAccount account;
+
+        FlowSteps(ServerEntry server, Instance instance, AuthAccount account) {
+            this.server = server;
+            this.instance = instance;
+            this.account = account;
+        }
+
+        @Override
+        public boolean gameReady() {
+            return new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).check(instance).isEmpty();
+        }
+
+        @Override
+        public void installGame() throws IOException {
+            PackOps.installGame(ctx, instance, installProgress);
+        }
+
+        @Override
+        public boolean packCurrent() {
+            if (!server.pack().present()) {
+                return true;
+            }
+            PackSyncService service = PackOps.newService(ctx);
+            String local = service.installedVersion(instance.gameDir());
+            PackSyncService.Remote remote = service.probe(server.pack());
+            if (local.isBlank()) {
+                return false;
+            }
+            return !remote.reachable() || remote.version().isBlank() || local.equals(remote.version());
+        }
+
+        @Override
+        public void installPack() throws IOException {
+            PackOps.Outcome outcome = PackOps.installPack(ctx, server, instance, installProgress);
+            PackSyncService.Result result = outcome.result();
+            if (!result.ok()) {
+                String key = "sync.err." + result.code();
+                throw new IOException(I18n.tr(key).equals(key) ? result.message() : I18n.tr(key));
+            }
+        }
+
+        @Override
+        public void launch() throws Exception {
+            ctx.setStatus(I18n.tr("play.checking"));
+            installProgress.finish();
+            GameLauncher launcher = new GameLauncher(ctx.gamePaths(), ctx::log, progress()).withInstance(instance);
+            launcher.addExitSink(code -> Platform.runLater(() -> onExit(code, launcher)));
+            game = launcher;
+            launcher.launch(ctx.config, account);
+            ctx.setProgress(-1);
+            ctx.setStatus(I18n.tr("home.running"));
+            setPhase(Phase.RUNNING);
+        }
     }
 
     /** "Verify files": reinstall on a pin mismatch, re-hash libraries, assets and the client jar. */

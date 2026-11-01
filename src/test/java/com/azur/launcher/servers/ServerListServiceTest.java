@@ -43,7 +43,8 @@ class ServerListServiceTest {
     @Test
     void unwritableCacheDoesNotBlockTheDownloadedList() throws Exception {
         Files.writeString(dir.resolve("cache"), "a file, not a directory");
-        var loaded = service(url -> good(), "2026-10-29T00:00:00Z").load();
+        byte[] file = good();
+        var loaded = service(url -> file, "2026-10-29T00:00:00Z").load();
         assertEquals(ServerListService.Source.NETWORK, loaded.source());
         assertEquals(2, loaded.list().servers().size());
     }

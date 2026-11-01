@@ -17,7 +17,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -31,7 +30,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Servers: the signed list on the left, the selected server (status, pack, Update / Play) on the right. */
+/** Servers: the signed list on the left, the selected server (status, pack info, Play) on the right. */
 final class ServersPage {
 
     private static final long PING_INTERVAL_MS = 15_000;
@@ -51,24 +50,16 @@ final class ServersPage {
     private final Map<String, RowView> rows = new HashMap<>();
     private final Map<String, String> packVersions = new HashMap<>();
     private final SelectableText message = UiKit.selectable("", "card-subtitle");
-    private final ProgressBar progress = new ProgressBar(0);
-    private final Button updateButton;
-    private final Button verifyButton;
-    private final Button downloadButton;
     private final Button repairButton;
     private final Button playButton;
 
     private List<ServerEntry> servers = List.of();
     private ServerEntry selected;
-    private volatile boolean busy;
 
     ServersPage(AppContext ctx, PlayController play) {
         this.ctx = ctx;
         this.play = play;
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
-        updateButton = UiKit.button(I18n.tr("servers.update"), "icon-refresh", "button-raised", this::sync);
-        verifyButton = UiKit.button(I18n.tr("servers.verify"), null, "button-border", this::verify);
-        downloadButton = UiKit.button(I18n.tr("servers.download"), null, "button-border", this::downloadClient);
         repairButton = UiKit.button(I18n.tr("servers.repair"), null, "button-border", () -> {
             if (selected != null) {
                 play.repair(selected);
@@ -92,7 +83,6 @@ final class ServersPage {
         left.setPrefWidth(LIST_WIDTH);
         left.setMaxWidth(LIST_WIDTH);
         HBox.setHgrow(detail, Priority.ALWAYS);
-        progress.setMaxWidth(Double.MAX_VALUE);
                 root.getStyleClass().add("page");
         root.getChildren().addAll(left, detail);
         renderDetail();
@@ -195,12 +185,40 @@ final class ServersPage {
             }
         });
         message.setText("");
-        progress.setVisible(false);
-        progress.setManaged(false);
         renderDetail();
         if (entry != null) {
             ping(entry);
+            loadPackInfo(entry);
         }
+    }
+
+    /** The game folder of the server's instance (profile written from the signed entry on first use). */
+    private Path instanceDir(ServerEntry entry) throws IOException {
+        return new InstanceStore(ctx.dirs).ensure(ServerProfiles.derive(entry, InstanceStore.bundledProfile())).gameDir();
+    }
+
+    /** Installed and announced pack versions (cheap /status probe), shown as information only. */
+    private void loadPackInfo(ServerEntry entry) {
+        if (!entry.pack().present()) {
+            return;
+        }
+        ctx.io.submit(() -> {
+            try {
+                PackSyncService service = PackOps.newService(ctx);
+                String local = service.installedVersion(instanceDir(entry));
+                String remote = service.probe(entry.pack()).version();
+                Platform.runLater(() -> {
+                    packVersions.put(entry.id(), local.isBlank() ? "-" : local);
+                    if (selected == entry) {
+                        message.setText(I18n.tr("servers.pack_info", local.isBlank() ? "-" : local,
+                                remote.isBlank() ? "-" : remote));
+                        renderDetail();
+                    }
+                });
+            } catch (IOException e) {
+                ctx.log("Pack info: " + e.getMessage());
+            }
+        });
     }
 
     // ------------------------------------------------------------------ detail
@@ -221,9 +239,9 @@ final class ServersPage {
                 kv("servers.java", e.java().isBlank() ? "-" : "Java " + e.java()),
                 kv("servers.channel", e.packChannel().isBlank() ? "-" : e.packChannel()),
                 kv("servers.pack", packVersions.getOrDefault(e.id(), "-")));
-        HBox actions = new HBox(10, updateButton, verifyButton, downloadButton, repairButton, UiKit.spacer(), playButton);
+        HBox actions = new HBox(10, repairButton, UiKit.spacer(), playButton);
         actions.setAlignment(Pos.CENTER_LEFT);
-        VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, progress, UiKit.withCopy(message));
+        VBox pack = UiKit.card(UiKit.cardHeader("icon-java", I18n.tr("servers.pack_title")), actions, UiKit.withCopy(message));
         VBox news = UiKit.card(UiKit.cardHeader("icon-terminal", I18n.tr("servers.news")),
                 UiKit.label(I18n.tr("servers.news_placeholder"), "card-subtitle"));
         detail.getChildren().addAll(info, pack, news);
@@ -237,137 +255,12 @@ final class ServersPage {
         return row;
     }
 
-    // ------------------------------------------------------------------ pack sync
-
-    private void sync() {
-        run(false);
-    }
-
-    private void verify() {
-        run(true);
-    }
-
-    /**
-     * "Download client": installs the pin and fetches everything the game needs (client jar, libraries, assets) and then
-     * the pack, showing progress for both stages. Repeating after an interruption continues with the missing files.
-     */
-    private void downloadClient() {
-        ServerEntry entry = selected;
-        if (entry == null || busy) {
-            return;
-        }
-        setBusy(true);
-        message.setText(I18n.tr("download.starting"));
-        ctx.io.submit(() -> {
-            ctx.setStatus(I18n.tr("download.starting"));
-            PackOps.Outcome outcome = PackOps.download(ctx, entry,
-                    (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)),
-                    (done, total, current) -> Platform.runLater(() -> showProgress("download", current, done, total)));
-            Platform.runLater(() -> finishDownload(outcome));
-        });
-    }
-
-    private void finishDownload(PackOps.Outcome outcome) {
-        setBusy(false);
-        progress.setVisible(false);
-        progress.setManaged(false);
-        PackSyncService.Result result = outcome.result();
-        if (result.ok()) {
-            message.setText(I18n.tr("download.ready"));
-            ctx.setStatus(I18n.tr("download.ready"));
-            return;
-        }
-        String key = "sync.err." + result.code();
-        String text = I18n.tr(key).equals(key) ? result.message() : I18n.tr(key);
-        message.setText(I18n.tr("sync.failed", text));
-        ctx.log("Download client failed: exit " + result.exit() + " " + result.code() + " " + result.message());
-    }
-
-    private void run(boolean verifyOnly) {
-        ServerEntry entry = selected;
-        if (entry == null || busy) {
-            return;
-        }
-        if (!verifyOnly && !entry.pack().present()) {
-            message.setText(I18n.tr("sync.no_pack"));
-            return;
-        }
-        setBusy(true);
-        message.setText(I18n.tr(verifyOnly ? "sync.verifying" : "sync.starting"));
-        ctx.io.submit(() -> {
-            PackOps.Outcome outcome;
-            try {
-                Path instance = instanceDir(entry);
-                PackSyncService service = PackOps.newService(ctx);
-                outcome = verifyOnly ? new PackOps.Outcome(service.verify(instance), true, false)
-                        : PackOps.update(service, entry, instance,
-                                (phase, file, done, total) -> Platform.runLater(() -> showProgress(phase, file, done, total)));
-            } catch (IOException e) {
-                ctx.log("Pack sync: " + e.getMessage());
-                outcome = new PackOps.Outcome(new PackSyncService.Result(-1, "unknown", e.getMessage(), ""), verifyOnly, false);
-            }
-            PackOps.Outcome finished = outcome;
-            Platform.runLater(() -> finish(entry, finished));
-        });
-    }
-
-    /** The game folder of the server's instance (profile written from the signed entry on first use). */
-    private Path instanceDir(ServerEntry entry) throws IOException {
-        Instance instance = new InstanceStore(ctx.dirs).ensure(ServerProfiles.derive(entry, InstanceStore.bundledProfile()));
-        return instance.gameDir();
-    }
-
-    private void showProgress(String phase, String file, long done, long total) {
-        progress.setVisible(true);
-        progress.setManaged(true);
-        progress.setProgress(total <= 0 ? ProgressBar.INDETERMINATE_PROGRESS : done / (double) total);
-        message.setText(I18n.tr("sync." + phase, file));
-    }
-
-    private void finish(ServerEntry entry, PackOps.Outcome outcome) {
-        setBusy(false);
-        progress.setVisible(false);
-        progress.setManaged(false);
-        PackSyncService.Result result = outcome.result();
-        if (result.ok()) {
-            if (!outcome.verifyOnly() && !result.packVersion().isBlank()) {
-                packVersions.put(entry.id(), result.packVersion());
-                if (selected == entry) {
-                    renderDetail();
-                }
-            }
-            String done;
-            if (outcome.localCopy()) {
-                done = I18n.tr("sync.local_copy");
-            } else if (outcome.verifyOnly()) {
-                done = I18n.tr("sync.verified");
-            } else {
-                done = I18n.tr("sync.done", result.packVersion());
-            }
-            message.setText(done);
-            ctx.setStatus(done);
-            return;
-        }
-        String key = "sync.err." + result.code();
-        String text = I18n.tr(key).equals(key) ? result.message() : I18n.tr(key);
-        message.setText(I18n.tr("sync.failed", text));
-        ctx.log("Pack sync failed: exit " + result.exit() + " " + result.code() + " " + result.message());
-    }
-
-    private void setBusy(boolean value) {
-        busy = value;
-        updateButton.setDisable(value);
-        verifyButton.setDisable(value);
-    }
-
-    /** Play turns into Stop while the game runs; Update and Repair wait until the game is closed. */
+    /** Play installs and updates what is missing, then starts; it turns into Cancel while preparing and Stop while the game runs. */
     private void showPhase(PlayController.Phase phase) {
         boolean idle = phase == PlayController.Phase.IDLE;
         repairButton.setDisable(!idle);
-        updateButton.setDisable(!idle || busy);
-        downloadButton.setDisable(!idle || busy);
-        playButton.setDisable(phase == PlayController.Phase.PREPARING);
-        playButton.setText(I18n.tr(phase == PlayController.Phase.RUNNING ? "home.stop" : "home.play"));
+        playButton.setText(I18n.tr(phase == PlayController.Phase.RUNNING ? "home.stop"
+                : phase == PlayController.Phase.PREPARING ? "home.cancel" : "home.play"));
         playButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             playButton.getStyleClass().add("stopping");

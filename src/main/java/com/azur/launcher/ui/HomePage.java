@@ -12,7 +12,6 @@ import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.servers.ServerListService;
 import com.azur.launcher.servers.ServerPing;
 import com.azur.launcher.servers.ServerStatusService;
-import com.azur.launcher.sync.PackSyncService;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
@@ -57,7 +56,7 @@ final class HomePage {
     private final TitledPane details = new TitledPane(I18n.tr("home.error.details"), detailsLabel);
     private final Button copyError = UiKit.copyButton(this::errorText);
     private final VBox errorBox = new VBox(8, errorLabel, details, copyError);
-    private final InstallProgress installProgress = new InstallProgress();
+    private final InstallProgress installProgress;
     private final InstallProgressView progressView = new InstallProgressView();
     private final Timeline progressTicker = new Timeline(new KeyFrame(Duration.millis(100), e -> tick()));
     private final FirstRunWizard wizard;
@@ -76,6 +75,7 @@ final class HomePage {
         this.ctx = ctx;
         this.play = play;
         this.packState = packState;
+        this.installProgress = play.installProgress();
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
@@ -105,17 +105,11 @@ final class HomePage {
         root.setAlignment(Pos.TOP_CENTER);
 
         ctx.onAccountsChanged(this::renderAccount);
-        play.onPhase(phase -> render());
+        play.onPhase(this::onPhase);
         renderAccount();
         loadServer();
         refresher.setCycleCount(Timeline.INDEFINITE);
         refresher.play();
-        if (FakeProgressFeed.enabled()) {
-            Platform.runLater(() -> {
-                wizard.showStep(2);
-                install();
-            });
-        }
     }
 
     /** The Home page became visible: re-read the state (the pack answer is cached, so this is cheap). */
@@ -187,15 +181,14 @@ final class HomePage {
 
     // ------------------------------------------------------------------ actions
 
+    /** One button: Install and play / Update and play / Play / Retry all run the same flow (game, pack, launch). */
     private void onMainButton() {
-        switch (currentAction()) {
-            case PLAY -> startGame();
-            case START, UPDATE, RETRY -> install();
-            case UPDATING -> { }
-        }
+        startGame();
     }
 
     private void startGame() {
+        failed = false;
+        showError(null, null);
         if (server == null) {
             play.startDefault();
         } else {
@@ -209,24 +202,25 @@ final class HomePage {
         startGame();
     }
 
-    /** Installs the game and the pack (or updates it): step, bar, speed and ETA under the button. */
+    /** The wizard's install step is the same Play flow. */
     private void install() {
-        if (updating) {
-            return;
+        startGame();
+    }
+
+    private void onPhase(PlayController.Phase phase) {
+        boolean busy = phase == PlayController.Phase.PREPARING;
+        if (busy && !updating) {
+            updating = true;
+            progressView.show(installProgress.snapshot());
+            progressTicker.play();
+        } else if (!busy && updating) {
+            updating = false;
+            boolean success = phase == PlayController.Phase.RUNNING;
+            stopProgress(success);
+            packState.invalidate();
+            refreshState(true);
         }
-        updating = true;
-        failed = false;
-        installProgress.begin(!installed);
-        showError(null, null);
-        progressView.show(installProgress.snapshot());
-        progressTicker.play();
         render();
-        ServerEntry entry = server;
-        ctx.io.submit(() -> {
-            PackOps.Outcome outcome = FakeProgressFeed.enabled() ? FakeProgressFeed.run(installProgress)
-                    : PackOps.download(ctx, entry, installProgress);
-            Platform.runLater(() -> finishInstall(outcome));
-        });
     }
 
     /** At most 10 redraws per second: the workers only write into the model, this timer reads it. */
@@ -268,29 +262,6 @@ final class HomePage {
         return detail.isEmpty() ? errorLabel.getText() : errorLabel.getText() + "\n" + detail;
     }
 
-    private void finishInstall(PackOps.Outcome outcome) {
-        updating = false;
-        PackSyncService.Result result = outcome.result();
-        stopProgress(result.ok());
-        if (result.ok()) {
-            packState.invalidate();
-            installed = true;
-            updateAvailable = false;
-            showError(null, null);
-            if (wizardActive) {
-                wizard.showStep(3);
-            }
-            render();
-            return;
-        }
-        failed = true;
-        String key = "sync.err." + result.code();
-        String reason = I18n.tr(key).equals(key) ? result.message() : I18n.tr(key);
-        ctx.log("Home install failed: exit " + result.exit() + " " + result.code() + " " + result.message());
-        showError(I18n.tr("sync.failed", reason), result.code() + ": " + result.message());
-        render();
-    }
-
     // ------------------------------------------------------------------ rendering
 
     private HomeState.Action currentAction() {
@@ -303,7 +274,7 @@ final class HomePage {
             return I18n.tr("home.stop");
         }
         if (phase == PlayController.Phase.PREPARING) {
-            return I18n.tr("home.preparing");
+            return I18n.tr("home.cancel");
         }
         HomeState.Action action = currentAction();
         if (action == HomeState.Action.UPDATING) {
@@ -317,7 +288,7 @@ final class HomePage {
         PlayController.Phase phase = play.phase();
         String text = buttonText();
         mainButton.setText(text);
-        mainButton.setDisable(currentAction() == HomeState.Action.UPDATING || phase == PlayController.Phase.PREPARING);
+        mainButton.setDisable(false);
         mainButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");
