@@ -85,6 +85,11 @@ public final class HttpUtils {
         return downloader.getString(url);
     }
 
+    /** The signed server list: patient on a slow link (10 s connect, 15 s read, 3 attempts with growing pauses). */
+    public static byte[] getListBytes(String url) throws IOException {
+        return new Downloader(downloader.policy(), 3, 2000, 10_000, 15_000).getBytes(url);
+    }
+
     public static byte[] getBytes(String url) throws IOException {
         return downloader.getBytes(url);
     }

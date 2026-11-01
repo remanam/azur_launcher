@@ -70,37 +70,89 @@ public final class ServerListService {
         return loadKey(dev ? override : null);
     }
 
-    /** Network first, then the cache. Throws when neither gives a verifiable list. */
+    /** Network first, then the cache. Throws (with a short reason) when neither gives a verifiable list. */
     public Loaded load() throws IOException {
+        String networkReason = "no URL configured";
         if (url != null && !url.isBlank()) {
+            long start = clock.millis();
+            log.accept("Server list: fetching " + url);
             try {
                 byte[] bytes = fetcher.fetch(url);
                 ServerList list = ServerListVerifier.open(bytes, key, clock.instant());
+                log.accept("Server list: network OK, " + bytes.length + " bytes in " + (clock.millis() - start)
+                        + " ms, signature OK, valid until " + list.validUntil() + ", " + list.servers().size() + " server(s)");
                 saveCache(bytes);
                 return new Loaded(list, Source.NETWORK);
             } catch (IOException | ServerListException e) {
-                log.accept("Server list unavailable (" + e.getMessage() + "), using the cache");
+                networkReason = reasonOf(e);
+                log.accept("Server list: network failed after " + (clock.millis() - start) + " ms: " + networkReason
+                        + "; trying the cache");
             }
         }
-        return fromCache();
+        try {
+            Loaded cached = fromCache();
+            log.accept("Server list: from cache (" + cached.source() + "), valid until " + cached.list().validUntil()
+                    + (networkReason.isEmpty() ? "" : "; server unavailable: " + networkReason));
+            return cached;
+        } catch (IOException e) {
+            log.accept("Server list: no usable list: network: " + networkReason + "; cache: " + e.getMessage());
+            throw new IOException("network: " + networkReason + "; cache: " + e.getMessage(), e);
+        }
+    }
+
+    /** The verified cached copy only (no network), or {@code null}; used to show the list at once while the network is slow. */
+    public Loaded cached() {
+        try {
+            return fromCache();
+        } catch (IOException e) {
+            log.accept("Server list: cache not usable: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /** A short human reason for a failed fetch or verification: timeout, DNS, TLS, host policy, HTTP code, signature, expiry. */
+    public static String reasonOf(Throwable e) {
+        if (e instanceof ServerListException sle) {
+            return switch (sle.reason()) {
+                case BAD_SIGNATURE -> "signature check failed";
+                case EXPIRED -> "list expired (" + sle.getMessage() + ")";
+                case BAD_FORMAT -> "invalid list (" + sle.getMessage() + ")";
+            };
+        }
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof java.net.SocketTimeoutException) {
+                return "timeout";
+            }
+            if (t instanceof java.net.UnknownHostException) {
+                return "DNS: host not found";
+            }
+            if (t instanceof javax.net.ssl.SSLException) {
+                return "TLS error (" + t.getMessage() + ")";
+            }
+            if (t.getClass().getSimpleName().equals("BlockedHostException")) {
+                return "host not allowed by policy";
+            }
+        }
+        String m = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        return m.startsWith("HTTP ") ? m.replaceAll(" -> .*", "") : m;
     }
 
     private Loaded fromCache() throws IOException {
         if (!Files.isRegularFile(cacheFile)) {
-            throw new IOException("No server list: network failed and there is no cache");
+            throw new IOException("no cached list");
         }
         byte[] bytes = Files.readAllBytes(cacheFile);
         try {
             return new Loaded(ServerListVerifier.open(bytes, key, clock.instant()), Source.CACHE);
         } catch (ServerListException e) {
             if (e.reason() != ServerListException.Reason.EXPIRED) {
-                throw new IOException("Cached server list rejected: " + e.getMessage(), e);
+                throw new IOException("cached list rejected: " + reasonOf(e), e);
             }
             try {
                 return new Loaded(ServerListVerifier.openIgnoringExpiry(bytes, key, clock.instant()),
                         Source.CACHE_STALE);
             } catch (ServerListException inner) {
-                throw new IOException("Cached server list rejected: " + inner.getMessage(), inner);
+                throw new IOException("cached list rejected: " + reasonOf(inner), inner);
             }
         }
     }

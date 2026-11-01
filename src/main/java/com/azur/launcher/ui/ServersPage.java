@@ -100,7 +100,7 @@ final class ServersPage {
             try {
                 ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
                         ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
-                        HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
+                        HttpUtils::getListBytes, Clock.systemUTC(), ctx::log);
                 ServerListService.Loaded loaded = service.load();
                 Platform.runLater(() -> showList(loaded));
             } catch (IOException | java.security.GeneralSecurityException e) {

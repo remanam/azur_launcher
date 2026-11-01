@@ -37,6 +37,8 @@ final class PlayController implements GameStarter {
     private final InstallProgress installProgress = new InstallProgress();
     /** The server Home shows; {@code null} = the embedded default instance. */
     private volatile ServerEntry server;
+    private volatile boolean serverLoading;
+    private volatile String serverProblem;
 
     PlayController(AppContext ctx) {
         this.ctx = ctx;
@@ -59,6 +61,19 @@ final class PlayController implements GameStarter {
 
     void setServer(ServerEntry value) {
         server = value;
+    }
+
+    /** The list is being loaded: Play must say so instead of claiming a failure. */
+    void setServerLoading() {
+        serverProblem = null;
+        serverLoading = true;
+    }
+
+    /** The load finished: {@code problem} is the short reason when there is no server. */
+    void setServer(ServerEntry value, String problem) {
+        server = value;
+        serverProblem = problem;
+        serverLoading = false;
     }
 
     /** Play for the server Home shows. */
@@ -92,7 +107,8 @@ final class PlayController implements GameStarter {
             return;
         }
         if (server == null) {
-            error(I18n.tr("play.no_server"));
+            error(serverLoading ? I18n.tr("play.list_loading")
+                    : I18n.tr("play.no_server") + (serverProblem == null ? "" : "\n\n" + I18n.tr("play.no_server_reason", serverProblem)));
             return;
         }
         cancelled = false;

@@ -142,4 +142,52 @@ class ServerListServiceTest {
                 }, Clock.fixed(Instant.parse("2026-10-29T00:00:00Z"), ZoneOffset.UTC), line -> { });
         assertEquals(2, service.load().list().servers().size());
     }
+
+    private ServerListService logged(ServerListService.Fetcher fetcher, String now, java.util.List<String> lines) {
+        return new ServerListService(dir.resolve("cache/servers.json"), key.getPublic(), "https://x.example/servers.json",
+                fetcher, Clock.fixed(Instant.parse(now), ZoneOffset.UTC), lines::add);
+    }
+
+    @Test
+    void timeoutUsesTheCacheAndLogsTheReason() throws Exception {
+        byte[] file = good();
+        service(url -> file, "2026-10-29T00:00:00Z").load();
+        var lines = new java.util.ArrayList<String>();
+        var loaded = logged(url -> {
+            throw new java.net.SocketTimeoutException("Read timed out");
+        }, "2026-10-29T00:00:00Z", lines).load();
+        assertEquals(ServerListService.Source.CACHE, loaded.source());
+        assertTrue(lines.stream().anyMatch(l -> l.contains("network failed") && l.contains("timeout")), lines.toString());
+        assertTrue(lines.stream().anyMatch(l -> l.contains("from cache") && l.contains("server unavailable")), lines.toString());
+    }
+
+    @Test
+    void successRefreshesTheCacheAndLogsTheFetch() throws Exception {
+        byte[] file = good();
+        var lines = new java.util.ArrayList<String>();
+        logged(url -> file, "2026-10-29T00:00:00Z", lines).load();
+        assertEquals(new String(file, StandardCharsets.UTF_8), Files.readString(dir.resolve("cache/servers.json")));
+        assertTrue(lines.stream().anyMatch(l -> l.contains("fetching https://x.example/servers.json")));
+        assertTrue(lines.stream().anyMatch(l -> l.contains("signature OK") && l.contains(file.length + " bytes")));
+    }
+
+    @Test
+    void forgedCacheAndDeadNetworkGiveAReason() throws Exception {
+        Files.createDirectories(dir.resolve("cache"));
+        Files.write(dir.resolve("cache/servers.json"), ServerListVerifierTest.envelope(ServerListVerifierTest.PAYLOAD,
+                ServerListVerifierTest.newKey()));
+        var e = assertThrows(IOException.class, () -> service(url -> {
+            throw new java.net.UnknownHostException("x.example");
+        }, "2026-10-29T00:00:00Z").load());
+        assertTrue(e.getMessage().contains("DNS") && e.getMessage().contains("signature"), e.getMessage());
+        assertEquals(null, service(url -> null, "2026-10-29T00:00:00Z").cached());
+    }
+
+    @Test
+    void noCacheAndDeadNetworkSaysSo() {
+        var e = assertThrows(IOException.class, () -> service(url -> {
+            throw new java.net.SocketTimeoutException("x");
+        }, "2026-10-29T00:00:00Z").load());
+        assertTrue(e.getMessage().contains("timeout") && e.getMessage().contains("no cached list"), e.getMessage());
+    }
 }

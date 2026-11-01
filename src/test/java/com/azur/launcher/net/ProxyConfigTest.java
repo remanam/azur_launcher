@@ -88,4 +88,13 @@ class ProxyConfigTest {
         assertFalse(config.toString().contains("secret"));
         assertFalse(config.toString().contains("alice"));
     }
+
+    @org.junit.jupiter.api.Test
+    void environmentProxyIsReadAndNeverDescribedWithLogin() {
+        ProxyConfig p = ProxyConfig.fromEnvironment(java.util.Map.of("HTTPS_PROXY", "http://u:secret@proxy.example:3128"));
+        org.junit.jupiter.api.Assertions.assertEquals("proxy.example:3128", p.describe());
+        org.junit.jupiter.api.Assertions.assertTrue(p.hasCredentials());
+        org.junit.jupiter.api.Assertions.assertFalse(p.toString().contains("secret"));
+        org.junit.jupiter.api.Assertions.assertFalse(ProxyConfig.fromEnvironment(java.util.Map.of()).active());
+    }
 }

@@ -129,22 +129,43 @@ final class HomePage {
     // ------------------------------------------------------------------ data
 
     private void loadServer() {
+        play.setServerLoading();
         ctx.io.submit(() -> {
-            ServerEntry first = null;
+            ServerListService service;
             try {
-                ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
+                service = new ServerListService(ctx.dirs.serversCacheFile(),
                         ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
-                        HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
-                first = com.azur.launcher.servers.ServerChoice.pick(service.load().list().servers(), ctx.config.getLastServerId());
+                        HttpUtils::getListBytes, Clock.systemUTC(), ctx::log);
             } catch (Exception e) {
-                ctx.log("Home: server list unavailable: " + e.getMessage());
+                ctx.log("Server list: cannot start: " + e);
+                applyServer(null, "key: " + e.getMessage());
+                return;
             }
-            ServerEntry entry = first;
-            Platform.runLater(() -> {
-                server = entry;
-                play.setServer(entry);
-                refreshState(false);
-            });
+            ServerListService.Loaded cached = service.cached();
+            if (cached != null) {
+                applyServer(pick(cached), null);
+            }
+            try {
+                ServerListService.Loaded loaded = service.load();
+                if (loaded.source() != ServerListService.Source.NETWORK) {
+                    ctx.log("Server list from cache (server unavailable)");
+                }
+                applyServer(pick(loaded), null);
+            } catch (Exception e) {
+                applyServer(cached == null ? null : pick(cached), e.getMessage());
+            }
+        });
+    }
+
+    private ServerEntry pick(ServerListService.Loaded loaded) {
+        return com.azur.launcher.servers.ServerChoice.pick(loaded.list().servers(), ctx.config.getLastServerId());
+    }
+
+    private void applyServer(ServerEntry entry, String problem) {
+        Platform.runLater(() -> {
+            server = entry;
+            play.setServer(entry, entry == null ? problem : null);
+            refreshState(false);
         });
     }
 

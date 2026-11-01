@@ -46,6 +46,33 @@ public final class ProxyConfig {
         return new ProxyConfig(h, port, user == null ? "" : user.trim(), password == null ? "" : password);
     }
 
+    /**
+     * The proxy from HTTPS_PROXY / HTTP_PROXY (any case), or {@link #NONE}. Java ignores these variables itself, so
+     * without this a launcher behind a proxy times out where curl works. A login inside the URL stays in memory only.
+     */
+    public static ProxyConfig fromEnvironment(java.util.Map<String, String> env) {
+        for (String name : new String[] {"HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy"}) {
+            String value = env.get(name);
+            if (value == null || value.isBlank()) {
+                continue;
+            }
+            try {
+                URI uri = URI.create(value.contains("://") ? value.trim() : "http://" + value.trim());
+                String info = uri.getUserInfo();
+                int colon = info == null ? -1 : info.indexOf(':');
+                String user = info == null ? "" : colon < 0 ? info : info.substring(0, colon);
+                String pass = colon < 0 ? "" : info.substring(colon + 1);
+                ProxyConfig found = of(uri.getHost(), uri.getPort() > 0 ? uri.getPort() : 80, user, pass);
+                if (found.active()) {
+                    return found;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // not a URL: try the next variable
+            }
+        }
+        return NONE;
+    }
+
     public static ProxyConfig current() {
         return current;
     }
