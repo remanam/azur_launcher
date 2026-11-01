@@ -11,9 +11,7 @@ import com.azur.launcher.profile.Profile;
 import com.azur.launcher.model.VersionMeta;
 import com.azur.launcher.net.DownloadManager;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -58,7 +56,6 @@ public class GameLauncher {
     private Instance fixedInstance;
     private volatile Process process;
     private volatile boolean preparing;
-    private final TailBuffer tail = new TailBuffer(TAIL_LINES);
     private volatile Path gameLogFile;
     private volatile HangHandler hangHandler;
     private volatile LaunchWatchdog watchdog;
@@ -95,7 +92,8 @@ public class GameLauncher {
 
     /** The last lines the game printed (stdout and stderr). */
     public List<String> lastLines() {
-        return tail.lines();
+        Path f = gameLogFile;
+        return f == null ? List.of() : LogFiles.tail(f, TAIL_LINES, 64 * 1024);
     }
 
     /** {@code <instance>/minecraft/logs/launcher-game.log}, the whole output of the last run; null before the first launch. */
@@ -174,14 +172,13 @@ public class GameLauncher {
             gameLogFile = contentRoot.resolve("logs").resolve(GAME_LOG);
             Files.createDirectories(gameLogFile.getParent());
             Files.deleteIfExists(gameLogFile);
+            scanned = 0;
 
+            // the game writes straight to the file: no pipe in the launcher JVM, so it can never fill up and block the game
+            processBuilder.redirectOutput(ProcessBuilder.Redirect.appendTo(gameLogFile.toFile()));
             Process p = processBuilder.start();
             this.process = p;
             log("Minecraft started, PID " + p.pid());
-
-            Thread stdoutThread = new Thread(() -> pumpOutput(p), "azur-game-stdout");
-            stdoutThread.setDaemon(true);
-            stdoutThread.start();
 
             startWatchdog(p, config, contentRoot);
 
@@ -225,6 +222,7 @@ public class GameLauncher {
             try {
                 while (p.isAlive() && !dog.ready()) {
                     Thread.sleep(5000);
+                    scanReady(dog);
                     dog.observeSize(logsSize(contentRoot), System.currentTimeMillis());
                     if (p.isAlive() && dog.hung(System.currentTimeMillis())) {
                         if (handleHang(p, contentRoot, handler)) {
@@ -239,6 +237,21 @@ public class GameLauncher {
         }, "azur-game-watchdog");
         t.setDaemon(true);
         t.start();
+    }
+
+    private long scanned;
+
+    /** Looks for the ready marker only in the bytes added since the last look. */
+    private void scanReady(LaunchWatchdog dog) {
+        long size = LogFiles.size(gameLogFile);
+        if (size <= scanned) {
+            return;
+        }
+        String chunk = LogFiles.readFrom(gameLogFile, scanned, 4 * 1024 * 1024);
+        scanned = size;
+        if (LaunchWatchdog.isReadyLine(chunk)) {
+            dog.markReady();
+        }
     }
 
     private static long logsSize(Path contentRoot) {
@@ -265,11 +278,7 @@ public class GameLauncher {
             Thread.sleep(2000);
         }
         List<String> dump = List.of();
-        try {
-            dump = HangDiagnosis.lastDump(Files.readAllLines(gameLogFile, StandardCharsets.UTF_8));
-        } catch (IOException e) {
-            log("Cannot read the game log: " + e.getMessage());
-        }
+        dump = HangDiagnosis.lastDump(LogFiles.tail(gameLogFile, 100_000, 8 * 1024 * 1024));
         HangDiagnosis diagnosis = HangDiagnosis.parse(dump);
         String message = diagnosis != null ? diagnosis.message(I18n.language())
                 : I18n.tr("hang.unknown");
@@ -305,28 +314,6 @@ public class GameLauncher {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             p.destroyForcibly();
-        }
-    }
-
-    private void pumpOutput(Process p) {
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            Path file = gameLogFile;
-            try (java.io.BufferedWriter out = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
-                while ((line = reader.readLine()) != null) {
-                    tail.add(line);
-                    if (LaunchWatchdog.isReadyLine(line) && watchdog != null) {
-                        watchdog.markReady();
-                    }
-                    log("[game] " + line);
-                    out.write(line);
-                    out.newLine();
-                    out.flush();
-                }
-            }
-        } catch (IOException ignored) {
-            // the stream closes when the process exits
         }
     }
 

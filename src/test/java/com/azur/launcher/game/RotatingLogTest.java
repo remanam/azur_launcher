@@ -21,13 +21,4 @@ class RotatingLogTest {
         assertTrue(Files.exists(dir.resolve("logs/launcher.log.1")));
         assertTrue(Files.notExists(dir.resolve("logs/launcher.log.3")));
     }
-
-    @Test
-    void tailKeepsTheLastLines() {
-        TailBuffer tail = new TailBuffer(3);
-        for (int i = 1; i <= 5; i++) {
-            tail.add("l" + i);
-        }
-        assertEquals(List.of("l3", "l4", "l5"), tail.lines());
-    }
 }
