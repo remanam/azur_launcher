@@ -57,6 +57,11 @@ class CommandBuilderTest {
         List<String> cmd = CommandBuilder.build(profile, meta);
         assertEquals("/jdk/bin/java", cmd.get(0));
         assertEquals(List.of("-Xmx6144m", "-Xms2048m"), cmd.subList(1, 3));
+        assertEquals(List.of("-Dsun.net.client.defaultConnectTimeout=5000", "-Dsun.net.client.defaultReadTimeout=8000"),
+                cmd.subList(5, 7), "network timeouts right after the brand flags");
+        assertEquals(1, cmd.stream().filter(a -> a.startsWith("-Dsun.net.client.defaultConnectTimeout")).count());
+        assertEquals(true, cmd.indexOf("-Dsun.net.client.defaultReadTimeout=8000") < cmd.indexOf("-Dname=a b"),
+                "before user jvmArgs");
         assertEquals(true, cmd.contains("-Dname=a b"), "kept as one argument, not split by spaces");
         int main = cmd.indexOf("cpw.mods.bootstraplauncher.BootstrapLauncher");
         assertEquals(true, cmd.indexOf("-cp") < main && cmd.indexOf("-XX:+UseG1GC") < main);

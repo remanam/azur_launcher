@@ -10,6 +10,10 @@ import java.util.Map;
 
 public final class CommandBuilder {
 
+    /** Network timeouts for HttpURLConnection callers without their own (mods fetching lists during construction). */
+    static final List<String> NETWORK_TIMEOUT_ARGS = List.of(
+            "-Dsun.net.client.defaultConnectTimeout=5000", "-Dsun.net.client.defaultReadTimeout=8000");
+
     private CommandBuilder() {
     }
 
@@ -23,6 +27,7 @@ public final class CommandBuilder {
         command.add("-Xms" + profile.getMinMemoryMb() + "m");
         command.add("-Dminecraft.launcher.brand=" + LaunchProfile.LAUNCHER_NAME);
         command.add("-Dminecraft.launcher.version=" + LaunchProfile.LAUNCHER_VERSION);
+        command.addAll(NETWORK_TIMEOUT_ARGS);
 
         List<String> jvmArgs = expand(meta.getArguments() == null ? null : meta.getArguments().getJvm(), placeholders);
         if (jvmArgs.isEmpty()) {
