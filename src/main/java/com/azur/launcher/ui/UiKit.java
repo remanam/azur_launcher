@@ -5,6 +5,8 @@ import com.azur.launcher.i18n.I18n;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Button;
 import javafx.scene.control.DialogPane;
 import javafx.scene.control.Label;
@@ -87,6 +89,32 @@ final class UiKit {
         alert.getDialogPane().setContent(content);
         styleDialog(alert.getDialogPane(), dark);
         alert.showAndWait();
+    }
+
+    /** Hang dialog: diagnosis + dump head, Copy / Open logs; true = terminate, false = wait. Auto-terminates after 60 s. */
+    static boolean hangDialog(Window owner, String message, String dumpHead, Runnable openLogs, boolean dark) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.initOwner(owner);
+        alert.setTitle(I18n.tr("hang.title"));
+        alert.setHeaderText(I18n.tr("hang.title"));
+        String full = message + "\n\n" + dumpHead;
+        SelectableText text = selectable(full, null);
+        text.setPrefWidth(560);
+        text.setMaxHeight(320);
+        Button open = button(I18n.tr("play.open_logs"), null, "button-border", openLogs);
+        Label auto = label(I18n.tr("hang.auto"), null);
+        VBox content = new VBox(10, text, new HBox(8, copyButton(() -> full), open), auto);
+        alert.getDialogPane().setContent(content);
+        ButtonType kill = new ButtonType(I18n.tr("hang.terminate"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType wait = new ButtonType(I18n.tr("hang.wait"), ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(kill, wait);
+        styleDialog(alert.getDialogPane(), dark);
+        javafx.animation.PauseTransition timer = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(60));
+        timer.setOnFinished(e -> alert.setResult(kill));
+        timer.play();
+        boolean result = alert.showAndWait().orElse(kill) == kill;
+        timer.stop();
+        return result;
     }
 
     static Region spacer() {

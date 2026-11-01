@@ -21,6 +21,7 @@ public final class I18n {
     public static final String DEFAULT_LANGUAGE = "ru";
     public static final Set<String> SUPPORTED = Set.of("ru", "en");
 
+    private static volatile String language = DEFAULT_LANGUAGE;
     private static final Map<String, Properties> BUNDLES = new ConcurrentHashMap<>();
     private static volatile Properties current = load(DEFAULT_LANGUAGE);
 
@@ -29,7 +30,12 @@ public final class I18n {
 
     /** Selects the language: an explicit supported choice wins, anything else (including legacy "auto") is Russian. */
     public static void setLanguage(String setting) {
-        current = load(resolve(setting));
+        language = resolve(setting);
+        current = load(language);
+    }
+
+    public static String language() {
+        return language;
     }
 
     /** Pure language resolution, exposed for tests. The system locale is deliberately ignored. */

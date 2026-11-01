@@ -39,6 +39,11 @@ public class GameLauncher {
         void onExit(int exitCode);
     }
 
+    /** Asked when the start looks hung; returns true to terminate the game, false to wait two more minutes. */
+    public interface HangHandler {
+        boolean terminate(String message, List<String> keyLines, Path dumpFile);
+    }
+
     /** Lines of game output kept for the error dialog. */
     public static final int TAIL_LINES = 30;
     public static final String GAME_LOG = "launcher-game.log";
@@ -55,6 +60,8 @@ public class GameLauncher {
     private volatile boolean preparing;
     private final TailBuffer tail = new TailBuffer(TAIL_LINES);
     private volatile Path gameLogFile;
+    private volatile HangHandler hangHandler;
+    private volatile LaunchWatchdog watchdog;
 
     public GameLauncher(GamePaths paths, Consumer<String> logger, DownloadManager.ProgressListener progressListener) {
         this.paths = paths;
@@ -71,6 +78,10 @@ public class GameLauncher {
 
     public void addLogSink(LogSink sink) {
         logSinks.add(sink);
+    }
+
+    public void setHangHandler(HangHandler handler) {
+        this.hangHandler = handler;
     }
 
     public void addExitSink(ExitSink sink) {
@@ -172,6 +183,8 @@ public class GameLauncher {
             stdoutThread.setDaemon(true);
             stdoutThread.start();
 
+            startWatchdog(p, config, contentRoot);
+
             Thread waitThread = new Thread(() -> {
                 int code;
                 try {
@@ -200,6 +213,84 @@ public class GameLauncher {
         }
     }
 
+    private void startWatchdog(Process p, LauncherConfig config, Path contentRoot) {
+        HangHandler handler = hangHandler;
+        if (handler == null || (config.getHangSeconds() <= 0 && config.getStartupLimitSeconds() <= 0)) {
+            return;
+        }
+        LaunchWatchdog dog = new LaunchWatchdog(config.getHangSeconds(), config.getStartupLimitSeconds(),
+                System.currentTimeMillis());
+        watchdog = dog;
+        Thread t = new Thread(() -> {
+            try {
+                while (p.isAlive() && !dog.ready()) {
+                    Thread.sleep(5000);
+                    dog.observeSize(logsSize(contentRoot), System.currentTimeMillis());
+                    if (p.isAlive() && dog.hung(System.currentTimeMillis())) {
+                        if (handleHang(p, contentRoot, handler)) {
+                            return;
+                        }
+                        dog.postpone(120_000, System.currentTimeMillis());
+                    }
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }, "azur-game-watchdog");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    private static long logsSize(Path contentRoot) {
+        long sum = 0;
+        for (String name : new String[] {"latest.log", GAME_LOG}) {
+            try {
+                sum += Files.size(contentRoot.resolve("logs").resolve(name));
+            } catch (IOException ignored) {
+                // not created yet
+            }
+        }
+        return sum;
+    }
+
+    /** Takes a thread dump, writes it, asks the handler; returns true if the game was terminated. */
+    private boolean handleHang(Process p, Path contentRoot, HangHandler handler) throws InterruptedException {
+        boolean windows = System.getProperty("os.name", "").toLowerCase().contains("win");
+        if (!windows) {
+            try {
+                new ProcessBuilder("kill", "-3", Long.toString(p.pid())).start().waitFor();
+            } catch (IOException e) {
+                log("Thread dump request failed: " + e.getMessage());
+            }
+            Thread.sleep(2000);
+        }
+        List<String> dump = List.of();
+        try {
+            dump = HangDiagnosis.lastDump(Files.readAllLines(gameLogFile, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            log("Cannot read the game log: " + e.getMessage());
+        }
+        HangDiagnosis diagnosis = HangDiagnosis.parse(dump);
+        String message = diagnosis != null ? diagnosis.message(I18n.language())
+                : I18n.tr("hang.unknown");
+        Path dumpFile = null;
+        if (!dump.isEmpty()) {
+            try {
+                dumpFile = contentRoot.resolve("logs").resolve("hang-dump-" + System.currentTimeMillis() + ".txt");
+                Files.write(dumpFile, dump, StandardCharsets.UTF_8);
+            } catch (IOException e) {
+                log("Cannot write the hang dump: " + e.getMessage());
+            }
+        }
+        log("HANG: " + message);
+        dump.stream().limit(40).forEach(l -> log("[hang-dump] " + l));
+        boolean kill = handler.terminate(message, dump.stream().limit(40).toList(), dumpFile);
+        if (kill) {
+            stop();
+        }
+        return kill;
+    }
+
     /** Stops the game: polite destroy, forced after five seconds. */
     public synchronized void stop() {
         Process p = process;
@@ -225,6 +316,9 @@ public class GameLauncher {
             try (java.io.BufferedWriter out = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
                 while ((line = reader.readLine()) != null) {
                     tail.add(line);
+                    if (LaunchWatchdog.isReadyLine(line) && watchdog != null) {
+                        watchdog.markReady();
+                    }
                     log("[game] " + line);
                     out.write(line);
                     out.newLine();

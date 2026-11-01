@@ -15,6 +15,10 @@ public class LauncherConfig {
     private int windowWidth = 854;
     private int windowHeight = 480;
     private String jvmArgs = "";
+    /** Seconds without log growth before the start counts as hung (0 = watchdog off). */
+    private int hangSeconds = 120;
+    /** Seconds the start may take without the "loaded" marker (0 = no limit). */
+    private int startupLimitSeconds = 480;
     private boolean darkMode = false;
     private String lastServerId = "";
     private String language = "ru";
@@ -89,6 +93,14 @@ public class LauncherConfig {
 
     public void setWindowHeight(int windowHeight) {
         this.windowHeight = windowHeight;
+    }
+
+    public int getHangSeconds() {
+        return hangSeconds;
+    }
+
+    public int getStartupLimitSeconds() {
+        return startupLimitSeconds;
     }
 
     public String getJvmArgs() {

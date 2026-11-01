@@ -219,6 +219,7 @@ final class PlayController implements GameStarter {
             GameLauncher launcher = new GameLauncher(ctx.gamePaths(), ctx::log, progress()).withInstance(instance);
             launcher.addExitSink(code -> Platform.runLater(() -> onExit(code, launcher)));
             game = launcher;
+            launcher.setHangHandler((message, keyLines, dump) -> askTerminate(message, keyLines, dump, launcher));
             launcher.launch(ctx.config, account);
             ctx.setProgress(-1);
             ctx.setStatus(I18n.tr("home.running"));
@@ -260,6 +261,21 @@ final class PlayController implements GameStarter {
 
     private DownloadManager.ProgressListener progress() {
         return (done, total, current) -> ctx.setProgress(total == 0 ? -1 : done / (double) total);
+    }
+
+    /** Called from the watchdog thread; shows the dialog on the FX thread and waits for the answer. */
+    private boolean askTerminate(String message, List<String> keyLines, Path dump, GameLauncher launcher) {
+        java.util.concurrent.CompletableFuture<Boolean> answer = new java.util.concurrent.CompletableFuture<>();
+        Platform.runLater(() -> {
+            Path logs = dump != null ? dump.getParent() : ctx.dirs.logsDir();
+            answer.complete(UiKit.hangDialog(ctx.stage, message, String.join("\n", keyLines),
+                    () -> ctx.openInSystem(logs), ctx.config.isDarkMode()));
+        });
+        try {
+            return answer.get(120, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception e) {
+            return true;
+        }
     }
 
     private void onExit(int code, GameLauncher launcher) {
