@@ -85,8 +85,8 @@ public final class ServerListService {
                 return new Loaded(list, Source.NETWORK);
             } catch (IOException | ServerListException e) {
                 networkReason = reasonOf(e);
-                log.accept("Server list: network failed after " + (clock.millis() - start) + " ms: " + networkReason
-                        + "; trying the cache");
+                log.accept("Server list: direct connection failed: " + networkReason + " (" + (clock.millis() - start)
+                        + " ms), proxy not configured (Settings > Advanced); trying the cache");
             }
         }
         try {

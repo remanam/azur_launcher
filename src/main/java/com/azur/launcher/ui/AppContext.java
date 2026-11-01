@@ -66,11 +66,8 @@ final class AppContext {
         this.config = config;
         this.accounts = accounts;
         this.proxySettings = proxySettings;
-        ProxyConfig configured = ProxyConfig.of(proxySettings.proxyHost(), proxySettings.proxyPort(), "", "");
-        ProxyConfig fromEnv = configured.active() ? ProxyConfig.NONE : ProxyConfig.fromEnvironment(System.getenv());
-        ProxyConfig.set(configured.active() ? configured : fromEnv);
-        logFile.append("Proxy: " + ProxyConfig.current().describe()
-                + (fromEnv.active() ? " (from environment)" : configured.active() ? " (settings)" : ""));
+        ProxyConfig.set(ProxyConfig.of(proxySettings.proxyHost(), proxySettings.proxyPort(), "", ""));
+        logFile.append("Proxy: " + ProxyConfig.current().describe() + " (only from Settings > Advanced)");
         this.playerTokens = PlayerTokenStore.system(dirs.playerTokenVaultFile());
         this.host = host;
         this.stage = stage;
