@@ -23,6 +23,28 @@ public class Arguments {
         return jvm;
     }
 
+    /** Loader JSON arguments are appended to the parent's (vanilla's), never replace them. */
+    public static Arguments merge(Arguments parent, Arguments child) {
+        if (parent == null || child == null) {
+            return child != null ? child : parent;
+        }
+        Arguments merged = new Arguments();
+        merged.game = concat(parent.game, child.game);
+        merged.jvm = concat(parent.jvm, child.jvm);
+        return merged;
+    }
+
+    private static List<Entry> concat(List<Entry> first, List<Entry> second) {
+        List<Entry> all = new java.util.ArrayList<>();
+        if (first != null) {
+            all.addAll(first);
+        }
+        if (second != null) {
+            all.addAll(second);
+        }
+        return all;
+    }
+
     @JsonAdapter(EntryDeserializer.class)
     public static class Entry {
         private List<Rule> rules;

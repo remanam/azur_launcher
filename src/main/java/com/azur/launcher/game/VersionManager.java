@@ -130,7 +130,7 @@ public class VersionManager {
         r.setJar(firstNonBlank(child.getJar(), parent.getJar()));
         r.setMinecraftArguments(firstNonBlank(child.getMinecraftArguments(), parent.getMinecraftArguments()));
         r.setAssetIndex(child.getAssetIndex() != null ? child.getAssetIndex() : parent.getAssetIndex());
-        r.setArguments(child.getArguments() != null ? child.getArguments() : parent.getArguments());
+        r.setArguments(com.azur.launcher.model.Arguments.merge(parent.getArguments(), child.getArguments()));
         r.setJavaVersion(child.getJavaVersion() != null ? child.getJavaVersion() : parent.getJavaVersion());
 
         Map<String, DownloadInfo> downloads = new LinkedHashMap<>();
@@ -157,8 +157,10 @@ public class VersionManager {
         return r;
     }
 
-    private static String dedupKey(Library lib) {
-        return lib.getGroupId() + ":" + lib.getArtifactId();
+    /** Same library = group, artifact and classifier; version is not part of it (the child's version wins). */
+    static String dedupKey(Library lib) {
+        String[] coords = lib.getName() == null ? new String[0] : lib.getName().split(":");
+        return lib.getGroupId() + ":" + lib.getArtifactId() + (coords.length > 3 ? ":" + coords[3] : "");
     }
 
     private static String firstNonBlank(String a, String b) {
