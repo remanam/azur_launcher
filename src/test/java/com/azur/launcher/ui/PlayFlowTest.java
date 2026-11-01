@@ -67,4 +67,32 @@ class PlayFlowTest {
             assertEquals(f.failAt, f.calls.get(f.calls.size() - 1));
         }
     }
+
+    @Test
+    void freshNewerServerVersionNeedsPack() {
+        assertEquals(true, PlayFlow.packNeeded("2026.11.01-2115", true, "2026.11.01-2246"));
+    }
+
+    @Test
+    void unreachableServerPlaysLocalCopy() {
+        assertEquals(false, PlayFlow.packNeeded("2026.11.01-2115", false, ""));
+    }
+
+    @Test
+    void sameVersionSkipsPack() {
+        assertEquals(false, PlayFlow.packNeeded("2026.11.01-2246", true, "2026.11.01-2246"));
+    }
+
+    @Test
+    void unknownInstalledVersionNeedsPack() {
+        assertEquals(true, PlayFlow.packNeeded("", false, ""));
+    }
+
+    @Test
+    void statusJsonKeepsPackVersion() {
+        var s = new com.google.gson.Gson().fromJson(
+                "{\"maintenance\":false,\"message\":\"\",\"pack_version\":\"2026.11.01-2246\"}",
+                com.azur.launcher.pack.PackServer.Status.class);
+        assertEquals("2026.11.01-2246", s.packVersion());
+    }
 }

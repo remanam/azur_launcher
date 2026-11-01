@@ -4,6 +4,7 @@ import com.azur.launcher.net.Hashes;
 import com.azur.launcher.net.HostPolicy;
 import com.azur.launcher.net.ProxyConfig;
 import com.google.gson.Gson;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.JsonSyntaxException;
 
 import java.io.IOException;
@@ -28,7 +29,7 @@ import java.util.function.LongConsumer;
 public final class PackServer {
 
     /** {@code /status}: maintenance flag and banner text set by the host. */
-    public record Status(boolean maintenance, String message, String packVersion) {
+    public record Status(boolean maintenance, String message, @SerializedName("pack_version") String packVersion) {
     }
 
     private static final Gson GSON = new Gson();
@@ -100,7 +101,12 @@ public final class PackServer {
     }
 
     public Status status() throws PackException {
-        try (InputStream in = get("status", 0, Duration.ofSeconds(15)).body()) {
+        return status(Duration.ofSeconds(15));
+    }
+
+    /** Fresh {@code /status} with its own timeout (the Play decision must not hang on a dead server). */
+    public Status status(Duration timeout) throws PackException {
+        try (InputStream in = get("status", 0, timeout).body()) {
             Status s = GSON.fromJson(new String(in.readNBytes(1 << 16), StandardCharsets.UTF_8), Status.class);
             return s == null ? new Status(false, "", "") : s;
         } catch (PackException e) {

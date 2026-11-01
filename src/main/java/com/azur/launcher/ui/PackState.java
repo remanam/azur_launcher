@@ -9,11 +9,11 @@ import com.azur.launcher.sync.PackSyncService;
 /**
  * What Home needs to know about the pack: installed (game pin on disk plus an installed pack version) and whether the
  * server announces a newer one. The server answer comes from a cheap {@code /status} request, cached for
- * {@link #TTL_MS} (a failure for {@link #RETRY_MS}); blocking, call off the UI thread.
+ * {@link #TTL_MS} (only for the Home button label; Play never reads this cache) (a failure for {@link #RETRY_MS}); blocking, call off the UI thread.
  */
 final class PackState {
 
-    static final long TTL_MS = 5 * 60_000L;
+    static final long TTL_MS = 60_000L;
     static final long RETRY_MS = 30_000L;
 
     /** One reading; {@code banner} is the maintenance text or empty. */

@@ -61,8 +61,13 @@ public final class PackSyncService {
 
     /** Cheap {@code /status} request (no manifest, no writes): newest pack version and the maintenance banner. */
     public Remote probe(PackSource source) {
+        return probe(source, java.time.Duration.ofSeconds(15));
+    }
+
+    /** Same, with a custom timeout (Play uses a short one and never a cache). */
+    public Remote probe(PackSource source, java.time.Duration timeout) {
         try {
-            PackServer.Status status = new PackServer(secure(source), policy.get()).status();
+            PackServer.Status status = new PackServer(secure(source), policy.get()).status(timeout);
             String text = status.maintenance() ? nz(status.message()) : "";
             banner = text;
             return new Remote(true, nz(status.packVersion()), text);

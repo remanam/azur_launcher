@@ -42,6 +42,17 @@ final class PlayFlow {
     private PlayFlow() {
     }
 
+    /**
+     * Whether the pack must be (re)installed before launch. An unknown installed version (pack from an older launcher)
+     * means yes; an unreachable server or an empty server version means "play the local copy".
+     */
+    static boolean packNeeded(String local, boolean reachable, String server) {
+        if (local.isBlank()) {
+            return true;
+        }
+        return reachable && !server.isBlank() && !local.equals(server);
+    }
+
     static void run(Steps steps, Consumer<Step> onStep) throws StepFailed {
         if (!steps.gameReady()) {
             perform(Step.GAME, onStep, steps::installGame);

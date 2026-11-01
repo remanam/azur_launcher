@@ -108,13 +108,18 @@ final class HomePage {
         play.onPhase(this::onPhase);
         renderAccount();
         loadServer();
+        ctx.stage.focusedProperty().addListener((o, was, focused) -> {
+            if (focused) {
+                refreshState(true);
+            }
+        });
         refresher.setCycleCount(Timeline.INDEFINITE);
         refresher.play();
     }
 
-    /** The Home page became visible: re-read the state (the pack answer is cached, so this is cheap). */
+    /** The Home page became visible: ask the server again (the button label must not show a stale answer). */
     void onShown() {
-        refreshState(false);
+        refreshState(true);
     }
 
     Node node() {

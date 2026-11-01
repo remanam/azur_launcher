@@ -146,7 +146,7 @@ final class PlayController implements GameStarter {
         return I18n.tr("play.err." + e.step().name().toLowerCase(), reason);
     }
 
-    /** The real work of every PlayFlow step; the pack decision uses the cheap /status probe. */
+    /** The real work of every PlayFlow step; the pack decision uses a fresh /status probe, never the Home cache. */
     private final class FlowSteps implements PlayFlow.Steps {
         private final ServerEntry server;
         private final Instance instance;
@@ -175,11 +175,15 @@ final class PlayController implements GameStarter {
             }
             PackSyncService service = PackOps.newService(ctx);
             String local = service.installedVersion(instance.gameDir());
-            PackSyncService.Remote remote = service.probe(server.pack());
-            if (local.isBlank()) {
-                return false;
+            PackSyncService.Remote remote = service.probe(server.pack(), java.time.Duration.ofSeconds(6));
+            boolean needed = PlayFlow.packNeeded(local, remote.reachable(), remote.version());
+            if (needed) {
+                ctx.log("Play step: PACK (installed " + (local.isBlank() ? "unknown" : local) + " -> server "
+                        + remote.version() + ")");
+            } else if (!remote.reachable()) {
+                ctx.log("Pack server unreachable: playing the local copy " + local);
             }
-            return !remote.reachable() || remote.version().isBlank() || local.equals(remote.version());
+            return !needed;
         }
 
         @Override
