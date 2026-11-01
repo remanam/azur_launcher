@@ -79,11 +79,14 @@ public final class JavaDetector {
     /** All runtimes found on this machine, newest first. */
     public static List<JavaInfo> detectAll() {
         Map<String, JavaInfo> unique = new LinkedHashMap<>();
-        addEnvHome(unique, "JAVA_HOME");
-        addEnvHome(unique, "JDK_HOME");
         String thisHome = System.getProperty("java.home");
         if (thisHome != null && !thisHome.isBlank()) {
             addHome(unique, Path.of(thisHome));
+        }
+        addEnvHome(unique, "JAVA_HOME");
+        addEnvHome(unique, "JDK_HOME");
+        if (isMac()) {
+            addHome(unique, macJavaHome(21));
         }
         for (Path exe : findOnPath()) {
             addExecutable(unique, exe);
@@ -96,6 +99,48 @@ public final class JavaDetector {
                 .thenComparing((a, b) -> compareVersion(b.getVersion(), a.getVersion()))
                 .thenComparing(a -> String.valueOf(a.getHome()).toLowerCase(Locale.ROOT)));
         return result;
+    }
+
+    /**
+     * Home reported by {@code /usr/libexec/java_home -v N}, or null. Only a path that exists is accepted, so the
+     * "Unable to locate a Java Runtime" message of the macOS stub is never mistaken for a home.
+     */
+    static Path macJavaHome(int major) {
+        Path tool = Path.of("/usr/libexec/java_home");
+        if (!Files.isExecutable(tool)) {
+            return null;
+        }
+        Process process = null;
+        try {
+            process = new ProcessBuilder(tool.toString(), "-v", String.valueOf(major)).redirectErrorStream(true).start();
+            String out = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+            if (!process.waitFor(10, TimeUnit.SECONDS) || process.exitValue() != 0) {
+                return null;
+            }
+            return parseJavaHomeOutput(out);
+        } catch (IOException e) {
+            return null;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return null;
+        } finally {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
+            }
+        }
+    }
+
+    /** First output line when it is an existing directory, otherwise null. */
+    static Path parseJavaHomeOutput(String out) {
+        if (out == null || out.isBlank()) {
+            return null;
+        }
+        String line = out.lines().findFirst().orElse("").trim();
+        if (!line.startsWith("/")) {
+            return null;
+        }
+        Path path = Path.of(line);
+        return Files.isDirectory(path) ? path : null;
     }
 
     private static void addEnvHome(Map<String, JavaInfo> unique, String name) {
@@ -188,6 +233,9 @@ public final class JavaDetector {
     }
 
     private static void addHome(Map<String, JavaInfo> unique, Path home) {
+        if (home == null) {
+            return;
+        }
         putUnique(unique, probe(home));
     }
 
@@ -222,13 +270,12 @@ public final class JavaDetector {
         return best;
     }
 
-    /** Exact match, otherwise the closest lower major, otherwise the closest higher one. */
+    /** Exact match, otherwise the closest higher major (a lower one cannot run the game). */
     public static JavaInfo pickFallback(List<JavaInfo> candidates, int requiredMajor) {
         JavaInfo exact = pickBest(candidates, requiredMajor);
         if (exact != null) {
             return exact;
         }
-        JavaInfo lower = null;
         JavaInfo higher = null;
         for (JavaInfo info : candidates) {
             int major = info.getMajorVersion();
@@ -236,14 +283,12 @@ public final class JavaDetector {
                 continue;
             }
             if (major < requiredMajor) {
-                if (lower == null || major > lower.getMajorVersion()) {
-                    lower = info;
-                }
+                continue;
             } else if (higher == null || major < higher.getMajorVersion()) {
                 higher = info;
             }
         }
-        return lower != null ? lower : higher;
+        return higher;
     }
 
     /** A 32-bit runtime cannot run the game on a 64-bit host. */

@@ -1,6 +1,7 @@
 package com.azur.launcher.game;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -43,12 +44,32 @@ class JavaDetectorTest {
     }
 
     @Test
-    void fallbackPrefersTheClosestLowerThenHigherMajor() {
+    void fallbackNeverPicksLowerMajor() {
         JavaDetector.JavaInfo j8 = java("1.8.0_402", "x86_64");
         JavaDetector.JavaInfo j17 = java("17.0.9", "x86_64");
         JavaDetector.JavaInfo j25 = java("25.0.1", "x86_64");
-        assertSame(j17, JavaDetector.pickFallback(List.of(j8, j17, j25), 21));
+        assertSame(j25, JavaDetector.pickFallback(List.of(j8, j17, j25), 21));
         assertSame(j25, JavaDetector.pickFallback(List.of(j25), 21));
         assertNull(JavaDetector.pickFallback(List.of(), 21));
+    }
+
+    @Test
+    void javaHomeStubMessageIsNotAHome() {
+        assertNull(JavaDetector.parseJavaHomeOutput(
+                "The operation couldn't be completed. Unable to locate a Java Runtime."));
+        assertNull(JavaDetector.parseJavaHomeOutput(""));
+        assertNull(JavaDetector.parseJavaHomeOutput("/definitely/not/here"));
+        assertNotNull(JavaDetector.parseJavaHomeOutput(System.getProperty("java.home")));
+    }
+
+    @Test
+    void ownJvmIsListedFirstBeforeSorting() {
+        assertTrue(JavaDetector.detectAll().stream()
+                .anyMatch(i -> i.getHome().toString().equals(System.getProperty("java.home"))));
+    }
+
+    @Test
+    void noLowerJavaIsAFallback() {
+        assertNull(JavaDetector.pickFallback(List.of(java("17.0.9", "aarch64")), 21));
     }
 }

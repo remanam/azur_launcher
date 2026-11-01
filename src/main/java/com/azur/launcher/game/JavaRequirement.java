@@ -13,6 +13,8 @@ import java.util.Locale;
 public final class JavaRequirement {
 
     public static final int DEFAULT_MAJOR = 21;
+    /** Where a player gets Java 21 when the launcher cannot find or download one. */
+    public static final String INSTALL_URL = "https://adoptium.net/temurin/releases/?version=21";
     private static final int MAX_INHERIT_DEPTH = 5;
 
     private JavaRequirement() {

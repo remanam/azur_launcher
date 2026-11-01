@@ -284,7 +284,13 @@ public class GameLauncher {
         if (manual != null) {
             return manual.getJavaExecutable();
         }
-        throw new IOException(I18n.tr("launch.no_java", required));
+        try {
+            log("No Java " + required + " installed, downloading Mojang's runtime");
+            return new JavaRuntimeDownloader(AppDirs.system(), this::log).ensure(required);
+        } catch (IOException e) {
+            log("Java download failed: " + e.getMessage());
+            throw new IOException(I18n.tr("launch.no_java", required, JavaRequirement.INSTALL_URL, e.getMessage()));
+        }
     }
 
     /** The single instance of this install; tests and the UI may inject another through the constructor. */

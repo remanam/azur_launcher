@@ -2,6 +2,7 @@ package com.azur.launcher.loader;
 
 import com.azur.launcher.config.AppDirs;
 import com.azur.launcher.game.JavaDetector;
+import com.azur.launcher.game.JavaRuntimeDownloader;
 import com.azur.launcher.game.JavaRequirement;
 import com.azur.launcher.i18n.I18n;
 import com.azur.launcher.net.Checks;
@@ -93,10 +94,11 @@ public class NeoForgeInstaller {
             InstallerLibraries.fetch(installerJar, gameDir, logger, libraryProgress);
 
             JavaDetector.JavaInfo java = pickJava(mcVersion);
-            if (java == null) {
+            Path javaExe = java != null ? java.getJavaExecutable() : downloadedJava(mcVersion);
+            if (javaExe == null) {
                 return fail(I18n.tr("neoforge.no_java"));
             }
-            int exitCode = run(command(java.getJavaExecutable(), installerJar, gameDir), gameDir);
+            int exitCode = run(command(javaExe, installerJar, gameDir), gameDir);
             if (exitCode != 0) {
                 return fail(I18n.tr("neoforge.exit_code", exitCode));
             }
@@ -165,6 +167,15 @@ public class NeoForgeInstaller {
         }
         reader.join(3000);
         return process.exitValue();
+    }
+
+    private Path downloadedJava(String mcVersion) {
+        try {
+            return new JavaRuntimeDownloader(dirs, logger).ensure(JavaRequirement.ruleMajorFor(mcVersion));
+        } catch (IOException e) {
+            logger.accept("Java download failed: " + e.getMessage());
+            return null;
+        }
     }
 
     private JavaDetector.JavaInfo pickJava(String mcVersion) {
