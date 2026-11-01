@@ -17,7 +17,7 @@ public class LauncherConfig {
     private String jvmArgs = "";
     private boolean darkMode = false;
     private String lastServerId = "";
-    private String language = "auto";
+    private String language = "ru";
 
     public String getVersionId() {
         return versionId;
@@ -115,9 +115,9 @@ public class LauncherConfig {
         this.darkMode = darkMode;
     }
 
-    /** {@code auto}, {@code ru} or {@code en}. */
+    /** {@code ru} (default) or {@code en}; legacy {@code auto} counts as {@code ru}. */
     public String getLanguage() {
-        return language == null || language.isBlank() ? "auto" : language;
+        return language == null || language.isBlank() ? "ru" : language;
     }
 
     public void setLanguage(String language) {

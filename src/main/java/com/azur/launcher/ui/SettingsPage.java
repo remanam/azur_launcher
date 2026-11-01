@@ -22,7 +22,7 @@ final class SettingsPage {
     private static final int MEMORY_MIN_MB = 512;
     private static final int MEMORY_MAX_MB = 32768;
     private static final int MEMORY_STEP_MB = 512;
-    private static final List<String> LANGUAGES = List.of(I18n.AUTO, "ru", "en");
+    private static final List<String> LANGUAGES = List.of("ru", "en");
 
     private final AppContext ctx;
     private final Runnable onLanguageChanged;
@@ -103,7 +103,7 @@ final class SettingsPage {
     private Node languageRow() {
         ComboBox<String> box = new ComboBox<>();
         box.getItems().setAll(LANGUAGES);
-        box.setValue(ctx.config.getLanguage());
+        box.setValue(I18n.resolve(ctx.config.getLanguage()));
         box.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(String code) {
@@ -116,7 +116,7 @@ final class SettingsPage {
             }
         });
         box.setOnAction(event -> {
-            if (!box.getValue().equals(ctx.config.getLanguage())) {
+            if (!box.getValue().equals(I18n.resolve(ctx.config.getLanguage()))) {
                 ctx.config.setLanguage(box.getValue());
                 ctx.saveConfig();
                 I18n.setLanguage(box.getValue());

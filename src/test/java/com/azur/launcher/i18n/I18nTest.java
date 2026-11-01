@@ -76,12 +76,15 @@ class I18nTest {
 
     @Test
     void languageResolution() {
-        assertEquals("en", I18n.resolve("en", Locale.GERMAN));
-        assertEquals("ru", I18n.resolve("ru", Locale.ENGLISH));
-        assertEquals("en", I18n.resolve("auto", Locale.ENGLISH));
-        assertEquals("ru", I18n.resolve("auto", Locale.forLanguageTag("ru-RU")));
-        assertEquals("ru", I18n.resolve("auto", Locale.CHINESE));
-        assertEquals("ru", I18n.resolve(null, null));
+        assertEquals("en", I18n.resolve("en"));
+        assertEquals("en", I18n.resolve(" EN "));
+        assertEquals("ru", I18n.resolve("ru"));
+        assertEquals("ru", I18n.resolve("auto"));
+        assertEquals("ru", I18n.resolve("de"));
+        assertEquals("ru", I18n.resolve(null));
+        Locale.setDefault(Locale.ENGLISH);
+        I18n.setLanguage("auto");
+        assertEquals(I18n.tr("settings.language"), "Язык");
     }
 
     private static Set<String> placeholders(Pattern pattern, String text) {

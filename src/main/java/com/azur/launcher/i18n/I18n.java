@@ -19,7 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class I18n {
 
     public static final String DEFAULT_LANGUAGE = "ru";
-    public static final String AUTO = "auto";
     public static final Set<String> SUPPORTED = Set.of("ru", "en");
 
     private static final Map<String, Properties> BUNDLES = new ConcurrentHashMap<>();
@@ -28,22 +27,15 @@ public final class I18n {
     private I18n() {
     }
 
-    /**
-     * Selects the language. A supported {@code setting} wins; otherwise the system language is used when
-     * supported; otherwise Russian.
-     */
+    /** Selects the language: an explicit supported choice wins, anything else (including legacy "auto") is Russian. */
     public static void setLanguage(String setting) {
-        current = load(resolve(setting, Locale.getDefault()));
+        current = load(resolve(setting));
     }
 
-    /** Pure language resolution, exposed for tests. */
-    public static String resolve(String setting, Locale system) {
+    /** Pure language resolution, exposed for tests. The system locale is deliberately ignored. */
+    public static String resolve(String setting) {
         String wanted = setting == null ? "" : setting.trim().toLowerCase(Locale.ROOT);
-        if (SUPPORTED.contains(wanted)) {
-            return wanted;
-        }
-        String sys = system == null ? "" : system.getLanguage().toLowerCase(Locale.ROOT);
-        return SUPPORTED.contains(sys) ? sys : DEFAULT_LANGUAGE;
+        return SUPPORTED.contains(wanted) ? wanted : DEFAULT_LANGUAGE;
     }
 
     public static String tr(String key) {
