@@ -130,7 +130,7 @@ final class HomePage {
                 ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
                         ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
                         HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
-                first = service.load().list().servers().stream().findFirst().orElse(null);
+                first = com.azur.launcher.servers.ServerChoice.pick(service.load().list().servers(), ctx.config.getLastServerId());
             } catch (Exception e) {
                 ctx.log("Home: server list unavailable: " + e.getMessage());
             }

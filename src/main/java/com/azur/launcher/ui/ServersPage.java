@@ -126,13 +126,16 @@ final class ServersPage {
         for (ServerEntry entry : servers) {
             listBox.getChildren().add(row(entry));
         }
+        if (!com.azur.launcher.servers.ServerChoice.selectorVisible(servers)) {
+            listBox.getChildren().clear();
+        }
         if (servers.isEmpty()) {
             Label empty = UiKit.label(I18n.tr("servers.empty"), "empty-hint");
             empty.setWrapText(true);
             listBox.getChildren().add(empty);
         }
-        select(servers.stream().filter(e -> selected != null && e.id().equals(selected.id())).findFirst()
-                .orElse(servers.isEmpty() ? null : servers.get(0)));
+        select(com.azur.launcher.servers.ServerChoice.pick(servers,
+                selected != null ? selected.id() : ctx.config.getLastServerId()));
     }
 
     private void showListError(Exception e) {
@@ -178,6 +181,10 @@ final class ServersPage {
 
     private void select(ServerEntry entry) {
         selected = entry;
+        if (entry != null && !entry.id().equals(ctx.config.getLastServerId())) {
+            ctx.config.setLastServerId(entry.id());
+            ctx.saveConfig();
+        }
         rows.forEach((id, view) -> {
             view.row().getStyleClass().remove("selected");
             if (entry != null && id.equals(entry.id())) {

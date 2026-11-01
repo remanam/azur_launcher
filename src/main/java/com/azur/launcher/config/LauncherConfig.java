@@ -16,6 +16,7 @@ public class LauncherConfig {
     private int windowHeight = 480;
     private String jvmArgs = "";
     private boolean darkMode = false;
+    private String lastServerId = "";
     private String language = "auto";
 
     public String getVersionId() {
@@ -96,6 +97,14 @@ public class LauncherConfig {
 
     public void setJvmArgs(String jvmArgs) {
         this.jvmArgs = jvmArgs;
+    }
+
+    public String getLastServerId() {
+        return lastServerId == null ? "" : lastServerId;
+    }
+
+    public void setLastServerId(String id) {
+        this.lastServerId = id == null ? "" : id;
     }
 
     public boolean isDarkMode() {
