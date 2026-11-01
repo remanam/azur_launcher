@@ -157,7 +157,7 @@ class ServerListServiceTest {
             throw new java.net.SocketTimeoutException("Read timed out");
         }, "2026-10-29T00:00:00Z", lines).load();
         assertEquals(ServerListService.Source.CACHE, loaded.source());
-        assertTrue(lines.stream().anyMatch(l -> l.contains("network failed") && l.contains("timeout")), lines.toString());
+        assertTrue(lines.stream().anyMatch(l -> l.contains("direct connection failed") && l.contains("timeout") && l.contains("proxy not configured")), lines.toString());
         assertTrue(lines.stream().anyMatch(l -> l.contains("from cache") && l.contains("server unavailable")), lines.toString());
     }
 
