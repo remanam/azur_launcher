@@ -76,7 +76,7 @@ public final class ServerListService {
             try {
                 byte[] bytes = fetcher.fetch(url);
                 ServerList list = ServerListVerifier.open(bytes, key, clock.instant());
-                writeCache(bytes);
+                saveCache(bytes);
                 return new Loaded(list, Source.NETWORK);
             } catch (IOException | ServerListException e) {
                 log.accept("Server list unavailable (" + e.getMessage() + "), using the cache");
@@ -105,10 +105,33 @@ public final class ServerListService {
         }
     }
 
-    private void writeCache(byte[] bytes) throws IOException {
+    /** The cache is only a fallback: a failed write is logged and never replaces the list just loaded. */
+    private void saveCache(byte[] bytes) {
+        try {
+            writeCache(bytes);
+        } catch (IOException e) {
+            log.accept("Server list cache not saved (" + e + "); using the downloaded list from memory");
+        }
+    }
+
+    private synchronized void writeCache(byte[] bytes) throws IOException {
         Files.createDirectories(cacheFile.getParent());
-        Path tmp = cacheFile.resolveSibling(cacheFile.getFileName() + ".tmp");
-        Files.write(tmp, bytes);
-        Files.move(tmp, cacheFile, StandardCopyOption.REPLACE_EXISTING);
+        IOException last = null;
+        for (int attempt = 0; attempt < 3; attempt++) {
+            Path tmp = Files.createTempFile(cacheFile.getParent(), cacheFile.getFileName().toString(), ".tmp");
+            try {
+                Files.write(tmp, bytes);
+                try {
+                    Files.move(tmp, cacheFile, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(tmp, cacheFile, StandardCopyOption.REPLACE_EXISTING);
+                }
+                return;
+            } catch (IOException e) {
+                last = e;
+                Files.deleteIfExists(tmp);
+            }
+        }
+        throw last;
     }
 }

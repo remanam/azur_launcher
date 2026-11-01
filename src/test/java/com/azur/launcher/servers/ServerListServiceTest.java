@@ -41,6 +41,34 @@ class ServerListServiceTest {
     }
 
     @Test
+    void unwritableCacheDoesNotBlockTheDownloadedList() throws Exception {
+        Files.writeString(dir.resolve("cache"), "a file, not a directory");
+        var loaded = service(url -> good(), "2026-10-29T00:00:00Z").load();
+        assertEquals(ServerListService.Source.NETWORK, loaded.source());
+        assertEquals(2, loaded.list().servers().size());
+    }
+
+    @Test
+    void concurrentLoadsBothSucceedAndLeaveNoTempFiles() throws Exception {
+        byte[] file = good();
+        var a = java.util.concurrent.CompletableFuture.supplyAsync(() -> load(file));
+        var b = java.util.concurrent.CompletableFuture.supplyAsync(() -> load(file));
+        assertEquals(ServerListService.Source.NETWORK, a.get().source());
+        assertEquals(ServerListService.Source.NETWORK, b.get().source());
+        try (var files = Files.list(dir.resolve("cache"))) {
+            assertEquals(1, files.count());
+        }
+    }
+
+    private ServerListService.Loaded load(byte[] file) {
+        try {
+            return service(url -> file, "2026-10-29T00:00:00Z").load();
+        } catch (IOException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
     void networkListIsCachedAndUsedWhenOffline() throws Exception {
         byte[] file = good();
         var online = service(url -> file, "2026-10-29T00:00:00Z").load();
