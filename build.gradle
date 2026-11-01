@@ -78,13 +78,15 @@ def configureFatJar = { Jar task, String directory ->
     task.destinationDirectory = layout.buildDirectory.dir(directory)
     task.duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     task.manifest {
-        attributes 'Main-Class': 'com.azur.launcher.Launcher'
+        attributes 'Main-Class': 'com.azur.launcher.Launcher',
+                'Enable-Native-Access': 'ALL-UNNAMED'
     }
     task.from(sourceSets.main.output)
     // Classes of the app dependencies and of every platform jar (the classes are the same, only the natives differ).
     task.from({
-        (configurations.runtimeClasspath + javafxPlatforms.collect { platformConfigs[it] })
-                .flatten()
+        // Explicit file list: `runtimeClasspath + [configs]` silently dropped the other platforms' jars.
+        ([configurations.runtimeClasspath] + javafxPlatforms.collect { platformConfigs[it] })
+                .collectMany { it.files as List }
                 .findAll { it.name.endsWith('.jar') }
                 .collect { zipTree(it) }
     }) {
@@ -103,8 +105,25 @@ def configureFatJar = { Jar task, String directory ->
     }
 }
 
+// Fails the build when the jar lacks classes or natives of a target platform (the Windows ClassNotFoundException).
+def verifyFatJar = { File jar ->
+    def required = [
+            'com/sun/glass/ui/win/WinPlatformFactory.class', 'com/sun/glass/ui/gtk/GtkPlatformFactory.class',
+            'com/sun/glass/ui/mac/MacPlatformFactory.class', 'com/sun/prism/d3d/D3DPipeline.class',
+            'com/sun/prism/es2/ES2Pipeline.class', 'natives/win/glass.dll', 'natives/win/prism_d3d.dll',
+            'natives/win/javafx_font.dll', 'natives/win/javafx_iio.dll', 'natives/win/prism_common.dll',
+            'natives/linux/libglass.so', 'natives/linux/libprism_es2.so', 'natives/mac/libglass.dylib',
+            'natives/mac-aarch64/libglass.dylib', 'javafx/scene/control/Button.class', 'javafx/beans/property/SimpleStringProperty.class']
+    def names = new java.util.zip.ZipFile(jar).withCloseable { z -> z.entries().collect { it.name } as Set }
+    def missing = required.findAll { !names.contains(it) }
+    if (!missing.isEmpty()) {
+        throw new GradleException("Fat jar ${jar.name} is missing: ${missing}")
+    }
+}
+
 tasks.register('releaseJar', Jar) { Jar task ->
     configureFatJar(task, 'libs')
+    doLast { verifyFatJar(task.archiveFile.get().asFile) }
     description = 'The one cross-platform launcher jar (what players get).'
     group = 'build'
 }
