@@ -8,6 +8,7 @@ import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.config.PackSettings;
 import com.azur.launcher.game.GamePaths;
+import com.azur.launcher.game.RotatingLog;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.net.ProxyConfig;
 import com.azur.launcher.net.ProxySettings;
@@ -48,6 +49,8 @@ final class AppContext {
         return thread;
     });
 
+    /** {@code <data>/logs/launcher.log}: 1 MB, three old files kept. */
+    private final RotatingLog logFile;
     private final StringBuilder logBuffer = new StringBuilder();
     private final List<Runnable> accountListeners = new ArrayList<>();
     private Consumer<String> logView = line -> { };
@@ -58,6 +61,7 @@ final class AppContext {
                ProxySettings proxySettings,
                HostServices host, Stage stage) {
         this.dirs = dirs;
+        this.logFile = new RotatingLog(dirs.logsDir().resolve("launcher.log"), 1_000_000, 3);
         this.configManager = configManager;
         this.config = config;
         this.accounts = accounts;
@@ -112,6 +116,9 @@ final class AppContext {
 
     /** Appends to the log; safe to call from any thread. */
     void log(String line) {
+        if (!line.startsWith("[game] ")) {
+            logFile.append(line);
+        }
         Platform.runLater(() -> {
             logBuffer.append(line).append('\n');
             if (logBuffer.length() > LOG_LIMIT) {

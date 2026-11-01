@@ -71,6 +71,24 @@ final class UiKit {
         alert.showAndWait();
     }
 
+    /** Game crash dialog: exit code, last output lines (selectable, copyable) and «Open logs folder». */
+    static void gameExitDialog(Window owner, int code, String output, Runnable openLogs, boolean dark) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.initOwner(owner);
+        alert.setTitle(I18n.tr("common.error"));
+        alert.setHeaderText(I18n.tr("home.exited", code));
+        SelectableText text = selectable(output.isBlank() ? I18n.tr("play.no_output") : output, null);
+        text.setPrefWidth(560);
+        text.setMaxHeight(320);
+        Button open = button(I18n.tr("play.open_logs"), null, "button-border", openLogs);
+        HBox buttons = new HBox(8, copyButton(() -> output), open);
+        VBox content = new VBox(10, text, buttons);
+        content.setAlignment(Pos.CENTER_LEFT);
+        alert.getDialogPane().setContent(content);
+        styleDialog(alert.getDialogPane(), dark);
+        alert.showAndWait();
+    }
+
     static Region spacer() {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);

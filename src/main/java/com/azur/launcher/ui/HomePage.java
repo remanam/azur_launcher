@@ -134,7 +134,7 @@ final class HomePage {
             ServerEntry first = null;
             try {
                 ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
-                        ServerListService.loadKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
+                        ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
                         HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
                 first = service.load().list().servers().stream().findFirst().orElse(null);
             } catch (Exception e) {

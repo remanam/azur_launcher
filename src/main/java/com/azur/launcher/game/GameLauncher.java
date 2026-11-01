@@ -39,6 +39,10 @@ public class GameLauncher {
         void onExit(int exitCode);
     }
 
+    /** Lines of game output kept for the error dialog. */
+    public static final int TAIL_LINES = 30;
+    public static final String GAME_LOG = "launcher-game.log";
+
     private final GamePaths paths;
     private final Consumer<String> internalLogger;
     private final DownloadManager.ProgressListener progressListener;
@@ -49,6 +53,8 @@ public class GameLauncher {
     private Instance fixedInstance;
     private volatile Process process;
     private volatile boolean preparing;
+    private final TailBuffer tail = new TailBuffer(TAIL_LINES);
+    private volatile Path gameLogFile;
 
     public GameLauncher(GamePaths paths, Consumer<String> logger, DownloadManager.ProgressListener progressListener) {
         this.paths = paths;
@@ -74,6 +80,16 @@ public class GameLauncher {
     public boolean isRunning() {
         Process p = process;
         return p != null && p.isAlive();
+    }
+
+    /** The last lines the game printed (stdout and stderr). */
+    public List<String> lastLines() {
+        return tail.lines();
+    }
+
+    /** {@code <instance>/minecraft/logs/launcher-game.log}, the whole output of the last run; null before the first launch. */
+    public Path gameLogFile() {
+        return gameLogFile;
     }
 
     public boolean isPreparing() {
@@ -144,6 +160,9 @@ public class GameLauncher {
             ProcessBuilder processBuilder = new ProcessBuilder(command);
             processBuilder.directory(contentRoot.toFile());
             processBuilder.redirectErrorStream(true);
+            gameLogFile = contentRoot.resolve("logs").resolve(GAME_LOG);
+            Files.createDirectories(gameLogFile.getParent());
+            Files.deleteIfExists(gameLogFile);
 
             Process p = processBuilder.start();
             this.process = p;
@@ -202,8 +221,15 @@ public class GameLauncher {
         try (BufferedReader reader = new BufferedReader(
                 new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
             String line;
-            while ((line = reader.readLine()) != null) {
-                log("[game] " + line);
+            Path file = gameLogFile;
+            try (java.io.BufferedWriter out = Files.newBufferedWriter(file, StandardCharsets.UTF_8)) {
+                while ((line = reader.readLine()) != null) {
+                    tail.add(line);
+                    log("[game] " + line);
+                    out.write(line);
+                    out.newLine();
+                    out.flush();
+                }
             }
         } catch (IOException ignored) {
             // the stream closes when the process exits

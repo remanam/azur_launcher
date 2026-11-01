@@ -15,6 +15,7 @@ import com.azur.launcher.servers.ServerEntry;
 import javafx.application.Platform;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
@@ -81,17 +82,24 @@ final class PlayController implements GameStarter {
             error(I18n.tr("home.sign_in_needed"));
             return;
         }
+        if (server == null) {
+            error(I18n.tr("play.no_server"));
+            return;
+        }
         setPhase(Phase.PREPARING);
         ctx.io.submit(() -> {
             try {
                 Instance instance = instanceFor(server);
+                if (server.pack().present() && PackOps.newService(ctx).installedVersion(instance.gameDir()).isBlank()) {
+                    throw new IllegalStateException(I18n.tr("play.no_pack"));
+                }
                 if (!account.launchPermitted()) {
                     throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
                 }
                 ctx.setStatus(I18n.tr("play.checking"));
                 new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).installIfNeeded(instance);
                 GameLauncher launcher = new GameLauncher(ctx.gamePaths(), ctx::log, progress()).withInstance(instance);
-                launcher.addExitSink(code -> Platform.runLater(() -> onExit(code)));
+                launcher.addExitSink(code -> Platform.runLater(() -> onExit(code, launcher)));
                 game = launcher;
                 launcher.launch(ctx.config, account);
                 ctx.setProgress(-1);
@@ -142,9 +150,15 @@ final class PlayController implements GameStarter {
         return (done, total, current) -> ctx.setProgress(total == 0 ? -1 : done / (double) total);
     }
 
-    private void onExit(int code) {
+    private void onExit(int code, GameLauncher launcher) {
         setPhase(Phase.IDLE);
         ctx.setStatus(I18n.tr("home.exited", code));
+        if (code != 0) {
+            Path logFile = launcher.gameLogFile();
+            UiKit.gameExitDialog(ctx.stage, code, String.join("\n", launcher.lastLines()),
+                    () -> ctx.openInSystem(logFile == null ? ctx.dirs.logsDir() : logFile.getParent()),
+                    ctx.config.isDarkMode());
+        }
     }
 
     private void setPhase(Phase value) {

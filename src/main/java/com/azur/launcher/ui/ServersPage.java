@@ -109,7 +109,7 @@ final class ServersPage {
         ctx.io.submit(() -> {
             try {
                 ServerListService service = new ServerListService(ctx.dirs.serversCacheFile(),
-                        ServerListService.loadKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
+                        ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
                         HttpUtils::getBytes, Clock.systemUTC(), ctx::log);
                 ServerListService.Loaded loaded = service.load();
                 Platform.runLater(() -> showList(loaded));

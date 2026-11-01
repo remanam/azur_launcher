@@ -16,13 +16,20 @@ public final class PackSettings {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-    /** Address of the signed servers.json (https). Empty: only the cached list is shown. */
+    /** Release address of the signed servers.json, used when the setting is empty (dev runs keep it empty). */
+    public static final String DEFAULT_SERVERS_URL = "https://example.test/servers.json";
+
+    /** Address of the signed servers.json (https). Empty: the release default, or only the cache in a dev run. */
     private String serversUrl = "";
     /** Address of the community API (https): registration, roles. Empty: the feature is off. */
     private String apiBase = "";
 
     public String getServersUrl() {
-        return serversUrl == null ? "" : serversUrl;
+        if (serversUrl != null && !serversUrl.isBlank()) {
+            return serversUrl;
+        }
+        boolean dev = !System.getProperty(com.azur.launcher.config.AppDirs.HOME_PROPERTY, "").isBlank();
+        return dev ? "" : DEFAULT_SERVERS_URL;
     }
 
     public void setServersUrl(String serversUrl) {

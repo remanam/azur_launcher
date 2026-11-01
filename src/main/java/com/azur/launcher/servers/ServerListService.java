@@ -61,6 +61,15 @@ public final class ServerListService {
         }
     }
 
+    /**
+     * The key the app trusts: the embedded one. A local {@code servers_pubkey.txt} counts only in a dev run
+     * ({@code -Dazur.home}), so a leftover dev key can never override the release key.
+     */
+    public static PublicKey appKey(Path override) throws IOException, GeneralSecurityException {
+        boolean dev = !System.getProperty(com.azur.launcher.config.AppDirs.HOME_PROPERTY, "").isBlank();
+        return loadKey(dev ? override : null);
+    }
+
     /** Network first, then the cache. Throws when neither gives a verifiable list. */
     public Loaded load() throws IOException {
         if (url != null && !url.isBlank()) {
