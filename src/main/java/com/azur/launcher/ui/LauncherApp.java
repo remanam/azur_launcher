@@ -1,7 +1,9 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AccountStore;
+import com.azur.launcher.AppVersion;
 import com.azur.launcher.config.AppDirs;
+import com.azur.launcher.update.UpdateStore;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.i18n.I18n;
@@ -32,7 +34,7 @@ import java.net.URL;
 /** Main window: title bar, navigation (Play, Player, Settings, About), the active page and the status bar. */
 public class LauncherApp extends Application {
 
-    static final String VERSION = "1.0.0";
+    static final String VERSION = AppVersion.APP;
     private static final String[] FONTS = {"philosopher_bold", "pt_sans_web_regular", "pt_sans_web_bold"};
 
     private enum Page { HOME, ACCOUNTS, SETTINGS, ABOUT }
@@ -43,6 +45,8 @@ public class LauncherApp extends Application {
     private StackPane sceneRoot;
     private Page current = Page.HOME;
     private HomePage homePage;
+    private PlayController play;
+    private UpdateController updates;
 
     @Override
     public void start(Stage stage) {
@@ -72,8 +76,15 @@ public class LauncherApp extends Application {
         stage.setMinWidth(960);
         stage.setMinHeight(600);
         stage.setOnCloseRequest(event -> ctx.saveConfig());
+        UpdateStore updateStore = UpdateStore.at(dirs.root().resolve("updates"));
+        updates = UpdateController.create(ctx, updateStore,
+                () -> play != null && play.phase() != PlayController.Phase.IDLE);
         build();
         stage.show();
+        updateStore.confirmStarted(AppVersion.APP);
+        if (updates != null) {
+            updates.start();
+        }
         ctx.log("Azur Launcher started, data folder: " + dirs.root());
     }
 
@@ -96,9 +107,12 @@ public class LauncherApp extends Application {
     private Node content() {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
-        PlayController play = new PlayController(ctx);
+        play = new PlayController(ctx);
         homePage = new HomePage(ctx, play, PackState.live(ctx));
         area.getChildren().addAll(homePage.node(), new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build, play).node(), new AboutPage().node());
+        if (updates != null) {
+            updates.onStatus(status -> homePage.showUpdate(status, () -> updates.restart(this::shutdown)));
+        }
         showPage(area, current);
         return area;
     }
@@ -171,6 +185,9 @@ public class LauncherApp extends Application {
 
     private void shutdown() {
         ctx.saveConfig();
+        if (updates != null) {
+            updates.stop();
+        }
         ctx.shutdown();
         Platform.exit();
     }

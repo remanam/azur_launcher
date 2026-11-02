@@ -2,6 +2,7 @@ package com.azur.launcher.ui;
 
 import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.i18n.I18n;
+import com.azur.launcher.update.UpdateService;
 import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.profile.Instance;
@@ -37,6 +38,8 @@ import java.util.List;
  */
 final class HomePage {
 
+    private static final String SITE_URL = "https://example.test";
+
     private static final long PING_INTERVAL_MS = 15_000;
 
     private final AppContext ctx;
@@ -51,6 +54,10 @@ final class HomePage {
     private final Label statusLabel = UiKit.label("", "home-sub");
     private final Label bannerLabel = UiKit.label("", "home-sub");
     private final Button mainButton;
+    private final Label updateLabel = UiKit.label("", "home-sub");
+    private final Button updateButton = UiKit.button("", null, "launch-button", () -> { });
+    private final VBox updateBox = new VBox(8, updateLabel, updateButton);
+    private boolean updateRequired;
     private final SelectableText errorLabel = UiKit.selectable("", null);
     private final SelectableText detailsLabel = UiKit.selectable("", "home-error-details");
     private final TitledPane details = new TitledPane(I18n.tr("home.error.details"), detailsLabel);
@@ -114,6 +121,11 @@ final class HomePage {
         bannerLabel.setMaxWidth(520);
         showBanner("");
         showError(null, null);
+        updateLabel.setWrapText(true);
+        updateLabel.setMaxWidth(520);
+        updateBox.setAlignment(Pos.CENTER);
+        updateBox.setVisible(false);
+        updateBox.setManaged(false);
 
         Region logo = new Region();
         logo.getStyleClass().add("home-logo");
@@ -121,7 +133,7 @@ final class HomePage {
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, mainButton, progressView.node(), errorBox);
+        main.getChildren().addAll(logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, updateBox, mainButton, progressView.node(), errorBox);
         main.setAlignment(Pos.TOP_CENTER);
         main.getStyleClass().add("home-hero");
         root.setAlignment(Pos.TOP_CENTER);
@@ -137,6 +149,30 @@ final class HomePage {
         });
         refresher.setCycleCount(Timeline.INDEFINITE);
         refresher.play();
+    }
+
+    /**
+     * Launcher self-update notice (JavaFX thread). READY: version + "Update and restart" (a required update also
+     * blocks Play); WRAPPER_OLD: link to the site, nothing is applied.
+     */
+    void showUpdate(UpdateService.Status status, Runnable restart) {
+        UpdateService.Kind kind = status.kind();
+        boolean ready = kind == UpdateService.Kind.READY;
+        boolean old = kind == UpdateService.Kind.WRAPPER_OLD;
+        updateRequired = (ready || old) && status.manifest().required();
+        if (ready) {
+            String version = status.manifest().version();
+            updateLabel.setText(updateRequired ? I18n.tr("update.required", version) : I18n.tr("update.available", version));
+            updateButton.setText(I18n.tr("update.button"));
+            updateButton.setOnAction(event -> restart.run());
+        } else if (old) {
+            updateLabel.setText(I18n.tr("update.wrapper_old", status.manifest().minWrapper()));
+            updateButton.setText(I18n.tr("update.site"));
+            updateButton.setOnAction(event -> ctx.host.showDocument(SITE_URL));
+        }
+        updateBox.setVisible(ready || old);
+        updateBox.setManaged(ready || old);
+        mainButton.setDisable(updateRequired);
     }
 
     /** The Home page became visible: ask the server again (the button label must not show a stale answer). */
@@ -342,7 +378,7 @@ final class HomePage {
         PlayController.Phase phase = play.phase();
         String text = buttonText();
         mainButton.setText(text);
-        mainButton.setDisable(false);
+        mainButton.setDisable(updateRequired);
         mainButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");
