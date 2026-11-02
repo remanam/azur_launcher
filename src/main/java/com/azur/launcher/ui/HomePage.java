@@ -6,7 +6,6 @@ import com.azur.launcher.launch.LaunchRequest;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.profile.Instance;
 import com.azur.launcher.profile.InstanceStore;
-import com.azur.launcher.profile.Profile;
 import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.servers.ServerListService;
@@ -20,6 +19,7 @@ import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.HBox;
@@ -29,9 +29,10 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.time.Clock;
+import java.util.List;
 
 /**
- * Home = the server screen: logo, nickname, server with status, one pack line and ONE big button whose label follows
+ * Home = the only player screen: logo, nickname, server with status (a selector only with 2+ servers) and ONE big button whose label follows
  * the state (Start / Update / Installing / Updating / Checking / Play / Retry). A failure is one sentence with an expandable detail.
  */
 final class HomePage {
@@ -48,7 +49,6 @@ final class HomePage {
     private final Region dot = new Region();
     private final Label serverLabel = UiKit.label("", "home-title");
     private final Label statusLabel = UiKit.label("", "home-sub");
-    private final Label packLabel = UiKit.label("", "home-sub");
     private final Label bannerLabel = UiKit.label("", "home-sub");
     private final Button mainButton;
     private final SelectableText errorLabel = UiKit.selectable("", null);
@@ -61,6 +61,8 @@ final class HomePage {
     private final Timeline progressTicker = new Timeline(new KeyFrame(Duration.millis(100), e -> tick()));
     private final FirstRunWizard wizard;
 
+    private final ComboBox<ServerEntry> serverBox = new ComboBox<>();
+    private boolean fillingBox;
     private ServerEntry server;
     private boolean installed;
     private boolean updateAvailable;
@@ -83,6 +85,26 @@ final class HomePage {
         wizardActive = HomeState.wizardNeeded(ctx.accounts.selected() != null);
 
         dot.getStyleClass().add("status-dot");
+        serverBox.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(ServerEntry entry) {
+                return entry == null ? "" : entry.name();
+            }
+
+            @Override
+            public ServerEntry fromString(String text) {
+                return null;
+            }
+        });
+        serverBox.setOnAction(e -> {
+            ServerEntry chosen = serverBox.getValue();
+            if (!fillingBox && chosen != null && server != null && !chosen.id().equals(server.id())) {
+                ctx.config.setLastServerId(chosen.id());
+                ctx.saveConfig();
+                applyServer(chosen, null, null);
+            }
+        });
+        showServerBox(List.of());
         details.setExpanded(false);
         details.getStyleClass().add("advanced-pane");
         errorBox.getStyleClass().add("home-error");
@@ -99,7 +121,7 @@ final class HomePage {
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(logo, nickRow, serverRow, statusLabel, packLabel, bannerLabel, mainButton, progressView.node(), errorBox);
+        main.getChildren().addAll(logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, mainButton, progressView.node(), errorBox);
         main.setAlignment(Pos.TOP_CENTER);
         main.getStyleClass().add("home-hero");
         root.setAlignment(Pos.TOP_CENTER);
@@ -138,21 +160,21 @@ final class HomePage {
                         HttpUtils::getListBytes, Clock.systemUTC(), ctx::log);
             } catch (Exception e) {
                 ctx.log("Server list: cannot start: " + e);
-                applyServer(null, "key: " + e.getMessage());
+                applyServer(null, null, "key: " + e.getMessage());
                 return;
             }
             ServerListService.Loaded cached = service.cached();
             if (cached != null) {
-                applyServer(pick(cached), null);
+                applyServer(pick(cached), cached.list().servers(), null);
             }
             try {
                 ServerListService.Loaded loaded = service.load();
                 if (loaded.source() != ServerListService.Source.NETWORK) {
                     ctx.log("Server list from cache (server unavailable)");
                 }
-                applyServer(pick(loaded), null);
+                applyServer(pick(loaded), loaded.list().servers(), null);
             } catch (Exception e) {
-                applyServer(cached == null ? null : pick(cached), e.getMessage());
+                applyServer(cached == null ? null : pick(cached), cached == null ? null : cached.list().servers(), e.getMessage());
             }
         });
     }
@@ -161,9 +183,15 @@ final class HomePage {
         return com.azur.launcher.servers.ServerChoice.pick(loaded.list().servers(), ctx.config.getLastServerId());
     }
 
-    private void applyServer(ServerEntry entry, String problem) {
+    private void applyServer(ServerEntry entry, List<ServerEntry> all, String problem) {
         Platform.runLater(() -> {
             server = entry;
+            if (all != null) {
+                showServerBox(all);
+                fillingBox = true;
+                serverBox.setValue(entry);
+                fillingBox = false;
+            }
             play.setServer(entry, entry == null ? problem : null);
             refreshState(false);
         });
@@ -342,13 +370,6 @@ final class HomePage {
         } else {
             statusLabel.setText(I18n.tr("servers.checking"));
         }
-        try {
-            Profile pin = server == null ? InstanceStore.bundledProfile()
-                    : ServerProfiles.derive(server, InstanceStore.bundledProfile());
-            packLabel.setText(I18n.tr("home.pack_line", pin.minecraft(), pin.neoforge()));
-        } catch (Exception e) {
-            packLabel.setText("");
-        }
     }
 
     private void showPing(ServerPing.Result result) {
@@ -357,6 +378,16 @@ final class HomePage {
         statusLabel.setText(result.online()
                 ? I18n.tr("servers.online", result.playersOnline(), result.playersMax(), result.latencyMs())
                 : I18n.tr("servers.down"));
+    }
+
+    /** The selector exists only when the signed list has 2+ servers (usually it is just Azur). */
+    private void showServerBox(List<ServerEntry> all) {
+        boolean visible = com.azur.launcher.servers.ServerChoice.selectorVisible(all);
+        fillingBox = true;
+        serverBox.getItems().setAll(all);
+        fillingBox = false;
+        serverBox.setVisible(visible);
+        serverBox.setManaged(visible);
     }
 
     private void showBanner(String text) {

@@ -83,14 +83,14 @@ final class ServersPage {
         left.setPrefWidth(LIST_WIDTH);
         left.setMaxWidth(LIST_WIDTH);
         HBox.setHgrow(detail, Priority.ALWAYS);
-                root.getStyleClass().add("page");
         root.getChildren().addAll(left, detail);
         renderDetail();
         reload();
     }
 
-    Node node() {
-        return UiKit.pageScroll(root);
+    /** Embedded in Settings > Advanced (no own scroll pane, no page padding). */
+    Node section() {
+        return root;
     }
 
     // ------------------------------------------------------------------ list

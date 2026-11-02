@@ -39,7 +39,7 @@ final class SettingsPage {
         VBox options = new VBox(0, languageRow(), serversUrlRow(), javaRow(), threadsRow(), jvmArgsRow(),
                 folderRow());
         AdvancedPanel advanced = new AdvancedPanel(ctx, play, memoryRow());
-        VBox page = new VBox(24, header, UiKit.card(options), advanced.node());
+        VBox page = new VBox(24, header, UiKit.card(options), new ServersPage(ctx, play).section(), advanced.node());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
         detectJava();
