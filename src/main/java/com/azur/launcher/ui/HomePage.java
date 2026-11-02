@@ -22,19 +22,25 @@ import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.Tooltip;
 import javafx.scene.control.TitledPane;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
 import java.time.Clock;
+import com.azur.launcher.sync.PackSyncService;
 import java.util.List;
 
 /**
- * Home = the only player screen: logo, nickname, server with status (a selector only with 2+ servers) and ONE big button whose label follows
- * the state (Start / Update / Installing / Updating / Checking / Play / Retry). A failure is one sentence with an expandable detail.
+ * Home = the only player screen (forge v3 layout): header (bell, nickname, gear), notice banner, a card with the server plate,
+ * pack status and the server text next to the hero picture, the action bar (status or install progress, ONE big Play button)
+ * and the news line. A failure is one sentence with an expandable detail. While no nickname exists the card holds the first-run wizard.
  */
 final class HomePage {
 
@@ -47,12 +53,22 @@ final class HomePage {
     private final PackState packState;
     private final ServerStatusService status;
     private final StackPane root = new StackPane();
-    private final VBox main = new VBox(24);
-    private final Label nickLabel = UiKit.label("", "home-sub");
+    private final VBox card = new VBox(14);
+    private final VBox info = new VBox(14);
+    private final Label nickLabel = UiKit.label("", "nick-name");
+    private final Label nickSub = UiKit.label("", "nick-sub");
+    private final StackPane avatarHolder = new StackPane();
     private final Region dot = new Region();
-    private final Label serverLabel = UiKit.label("", "home-title");
     private final Label statusLabel = UiKit.label("", "home-sub");
     private final Label bannerLabel = UiKit.label("", "home-sub");
+    private final Label packTitle = UiKit.label("", "pack-title");
+    private final Label packTag = UiKit.label("", "pack-tag");
+    private final Label aboutHead = UiKit.label(I18n.tr("home.about_server"), "section-head");
+    private final Label aboutText = UiKit.label("", "home-sub");
+    private final Region statusIcon = Icons.of("icon-check", 18);
+    private final Label statusTitle = UiKit.label("", "status-title");
+    private final Label statusHint = UiKit.label("", "status-hint");
+    private final VBox statusBox = new VBox(4, new HBox(8, statusIcon, statusTitle), statusHint);
     private final Button mainButton;
     private final Label updateLabel = UiKit.label("", "home-sub");
     private final Button updateButton = UiKit.button("", null, "launch-button", () -> { });
@@ -68,6 +84,8 @@ final class HomePage {
     private final InstallProgressView progressView = new InstallProgressView();
     private final Timeline progressTicker = new Timeline(new KeyFrame(Duration.millis(100), e -> tick()));
     private final FirstRunWizard wizard;
+    private final Runnable openAdvanced;
+    private String packVersion = "";
 
     private final ComboBox<ServerEntry> serverBox = new ComboBox<>();
     private boolean fillingBox;
@@ -81,8 +99,9 @@ final class HomePage {
     private final Timeline refresher = new Timeline(
             new KeyFrame(Duration.millis(PackState.TTL_MS), event -> refreshState(false)));
 
-    HomePage(AppContext ctx, PlayController play, PackState packState) {
+    HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAdvanced) {
         this.ctx = ctx;
+        this.openAdvanced = openAdvanced;
         this.play = play;
         this.packState = packState;
         this.installProgress = play.installProgress();
@@ -95,6 +114,7 @@ final class HomePage {
         wizardActive = HomeState.wizardNeeded(ctx.accounts.selected() != null);
 
         dot.getStyleClass().add("status-dot");
+        serverBox.getStyleClass().add("server-chip");
         serverBox.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(ServerEntry entry) {
@@ -104,6 +124,15 @@ final class HomePage {
             @Override
             public ServerEntry fromString(String text) {
                 return null;
+            }
+        });
+        serverBox.setButtonCell(new ListCell<>() {
+            @Override
+            protected void updateItem(ServerEntry entry, boolean empty) {
+                super.updateItem(entry, empty);
+                setText(null);
+                setGraphic(new HBox(10, UiKit.label(I18n.tr("home.server"), "chip-key"),
+                        UiKit.label(entry == null ? I18n.tr("home.default_server") : entry.name(), "chip-name")));
             }
         });
         serverBox.setOnAction(e -> {
@@ -118,28 +147,67 @@ final class HomePage {
         details.setExpanded(false);
         details.getStyleClass().add("advanced-pane");
         errorBox.getStyleClass().add("home-error");
-        errorBox.setMaxWidth(520);
         progressTicker.setCycleCount(Timeline.INDEFINITE);
         bannerLabel.setWrapText(true);
-        bannerLabel.setMaxWidth(520);
+        aboutText.setWrapText(true);
+        statusHint.setWrapText(true);
         showBanner("");
         showError(null, null);
         updateLabel.setWrapText(true);
-        updateLabel.setMaxWidth(520);
-        updateBox.setAlignment(Pos.CENTER);
+        updateBox.setAlignment(Pos.CENTER_LEFT);
         updateBox.setVisible(false);
         updateBox.setManaged(false);
+        packTag.getStyleClass().add("tag-ok");
 
-        Region logo = new Region();
-        logo.getStyleClass().add("home-logo");
-        HBox nickRow = new HBox(12, nickLabel);
-        nickRow.setAlignment(Pos.CENTER);
-        HBox serverRow = new HBox(12, dot, serverLabel);
-        serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(feed.node(), logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, updateBox, mainButton, progressView.node(), errorBox);
-        main.setAlignment(Pos.TOP_CENTER);
-        main.getStyleClass().add("home-hero");
-        root.setAlignment(Pos.TOP_CENTER);
+        HBox serverRow = new HBox(14, serverBox, UiKit.spacer(), dot, statusLabel);
+        serverRow.setAlignment(Pos.CENTER_LEFT);
+        HBox packRow = new HBox(12, packTitle, packTag);
+        packRow.setAlignment(Pos.CENTER_LEFT);
+        info.getChildren().addAll(serverRow, packRow, bannerLabel, aboutHead, aboutText, updateBox, errorBox);
+        card.getStyleClass().add("forge-card");
+        HBox.setHgrow(card, Priority.ALWAYS);
+
+        Region hero = new Region();
+        hero.getStyleClass().add("hero-art");
+        hero.setMinWidth(300);
+        hero.setPrefWidth(340);
+        hero.setMaxWidth(340);
+        HBox middle = new HBox(16, card, hero);
+        middle.getStyleClass().add("home-middle");
+
+        Button gear = UiKit.button("", null, "gear-button", openAdvanced);
+        gear.setGraphic(Icons.of("icon-gear", 20));
+        gear.setTooltip(new Tooltip(I18n.tr("home.advanced")));
+        avatarHolder.getStyleClass().add("nick-avatar");
+        VBox nickText = new VBox(1, nickLabel, nickSub);
+        HBox nickChip = new HBox(10, avatarHolder, nickText);
+        nickChip.getStyleClass().add("nick-chip");
+        nickChip.setAlignment(Pos.CENTER_LEFT);
+        HBox header = new HBox(14, UiKit.spacer(), feed.bell(), nickChip, gear);
+        header.getStyleClass().add("home-header");
+        header.setAlignment(Pos.CENTER_RIGHT);
+        VBox top = new VBox(header, feed.banner());
+
+        Region copperLine = new Region();
+        copperLine.getStyleClass().add("copper-line");
+        progressView.node().visibleProperty().addListener(o -> syncStatusSlot());
+        StackPane slot = new StackPane(statusBox, progressView.node());
+        slot.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(slot, Priority.ALWAYS);
+        HBox actions = new HBox(24, slot, mainButton);
+        actions.getStyleClass().add("action-bar");
+        actions.setAlignment(Pos.CENTER_LEFT);
+        VBox bottom = new VBox(copperLine, actions, feed.news());
+
+        BorderPane screen = new BorderPane();
+        screen.setTop(top);
+        screen.setCenter(middle);
+        screen.setBottom(bottom);
+        Node history = feed.history();
+        StackPane.setAlignment(history, Pos.TOP_RIGHT);
+        StackPane.setMargin(history, new javafx.geometry.Insets(54, 190, 0, 0));
+        root.getChildren().addAll(screen, history);
+        syncStatusSlot();
 
         ctx.onAccountsChanged(this::renderAccount);
         play.onPhase(this::onPhase);
@@ -189,7 +257,7 @@ final class HomePage {
     }
 
     Node node() {
-        return UiKit.pageScroll(root);
+        return root;
     }
 
     // ------------------------------------------------------------------ data
@@ -250,16 +318,21 @@ final class HomePage {
         ServerEntry entry = server;
         ctx.io.submit(() -> {
             PackState.Snapshot snap = new PackState.Snapshot(false, false, "");
+            String version = "";
             try {
-                snap = packState.read(instance(), entry, force);
+                Instance current = instance();
+                snap = packState.read(current, entry, force);
+                version = PackSyncService.standard(ctx.dirs).installedVersion(current.gameDir());
             } catch (Exception e) {
                 ctx.log("Home: state unavailable: " + e.getMessage());
             }
             PackState.Snapshot shot = snap;
+            String shownVersion = version == null ? "" : version;
             Platform.runLater(() -> {
                 if (updating) {
                     return;
                 }
+                packVersion = shownVersion;
                 installed = shot.installed();
                 updateAvailable = shot.updateAvailable();
                 showBanner(shot.banner());
@@ -347,6 +420,7 @@ final class HomePage {
                 if (!updating) {
                     progressView.hide();
                     wizard.progress().hide();
+                    render();
                 }
             });
             hide.play();
@@ -387,13 +461,52 @@ final class HomePage {
         PlayController.Phase phase = play.phase();
         String text = buttonText();
         mainButton.setText(text);
-        mainButton.setDisable(updateRequired || feed.blocksPlay() && phase == PlayController.Phase.IDLE);
+        boolean loginStep = wizardActive && wizard.step() == 1;
+        mainButton.setDisable(loginStep || updateRequired || feed.blocksPlay() && phase == PlayController.Phase.IDLE);
         mainButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");
         }
         wizard.showInstall(text, updating, failed ? errorLabel.getText() : null);
-        root.getChildren().setAll(wizardActive ? wizard.node() : main);
+        card.getChildren().setAll(wizardActive ? wizard.node() : info);
+        renderPack();
+        renderStatus();
+    }
+
+    /** Pack row of the card: «Сборка 1.4.3» and a tag (up to date / update / install). */
+    private void renderPack() {
+        boolean known = installed && !packVersion.isEmpty();
+        packTitle.setText(known ? I18n.tr("home.pack_title", packVersion)
+                : I18n.tr(installed ? "home.pack_title_plain" : "home.pack_none"));
+        String key = !installed ? "home.pack_install" : updateAvailable ? "home.pack_update" : "home.pack_ok";
+        packTag.setText(I18n.tr(key));
+        packTag.getStyleClass().removeAll("tag-ok", "tag-warn");
+        packTag.getStyleClass().add(installed && !updateAvailable ? "tag-ok" : "tag-warn");
+    }
+
+    private void renderStatus() {
+        HomeState.Status status = HomeState.status(ctx.accounts.selected() != null, installed, updateAvailable);
+        statusTitle.setText(I18n.tr(status.titleKey()));
+        statusTitle.getStyleClass().removeAll("ok", "warn");
+        statusTitle.getStyleClass().add(status.styleClass());
+        statusIcon.getStyleClass().removeAll("icon-check", "icon-lock", "icon-update");
+        statusIcon.getStyleClass().add(status == HomeState.Status.READY ? "icon-check"
+                : status == HomeState.Status.LOGIN ? "icon-lock" : "icon-update");
+        statusIcon.getStyleClass().removeAll("ok", "warn");
+        statusIcon.getStyleClass().add(status.styleClass());
+        if (status == HomeState.Status.READY && server != null) {
+            statusHint.setText(I18n.tr("home.status_info", server.mcVersion(), server.neoforge(),
+                    HomeState.gigabytes(ctx.config.getMaxMemoryMb())));
+        } else {
+            statusHint.setText(I18n.tr(status.hintKey()));
+        }
+    }
+
+    /** The install progress replaces the status text in the same slot while it is visible. */
+    private void syncStatusSlot() {
+        boolean progress = progressView.node().isVisible();
+        statusBox.setVisible(!progress);
+        statusBox.setManaged(!progress);
     }
 
     private void renderAccount() {
@@ -404,17 +517,21 @@ final class HomePage {
         } else if (wizardActive && wizard.step() == 1) {
             wizard.showStep(2);
         }
-        nickLabel.setText(account == null ? "" : I18n.tr("home.player", account.getUsername()));
+        nickLabel.setText(account == null ? I18n.tr("home.no_nick") : account.getUsername());
+        nickSub.setText(I18n.tr(account == null ? "home.sign_in_hint" : "home.account"));
+        avatarHolder.getChildren().setAll(UiKit.label(account == null ? "?" : account.getUsername().substring(0, 1).toUpperCase(),
+                "nick-avatar-text"));
         render();
     }
 
     private void renderServer() {
-        serverLabel.setText(server == null ? I18n.tr("home.default_server") : server.name());
-        if (server == null) {
-            statusLabel.setText("");
-        } else {
-            statusLabel.setText(I18n.tr("servers.checking"));
-        }
+        aboutText.setText(server == null ? "" : server.motd() == null ? "" : server.motd());
+        boolean hasAbout = !aboutText.getText().isBlank();
+        aboutHead.setVisible(hasAbout);
+        aboutHead.setManaged(hasAbout);
+        aboutText.setVisible(hasAbout);
+        aboutText.setManaged(hasAbout);
+        statusLabel.setText(server == null ? "" : I18n.tr("servers.checking"));
     }
 
     private void showPing(ServerPing.Result result) {
@@ -425,14 +542,18 @@ final class HomePage {
                 : I18n.tr("servers.down"));
     }
 
-    /** The selector exists only when the signed list has 2+ servers (usually it is just Azur). */
+    /** The plate is always there; it opens a list only when the signed list has 2+ servers (usually it is just Azur). */
     private void showServerBox(List<ServerEntry> all) {
-        boolean visible = com.azur.launcher.servers.ServerChoice.selectorVisible(all);
+        boolean selectable = com.azur.launcher.servers.ServerChoice.selectorVisible(all);
         fillingBox = true;
         serverBox.getItems().setAll(all);
         fillingBox = false;
-        serverBox.setVisible(visible);
-        serverBox.setManaged(visible);
+        serverBox.setMouseTransparent(!selectable);
+        serverBox.setFocusTraversable(selectable);
+        serverBox.getStyleClass().remove("single");
+        if (!selectable) {
+            serverBox.getStyleClass().add("single");
+        }
     }
 
     private void showBanner(String text) {

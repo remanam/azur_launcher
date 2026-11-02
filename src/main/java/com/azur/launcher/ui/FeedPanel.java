@@ -30,17 +30,18 @@ final class FeedPanel {
     private final FeedState state;
     private final Supplier<String> serverId;
     private final Runnable onChange;
-    private final VBox box = new VBox(8);
     private final Button bell = UiKit.button("", null, "feed-bell", this::toggleHistory);
+    private final Label bellCount = UiKit.label("", "feed-count");
     private final VBox bannerBox = new VBox(6);
     private final Label bannerTitle = UiKit.label("", "feed-title");
     private final Label bannerText = UiKit.label("", "feed-text");
     private final Button bannerLink = UiKit.button(I18n.tr("feed.more"), null, "feed-link", () -> { });
     private final Button bannerClose = UiKit.button("✕", null, "feed-close", this::closeBanner);
-    private final VBox history = new VBox(6);
+    private final VBox history = new VBox(8);
+    private final Label newsBadge = UiKit.label(I18n.tr("feed.badge"), "feed-badge");
     private final Label newsLine = UiKit.label("", "feed-news");
     private final Button newsLink = UiKit.button("", null, "feed-link", () -> { });
-    private final HBox newsRow = new HBox(8, newsLine, newsLink);
+    private final HBox newsRow = new HBox(12, newsBadge, newsLine, UiKit.spacer(), newsLink);
     private FeedDocument doc;
     private FeedView view = FeedView.EMPTY;
     private boolean historyOpen;
@@ -50,23 +51,38 @@ final class FeedPanel {
         this.state = state;
         this.serverId = serverId;
         this.onChange = onChange;
-        HBox top = new HBox(UiKit.spacer(), bell);
-        top.setAlignment(Pos.CENTER_RIGHT);
-        top.setMaxWidth(MAX_WIDTH);
+        bell.setGraphic(new HBox(6, Icons.of("icon-bell", 18), bellCount));
+        bell.setTooltip(new javafx.scene.control.Tooltip(I18n.tr("feed.bell")));
         HBox head = new HBox(8, bannerTitle, UiKit.spacer(), bannerClose);
         head.setAlignment(Pos.CENTER_LEFT);
         bannerText.setWrapText(true);
         bannerBox.getChildren().addAll(head, bannerText, bannerLink);
-        bannerBox.setMaxWidth(MAX_WIDTH);
+        history.getStyleClass().add("feed-history");
         history.setMaxWidth(MAX_WIDTH);
-        newsRow.setAlignment(Pos.CENTER);
-        box.setAlignment(Pos.TOP_CENTER);
-        box.getChildren().addAll(top, bannerBox, history, newsRow);
+        history.setMaxHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
+        newsRow.getStyleClass().add("feed-news-row");
+        newsRow.setAlignment(Pos.CENTER_LEFT);
         render();
     }
 
-    Node node() {
-        return box;
+    /** Bell with the unread count (hidden while the feed is empty). */
+    Node bell() {
+        return bell;
+    }
+
+    /** The banner with the most important open notice (hidden when none). */
+    Node banner() {
+        return bannerBox;
+    }
+
+    /** History list, shown as a popup while the bell is open. */
+    Node history() {
+        return history;
+    }
+
+    /** The one-line news strip at the bottom of the window. */
+    Node news() {
+        return newsRow;
     }
 
     /** True while an active critical notice blocks the Play button (same effect as a required launcher update). */
@@ -105,7 +121,9 @@ final class FeedPanel {
 
     private void render() {
         String lang = I18n.language();
-        bell.setText(view.unread() > 0 ? "🔔 " + view.unread() : "🔔");
+        bellCount.setText(view.unread() > 0 ? String.valueOf(view.unread()) : "");
+        bellCount.setVisible(view.unread() > 0);
+        bellCount.setManaged(view.unread() > 0);
         bell.setVisible(!view.active().isEmpty());
         bell.setManaged(bell.isVisible());
         FeedNotice banner = view.banner().orElse(null);
@@ -114,7 +132,7 @@ final class FeedPanel {
         if (banner != null) {
             bannerTitle.setText(banner.title().in(lang));
             bannerText.setText(banner.text().in(lang));
-            bannerBox.getStyleClass().removeIf(c -> c.startsWith("feed-sev-"));
+            bannerBox.getStyleClass().removeIf(c -> c.startsWith("feed-sev-") || c.equals("feed-banner"));
             bannerBox.getStyleClass().addAll("feed-banner", "feed-sev-" + banner.severity().wire());
             bannerClose.setVisible(banner.severity() != FeedNotice.Severity.CRITICAL);
             bannerClose.setManaged(bannerClose.isVisible());
@@ -129,12 +147,13 @@ final class FeedPanel {
                 history.getChildren().add(row);
             }
         }
+        history.setVisible(historyOpen);
         history.setManaged(historyOpen);
         FeedNews news = view.latestNews().orElse(null);
         newsRow.setVisible(news != null);
         newsRow.setManaged(news != null);
         if (news != null) {
-            newsLine.setText(I18n.tr("feed.news", news.title().in(lang), news.date()));
+            newsLine.setText(I18n.tr("feed.news", news.date(), news.title().in(lang)));
             linkButton(newsLink, news.link(), I18n.tr("feed.read"));
         }
     }

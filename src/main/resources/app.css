@@ -285,11 +285,11 @@
 }
 
 .button.launch-button {
-    -fx-min-width: 320;
-    -fx-max-width: 320;
-    -fx-min-height: 56;
-    -fx-pref-height: 56;
-    -fx-max-height: 56;
+    -fx-min-width: 260;
+    -fx-max-width: 260;
+    -fx-min-height: 64;
+    -fx-pref-height: 64;
+    -fx-max-height: 64;
     -fx-padding: 0 24 0 24;
     -fx-alignment: center;
     -fx-graphic-text-gap: 10;
@@ -1089,7 +1089,7 @@
 
 /* install progress: own bar (track, fill, sweep), percent 20px, text >= 14px */
 .install-progress {
-    -fx-max-width: 520;
+    -fx-max-width: 560;
 }
 
 .progress-step {
@@ -1119,9 +1119,9 @@
 }
 
 .progress-fill {
-    -fx-background-color: linear-gradient(to right, -azur-primary, -azur-azure);
+    -fx-background-color: linear-gradient(to right, #b8661f, #f0a35c);
     -fx-background-radius: 9;
-    -fx-border-color: transparent -azur-gold transparent transparent;
+    -fx-border-color: transparent #f0d9a8 transparent transparent;
     -fx-border-width: 0 3 0 0;
     -fx-border-radius: 9;
 }
@@ -1220,3 +1220,244 @@
     -fx-text-fill: -azur-on-error-container;
     -fx-font-weight: bold;
 }
+
+/* ---- forge v3 Home (docs/design/redesign/forge/launcher_ready.html) ---- */
+.home-header {
+    -fx-padding: 8 20 8 20;
+    -fx-min-height: 56;
+}
+
+.nick-chip {
+    -fx-padding: 6 14 6 8;
+    -fx-background-color: -azur-surface-container-low;
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-line;
+    -fx-border-radius: 4;
+}
+
+.nick-avatar {
+    -fx-min-width: 32;
+    -fx-min-height: 32;
+    -fx-max-width: 32;
+    -fx-max-height: 32;
+    -fx-background-color: -azur-primary;
+    -fx-background-radius: 3;
+}
+
+.nick-avatar-text {
+    -fx-text-fill: -azur-on-primary;
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.nick-name {
+    -fx-text-fill: -azur-gold-light;
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+.nick-sub {
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: 14px;
+}
+
+.gear-button,
+.feed-bell {
+    -fx-background-color: -azur-surface-container-low;
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-line;
+    -fx-border-radius: 4;
+    -fx-min-width: 44;
+    -fx-min-height: 44;
+    -fx-padding: 0 8 0 8;
+}
+
+.gear-button .icon,
+.feed-bell .icon {
+    -fx-background-color: -azur-primary;
+}
+
+.gear-button:hover,
+.gear-button:focused,
+.feed-bell:hover {
+    -fx-border-color: -azur-primary;
+    -fx-effect: dropshadow(gaussian, #e8964a55, 8, 0.2, 0, 0);
+}
+
+.feed-count {
+    -fx-background-color: -azur-azure;
+    -fx-text-fill: #1a0e05;
+    -fx-background-radius: 9;
+    -fx-padding: 0 6 0 6;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.icon-bell {
+    -fx-shape: "M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z";
+}
+
+.icon-gear {
+    -fx-shape: "M19.14 12.94c.04-.3.06-.61.06-.94s-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z";
+}
+
+.icon-check {
+    -fx-shape: "M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z";
+}
+
+.icon-lock {
+    -fx-shape: "M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z";
+}
+
+.icon-update {
+    -fx-shape: "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z";
+}
+
+.status-title.ok, .icon.ok { -fx-text-fill: -azur-online; -fx-background-color: -azur-online; }
+.status-title.warn, .icon.warn { -fx-text-fill: -azur-warn; -fx-background-color: -azur-warn; }
+.status-title.ok, .status-title.warn { -fx-background-color: transparent; }
+
+.home-middle {
+    -fx-padding: 16 20 16 20;
+}
+
+.forge-card {
+    -fx-padding: 20 24 20 24;
+    -fx-background-color: linear-gradient(to bottom, #2b211b, #211915);
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-line;
+    -fx-border-radius: 4;
+}
+
+.hero-art {
+    -fx-background-image: url("img/hero.jpg");
+    -fx-background-size: cover;
+    -fx-background-position: center;
+    -fx-background-repeat: no-repeat;
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-line;
+    -fx-border-radius: 4;
+}
+
+.server-chip {
+    -fx-background-color: #150f0c;
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 4;
+    -fx-min-height: 44;
+    -fx-pref-height: 44;
+}
+
+.server-chip .list-cell { -fx-padding: 0 4 0 12; }
+.server-chip .arrow { -fx-background-color: -azur-primary; }
+.server-chip.single .arrow-button { -fx-opacity: 0; -fx-pref-width: 8; -fx-min-width: 8; }
+
+.chip-key {
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: 14px;
+}
+
+.chip-name {
+    -fx-text-fill: -azur-gold-light;
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 22px;
+}
+
+.pack-title {
+    -fx-text-fill: -azur-on-surface;
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+}
+
+.pack-tag {
+    -fx-padding: 3 10 3 10;
+    -fx-background-radius: 3;
+    -fx-border-radius: 3;
+    -fx-border-width: 1;
+    -fx-font-size: 14px;
+}
+
+.pack-tag.tag-ok { -fx-text-fill: -azur-online; -fx-border-color: -azur-online; }
+.pack-tag.tag-warn { -fx-text-fill: -azur-warn; -fx-border-color: -azur-warn; }
+
+.section-head {
+    -fx-text-fill: -azur-gold-light;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+}
+
+.card-heading {
+    -fx-text-fill: -azur-gold-light;
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 28px;
+}
+
+.forge-card .button.launch-button {
+    -fx-min-width: 260;
+    -fx-max-width: 260;
+    -fx-min-height: 48;
+    -fx-pref-height: 48;
+    -fx-max-height: 48;
+    -fx-font-size: 18px;
+}
+
+.copper-line {
+    -fx-min-height: 1;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+    -fx-background-color: linear-gradient(to right, transparent, -azur-primary, #bba3ff, transparent);
+}
+
+.action-bar {
+    -fx-padding: 16 20 16 20;
+    -fx-min-height: 100;
+}
+
+.status-title {
+    -fx-font-family: "Philosopher";
+    -fx-font-weight: bold;
+    -fx-font-size: 20px;
+}
+
+.status-hint {
+    -fx-text-fill: -azur-muted;
+    -fx-font-size: 14px;
+}
+
+.feed-news-row {
+    -fx-padding: 8 20 8 20;
+    -fx-background-color: #0c0907;
+    -fx-border-color: -azur-line transparent transparent transparent;
+    -fx-min-height: 40;
+}
+
+.feed-badge {
+    -fx-background-color: -azur-azure;
+    -fx-text-fill: #1a0e05;
+    -fx-background-radius: 3;
+    -fx-padding: 1 8 1 8;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.feed-history {
+    -fx-background-color: -azur-surface-container;
+    -fx-background-radius: 4;
+    -fx-border-color: -azur-outline;
+    -fx-border-radius: 4;
+    -fx-padding: 12;
+    -fx-effect: dropshadow(gaussian, #000000a0, 12, 0.2, 0, 4);
+}
+
+.feed-banner {
+    -fx-background-radius: 0;
+    -fx-padding: 10 20 10 20;
+    -fx-background-color: #2b2210;
+}
+
+.feed-sev-warn { -fx-background-color: #2b2210; }

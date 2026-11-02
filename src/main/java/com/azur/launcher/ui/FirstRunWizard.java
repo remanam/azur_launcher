@@ -28,7 +28,7 @@ final class FirstRunWizard {
         this.install = install;
         this.play = play;
         installButton = UiKit.button(I18n.tr("wizard.install"), null, "launch-button", install);
-        root.setAlignment(Pos.TOP_CENTER);
+        root.setAlignment(Pos.TOP_LEFT);
         showStep(1);
     }
 
@@ -97,11 +97,10 @@ final class FirstRunWizard {
         Label hint = UiKit.label(I18n.tr(hintKey), "home-sub");
         hint.setWrapText(true);
         hint.setMaxWidth(420);
-        VBox box = new VBox(24, UiKit.label(I18n.tr("wizard.step", n), "wizard-step"),
-                UiKit.label(I18n.tr(titleKey), "home-title"), hint);
+        VBox box = new VBox(16, UiKit.label(I18n.tr("wizard.step", n), "wizard-step"),
+                UiKit.label(I18n.tr(titleKey), "card-heading"), hint);
         box.getChildren().addAll(content);
-        box.setAlignment(Pos.TOP_CENTER);
-        box.getStyleClass().add("home-hero");
+        box.setAlignment(Pos.TOP_LEFT);
         return box;
     }
 }

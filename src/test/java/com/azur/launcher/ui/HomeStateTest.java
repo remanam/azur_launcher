@@ -51,4 +51,18 @@ class HomeStateTest {
         assertFalse(HomeState.updateAvailable("", "1.1"));
         assertFalse(HomeState.updateAvailable("1.0", null));
     }
+
+    @Test
+    void statusFollowsAccountInstallAndUpdate() {
+        assertEquals(HomeState.Status.LOGIN, HomeState.status(false, true, false));
+        assertEquals(HomeState.Status.INSTALL, HomeState.status(true, false, false));
+        assertEquals(HomeState.Status.UPDATE, HomeState.status(true, true, true));
+        assertEquals(HomeState.Status.READY, HomeState.status(true, true, false));
+    }
+
+    @Test
+    void gigabytesDropsEmptyFraction() {
+        assertEquals("6", HomeState.gigabytes(6144));
+        assertEquals("2.5", HomeState.gigabytes(2560));
+    }
 }

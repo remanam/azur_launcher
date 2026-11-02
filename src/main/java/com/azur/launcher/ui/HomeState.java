@@ -76,4 +76,50 @@ final class HomeState {
     static boolean wizardNeeded(boolean hasAccount) {
         return !hasAccount;
     }
+
+    /** The status line at the bottom left of Home; {@link #styleClass()} colours it (ok = green, warn = amber). */
+    enum Status {
+        READY("home.status_ready", "home.status_ready_hint", "ok"),
+        UPDATE("home.status_update", "home.status_update_hint", "warn"),
+        INSTALL("home.status_install", "home.status_install_hint", "warn"),
+        LOGIN("home.status_login", "home.status_login_hint", "warn");
+
+        private final String titleKey;
+        private final String hintKey;
+        private final String styleClass;
+
+        Status(String titleKey, String hintKey, String styleClass) {
+            this.titleKey = titleKey;
+            this.hintKey = hintKey;
+            this.styleClass = styleClass;
+        }
+
+        String titleKey() {
+            return titleKey;
+        }
+
+        String hintKey() {
+            return hintKey;
+        }
+
+        String styleClass() {
+            return styleClass;
+        }
+    }
+
+    /** What the idle status line says: no nickname yet, nothing installed, an update waits, or all ready. */
+    static Status status(boolean hasAccount, boolean installed, boolean updateAvailable) {
+        if (!hasAccount) {
+            return Status.LOGIN;
+        }
+        if (!installed) {
+            return Status.INSTALL;
+        }
+        return updateAvailable ? Status.UPDATE : Status.READY;
+    }
+
+    /** Memory as the player reads it: whole gigabytes without a fraction, otherwise one decimal. */
+    static String gigabytes(int mb) {
+        return mb % 1024 == 0 ? Integer.toString(mb / 1024) : String.format(java.util.Locale.ROOT, "%.1f", mb / 1024.0);
+    }
 }
