@@ -38,26 +38,19 @@ final class AccountsPage {
         TextField nick = new TextField();
         nick.setPromptText(I18n.tr("accounts.nick_prompt"));
         nick.setMaxWidth(320);
-        Label error = UiKit.label("", "home-error");
-        error.setVisible(false);
-        error.setManaged(false);
+        FieldError nickField = new FieldError(nick);
         Runnable save = () -> {
-            String name = nick.getText().trim();
-            boolean bad = !OfflineAccount.isValidName(name);
-            error.setText(bad ? I18n.tr("accounts.offline_bad_nick") : "");
-            error.setVisible(bad);
-            error.setManaged(bad);
-            if (!bad) {
-                ctx.accounts.selectOffline(OfflineAccount.of(name));
+            if (nickField.check(FieldRules.nick(nick.getText()))) {
+                ctx.accounts.selectOffline(OfflineAccount.of(nick.getText().trim()));
                 nick.clear();
                 persistAndNotify();
             }
         };
         nick.setOnAction(e -> save.run());
         Button saveButton = UiKit.button(I18n.tr("accounts.save"), null, "button-raised", save);
-        HBox row = new HBox(10, nick, saveButton);
-        row.setAlignment(Pos.CENTER_LEFT);
-        return new VBox(6, row, error);
+        HBox row = new HBox(10, nickField.node(), saveButton);
+        row.setAlignment(Pos.TOP_LEFT);
+        return new VBox(6, row);
     }
 
     /** Community API: registration by code; the API decides roles, and the whitelist flag. */
@@ -70,25 +63,26 @@ final class AccountsPage {
         });
         TextField code = new TextField();
         code.setPromptText(I18n.tr("community.code_hint"));
+        FieldError codeField = new FieldError(code);
         SelectableText message = UiKit.selectable("", "hint");
         Button register = UiKit.button(I18n.tr("community.register"), null, "button-border", () -> { });
-        register.setOnAction(event -> register(code.getText(), message, register));
+        register.setOnAction(event -> register(codeField, message, register));
         return new VBox(6, UiKit.label(I18n.tr("community.title"), "page-subtitle"),
-                UiKit.label(I18n.tr("community.hint"), "hint"), apiBase, code, register, UiKit.withCopy(message));
+                UiKit.label(I18n.tr("community.hint"), "hint"), apiBase, codeField.node(), register, UiKit.withCopy(message));
     }
 
     /**
      * Registers this player with a code from the owner: the token goes into the vault, then {@code /v1/me} decides
      * what the launcher shows.
      */
-    private void register(String code, SelectableText message, Button button) {
+    private void register(FieldError codeField, SelectableText message, Button button) {
         AuthAccount account = ctx.accounts.selected();
         if (account == null) {
             message.setText(I18n.tr("community.sign_in_first"));
             return;
         }
-        if (code == null || code.isBlank()) {
-            message.setText(I18n.tr("community.code_required"));
+        String code = codeField.text();
+        if (!codeField.check(FieldRules.required(code, "field.err.code_required"))) {
             return;
         }
         String base = ctx.pack.getApiBase().trim();

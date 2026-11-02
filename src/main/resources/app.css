@@ -1192,3 +1192,23 @@
 .feed-sev-critical .feed-title, .feed-sev-critical .feed-text {
     -fx-text-fill: -azur-on-error-container;
 }
+
+/* Form errors (docs/design/FORM_ERRORS.md): red border + one reserved line under the field */
+.text-field.field-invalid,
+.password-field.field-invalid {
+    -fx-border-color: -azur-error;
+    -fx-border-width: 2;
+    -fx-background-color: -azur-error-container;
+}
+
+.field-msg {
+    -fx-font-size: 14px;
+    -fx-text-fill: -azur-muted;
+    -fx-min-height: 20;
+    -fx-pref-height: 20;
+}
+
+.field-msg.field-error {
+    -fx-text-fill: -azur-on-error-container;
+    -fx-font-weight: bold;
+}

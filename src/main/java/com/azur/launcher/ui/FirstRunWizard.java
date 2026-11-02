@@ -18,7 +18,6 @@ final class FirstRunWizard {
     private final Runnable install;
     private final Runnable play;
     private final StackPane root = new StackPane();
-    private final Label nickError = UiKit.label("", "home-error");
     private final InstallProgressView progress = new InstallProgressView();
     private int step;
     private final Button installButton;
@@ -66,16 +65,13 @@ final class FirstRunWizard {
         TextField nick = new TextField();
         nick.setPromptText(I18n.tr("wizard.nick_prompt"));
         nick.setMaxWidth(320);
-        nickError.setVisible(false);
-        nickError.setManaged(false);
+        FieldError nickField = new FieldError(nick);
+        nickField.node().setMaxWidth(320);
         Button next = UiKit.button(I18n.tr("wizard.next"), null, "launch-button", () -> {
-            String name = nick.getText().trim();
-            if (!OfflineAccount.isValidName(name)) {
-                nickError.setText(I18n.tr("accounts.offline_bad_nick"));
-                nickError.setVisible(true);
-                nickError.setManaged(true);
+            if (!nickField.check(FieldRules.nick(nick.getText()))) {
                 return;
             }
+            String name = nick.getText().trim();
             ctx.accounts.selectOffline(OfflineAccount.of(name));
             try {
                 ctx.accounts.save();
@@ -85,7 +81,7 @@ final class FirstRunWizard {
             ctx.fireAccountsChanged();
             showStep(2);
         });
-        return step(1, "wizard.1.title", "wizard.1.hint", nick, nickError, next);
+        return step(1, "wizard.1.title", "wizard.1.hint", nickField.node(), next);
     }
 
     private VBox installStep() {

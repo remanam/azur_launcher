@@ -97,6 +97,7 @@ final class AdvancedPanel {
         host.setPromptText(I18n.tr("accounts.proxy_host"));
         TextField port = new TextField(settings.proxyPort() > 0 ? Integer.toString(settings.proxyPort()) : "");
         port.setPromptText(I18n.tr("accounts.proxy_port"));
+        FieldError portField = new FieldError(port);
         TextField user = new TextField();
         user.setPromptText(I18n.tr("settings.proxy_user"));
         PasswordField password = new PasswordField();
@@ -105,6 +106,9 @@ final class AdvancedPanel {
         proxyHint.setWrapText(true);
         SelectableText message = UiKit.selectable("", "hint");
         Button save = UiKit.button(I18n.tr("accounts.save_settings"), null, "button-border", () -> {
+            if (!portField.check(FieldRules.port(port.getText()))) {
+                return;
+            }
             settings.setProxy(host.getText(), parsePort(port.getText()));
             ProxyConfig.set(ProxyConfig.of(host.getText(), parsePort(port.getText()), user.getText(), password.getText()));
             try {
@@ -114,7 +118,7 @@ final class AdvancedPanel {
                 message.setText(e.getMessage());
             }
         });
-        HBox proxy = new HBox(8, host, port);
+        HBox proxy = new HBox(8, host, portField.node());
         HBox.setHgrow(host, Priority.ALWAYS);
         return UiKit.card(UiKit.cardHeader("icon-account", I18n.tr("accounts.network_title")),
                 UiKit.label(I18n.tr("settings.proxy_title"), "page-subtitle"), proxyHint, proxy, user, password, save, UiKit.withCopy(message));
