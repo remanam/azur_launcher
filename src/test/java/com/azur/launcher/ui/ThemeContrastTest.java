@@ -105,9 +105,9 @@ class ThemeContrastTest {
     }
 
     @Test
-    void panelsAreLight() throws IOException {
+    void panelsAreDark() throws IOException {
         String css = css();
-        assertTrue(luminance(color(css, "surface-container")) > luminance("#13234a") * 2);
+        assertTrue(luminance(color(css, "surface-container")) < 0.05, "forge theme is dark");
     }
 
     @Test

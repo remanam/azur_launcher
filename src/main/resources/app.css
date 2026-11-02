@@ -1,5 +1,5 @@
 /*
- * Azur Launcher theme. One light palette (the only theme): pale blue-white panels, deep blue accents, gold kept for tags.
+ * Azur Launcher theme: forge, one dark palette (the only theme): warm dark panels, copper accent, arcane violet.
  * Fonts: Philosopher (headings) and PT Sans (text), both SIL OFL 1.1, loaded in LauncherApp from /fonts.
  * Every colour below is a variable; components reference only the variables.
  */
@@ -8,58 +8,60 @@
     -fx-font-family: "PT Sans", "Segoe UI", sans-serif;
     -fx-font-size: 16px;
 
-    /* type scale (px, literal because JavaFX cannot use looked-up sizes for fonts or radii): caption 14, body 16, card title 18, title 28, display 30 */
-
+    /* forge tokens (docs/design/redesign/forge/tokens.css): dark warm panels, copper accent, arcane violet.
+       Names kept from the old theme so every component follows. Sizes and radii stay literal (JavaFX cannot look them up). */
 
     /* panels */
-    -azur-surface: #fffdf8;
-    -azur-surface-container-low: #f8f2e4;
-    -azur-surface-container: #f0e7d1;
-    -azur-surface-container-high: #e8dcc0;
-    -azur-surface-container-highest: #ffffff;
-    -azur-surface-variant: #efe8d6;
+    -azur-surface: #1a1411;
+    -azur-surface-container-low: #211915;
+    -azur-surface-container: #2b211b;
+    -azur-surface-container-high: #382b22;
+    -azur-surface-container-highest: #150f0c;
+    -azur-surface-variant: #2b211b;
 
     /* text */
-    -azur-on-surface: #1b2438;
-    -azur-on-surface-variant: #2b3550;
-    -azur-on-surface-variant-transparent-38: #4a547080;
-    -azur-muted: #4a5470;
+    -azur-on-surface: #f3e9dc;
+    -azur-on-surface-variant: #c9b8a4;
+    -azur-on-surface-variant-transparent-38: #c9b8a460;
+    -azur-muted: #c9b8a4;
 
-    /* gold */
-    -azur-primary: #1f4e9c;
-    -azur-on-primary: #ffffff;
-    -azur-primary-container: #1f4e9c;
-    -azur-on-primary-container: #ffffff;
-    -azur-primary-fixed-dim: #163d7d;
-    -azur-on-primary-fixed: #ffffff;
-    -azur-primary-transparent-50: #1f4e9c22;
-    -azur-surface-tint: #1f4e9c;
+    /* copper accent */
+    -azur-primary: #e8964a;
+    -azur-on-primary: #1a0e05;
+    -azur-primary-container: #e8964a;
+    -azur-on-primary-container: #1a0e05;
+    -azur-primary-fixed-dim: #f0b070;
+    -azur-on-primary-fixed: #1a0e05;
+    -azur-primary-transparent-50: #e8964a33;
+    -azur-surface-tint: #e8964a;
 
-    /* azure */
-    -azur-secondary-container: #dbe6fa;
-    -azur-on-secondary-container: #14274f;
-    -azur-secondary-container-transparent-50: #2f6fd040;
-    -azur-azure: #2f6fd0;
+    /* arcane violet */
+    -azur-secondary-container: #3a2f5e;
+    -azur-on-secondary-container: #e5dbff;
+    -azur-secondary-container-transparent-50: #bba3ff40;
+    -azur-azure: #bba3ff;
 
     /* borders */
-    -azur-outline: #7d7258;
-    -azur-outline-variant: #80765c;
+    -azur-outline: #9a7a5e;
+    -azur-outline-variant: #9a7a5e;
+    -azur-line: #4a372a;
 
     /* errors, status */
-    -azur-error: #b3261e;
-    -azur-on-error: #ffffff;
-    -azur-error-container: #fde7e4;
-    -azur-on-error-container: #7a1410;
-    -azur-online: #1a7f37;
+    -azur-error: #ff8473;
+    -azur-on-error: #1a0e05;
+    -azur-error-container: #3b1a16;
+    -azur-on-error-container: #ffc2b8;
+    -azur-online: #74d99a;
+    -azur-warn: #f2c46b;
 
-    -azur-depth-color: rgba(20, 33, 61, 0.22);
+    -azur-depth-color: rgba(0, 0, 0, 0.55);
 
-    /* identity: navy band, gold accent (docs/design/AZUR_STYLE.md) */
-    -azur-navy: #14213d;
-    -azur-navy-high: #22345c;
-    -azur-gold: #c9a227;
-    -azur-gold-light: #f0d27a;
-    -azur-gold-deep: #7a5a00;
+    /* head band and copper line */
+    -azur-navy: #0c0907;
+    -azur-navy-high: #17110e;
+    -azur-gold: #e8964a;
+    -azur-gold-light: #f0d9a8;
+    -azur-gold-deep: #f2c46b;
 }
 
 .label {
@@ -67,7 +69,7 @@
 }
 
 .window-root {
-    -fx-background-color: linear-gradient(to bottom, #fbf7ee 0%, #f6efdd 55%, #efe5cc 100%);
+    -fx-background-color: linear-gradient(to bottom, #110d0b 0%, #1a1411 100%);
     -fx-background-radius: 8;
     -fx-border-color: -azur-outline;
     -fx-border-radius: 8;
@@ -291,12 +293,17 @@
     -fx-padding: 0 24 0 24;
     -fx-alignment: center;
     -fx-graphic-text-gap: 10;
-    -fx-background-color: -azur-primary;
-    -fx-background-radius: 8;
+    -fx-background-color: linear-gradient(to bottom, #f2a55c, #d9803a);
+    -fx-background-radius: 6;
+    -fx-border-color: #f0b070;
+    -fx-border-radius: 6;
+    -fx-border-width: 1;
     -fx-text-fill: -azur-on-primary;
-    -fx-font-size: 20px;
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 22px;
     -fx-font-weight: bold;
     -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, #e8964a66, 14, 0.2, 0, 0);
 }
 
 .button.launch-button .icon {
@@ -305,11 +312,12 @@
 
 .button.launch-button:hover,
 .button.launch-button:focused {
-    -fx-background-color: -azur-primary-fixed-dim;
+    -fx-background-color: linear-gradient(to bottom, #f6b574, #e48f48);
 }
 
 .button.launch-button:disabled {
-    -fx-opacity: 0.7;
+    -fx-effect: null;
+    -fx-opacity: 0.6;
 }
 
 .button.launch-button.stopping {
@@ -399,7 +407,7 @@
     -fx-text-fill: -azur-on-surface;
     -fx-prompt-text-fill: -azur-muted;
     -fx-highlight-fill: -azur-azure;
-    -fx-highlight-text-fill: #ffffff;
+    -fx-highlight-text-fill: #1a0e05;
     -fx-font-size: 16px;
     -fx-padding: 0 12 0 12;
     -fx-min-height: 44;
@@ -822,7 +830,7 @@
 }
 
 .hero-card {
-    -fx-background-color: linear-gradient(to bottom right, #fffdf8, #f6eed9);
+    -fx-background-color: linear-gradient(to bottom right, #211915, #2b211b);
     -fx-border-color: -azur-gold;
     -fx-border-radius: 10;
     -fx-background-radius: 10;
