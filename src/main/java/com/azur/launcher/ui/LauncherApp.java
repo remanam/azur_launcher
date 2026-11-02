@@ -47,6 +47,7 @@ public class LauncherApp extends Application {
     private HomePage homePage;
     private PlayController play;
     private UpdateController updates;
+    private FeedController feeds;
 
     @Override
     public void start(Stage stage) {
@@ -79,11 +80,15 @@ public class LauncherApp extends Application {
         UpdateStore updateStore = UpdateStore.at(dirs.root().resolve("updates"));
         updates = UpdateController.create(ctx, updateStore,
                 () -> play != null && play.phase() != PlayController.Phase.IDLE);
+        feeds = FeedController.create(ctx, () -> play != null && play.phase() != PlayController.Phase.IDLE);
         build();
         stage.show();
         updateStore.confirmStarted(AppVersion.APP);
         if (updates != null) {
             updates.start();
+        }
+        if (feeds != null) {
+            feeds.start();
         }
         ctx.log("Azur Launcher started, data folder: " + dirs.root());
     }
@@ -112,6 +117,9 @@ public class LauncherApp extends Application {
         area.getChildren().addAll(homePage.node(), new AccountsPage(ctx).node(), new SettingsPage(ctx, this::build, play).node(), new AboutPage().node());
         if (updates != null) {
             updates.onStatus(status -> homePage.showUpdate(status, () -> updates.restart(this::shutdown)));
+        }
+        if (feeds != null) {
+            feeds.onFeed(homePage::showFeed);
         }
         showPage(area, current);
         return area;
@@ -187,6 +195,9 @@ public class LauncherApp extends Application {
         ctx.saveConfig();
         if (updates != null) {
             updates.stop();
+        }
+        if (feeds != null) {
+            feeds.stop();
         }
         ctx.shutdown();
         Platform.exit();

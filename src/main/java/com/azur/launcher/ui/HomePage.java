@@ -58,6 +58,7 @@ final class HomePage {
     private final Button updateButton = UiKit.button("", null, "launch-button", () -> { });
     private final VBox updateBox = new VBox(8, updateLabel, updateButton);
     private boolean updateRequired;
+    private final FeedPanel feed;
     private final SelectableText errorLabel = UiKit.selectable("", null);
     private final SelectableText detailsLabel = UiKit.selectable("", "home-error-details");
     private final TitledPane details = new TitledPane(I18n.tr("home.error.details"), detailsLabel);
@@ -85,6 +86,8 @@ final class HomePage {
         this.play = play;
         this.packState = packState;
         this.installProgress = play.installProgress();
+        this.feed = new FeedPanel(ctx, new com.azur.launcher.feed.FeedState(ctx.dirs.root().resolve("feed_state.txt")),
+                () -> server == null ? "" : server.id(), this::render);
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
@@ -133,7 +136,7 @@ final class HomePage {
         nickRow.setAlignment(Pos.CENTER);
         HBox serverRow = new HBox(12, dot, serverLabel);
         serverRow.setAlignment(Pos.CENTER);
-        main.getChildren().addAll(logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, updateBox, mainButton, progressView.node(), errorBox);
+        main.getChildren().addAll(feed.node(), logo, nickRow, serverBox, serverRow, statusLabel, bannerLabel, updateBox, mainButton, progressView.node(), errorBox);
         main.setAlignment(Pos.TOP_CENTER);
         main.getStyleClass().add("home-hero");
         root.setAlignment(Pos.TOP_CENTER);
@@ -172,7 +175,12 @@ final class HomePage {
         }
         updateBox.setVisible(ready || old);
         updateBox.setManaged(ready || old);
-        mainButton.setDisable(updateRequired);
+        render();
+    }
+
+    /** The notice feed changed (JavaFX thread). */
+    void showFeed(com.azur.launcher.feed.FeedDocument doc) {
+        feed.show(doc);
     }
 
     /** The Home page became visible: ask the server again (the button label must not show a stale answer). */
@@ -229,6 +237,7 @@ final class HomePage {
                 fillingBox = false;
             }
             play.setServer(entry, entry == null ? problem : null);
+            feed.refresh();
             refreshState(false);
         });
     }
@@ -378,7 +387,7 @@ final class HomePage {
         PlayController.Phase phase = play.phase();
         String text = buttonText();
         mainButton.setText(text);
-        mainButton.setDisable(updateRequired);
+        mainButton.setDisable(updateRequired || feed.blocksPlay() && phase == PlayController.Phase.IDLE);
         mainButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");

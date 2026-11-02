@@ -1150,3 +1150,45 @@
 .home-error .selectable-text {
     -fx-text-fill: -azur-on-error-container;
 }
+
+/* Notice feed on the Play screen */
+.feed-bell, .feed-close, .feed-link {
+    -fx-background-color: transparent;
+    -fx-text-fill: -azur-on-surface-variant;
+    -fx-font-size: 14px;
+    -fx-padding: 2 8 2 8;
+}
+
+.feed-link {
+    -fx-text-fill: -azur-primary;
+    -fx-underline: true;
+}
+
+.feed-banner {
+    -fx-background-radius: 8;
+    -fx-padding: 10 14 10 14;
+    -fx-background-color: -azur-surface-variant;
+}
+
+.feed-sev-warn {
+    -fx-background-color: -azur-secondary-container;
+}
+
+.feed-sev-critical {
+    -fx-background-color: -azur-error-container;
+}
+
+.feed-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+    -fx-text-fill: -azur-on-surface;
+}
+
+.feed-text, .feed-history-row, .feed-news {
+    -fx-font-size: 14px;
+    -fx-text-fill: -azur-on-surface-variant;
+}
+
+.feed-sev-critical .feed-title, .feed-sev-critical .feed-text {
+    -fx-text-fill: -azur-on-error-container;
+}
