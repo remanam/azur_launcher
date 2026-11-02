@@ -2,22 +2,27 @@ package com.azur.launcher.ui;
 
 import com.azur.launcher.game.JavaDetector;
 import com.azur.launcher.i18n.I18n;
-import com.azur.launcher.net.HttpUtils;
 
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
 
-/** Settings: memory, Java, download threads, JVM arguments, language, server list and pack sync. Every change is saved at once. */
-final class SettingsPage {
+/**
+ * «Дополнительно» (the gear): player nickname, language, memory, Java, data folder, log, repair and, at the very bottom,
+ * «О программе». Every change is saved at once. Everything the player does not need (proxy, versions, thread count,
+ * JVM arguments, server list address) is not in the interface.
+ */
+final class AdvancedPage {
 
     private static final int MEMORY_MIN_MB = 512;
     private static final int MEMORY_MAX_MB = 32768;
@@ -30,16 +35,16 @@ final class SettingsPage {
     private final ComboBox<String> javaBox = new ComboBox<>();
     private List<JavaDetector.JavaInfo> detected = List.of();
 
-    SettingsPage(AppContext ctx, Runnable onLanguageChanged, PlayController play) {
+    AdvancedPage(AppContext ctx, Runnable onLanguageChanged, PlayController play, Runnable onBack) {
         this.ctx = ctx;
         this.onLanguageChanged = onLanguageChanged;
 
-        VBox header = new VBox(3, UiKit.label(I18n.tr("settings.title"), "page-title"),
-                UiKit.label(I18n.tr("settings.subtitle"), "page-subtitle"));
-        VBox options = new VBox(0, languageRow(), serversUrlRow(), javaRow(), threadsRow(), jvmArgsRow(),
-                folderRow());
-        AdvancedPanel advanced = new AdvancedPanel(ctx, play, memoryRow());
-        VBox page = new VBox(24, header, UiKit.card(options), new ServersPage(ctx, play).section(), advanced.node());
+        Button back = UiKit.button(I18n.tr("advanced.back"), null, "button-border", onBack);
+        HBox header = new HBox(16, back, UiKit.label(I18n.tr("settings.advanced"), "page-title"));
+        header.setAlignment(Pos.CENTER_LEFT);
+        VBox options = new VBox(0, languageRow(), memoryRow(), javaRow(), folderRow(), logRow());
+        VBox player = UiKit.card(UiKit.label(I18n.tr("advanced.player"), "card-title"), new PlayerSection(ctx).node());
+        VBox page = new VBox(18, header, player, UiKit.card(options), repairCard(play), aboutCard());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
         detectJava();
@@ -47,6 +52,35 @@ final class SettingsPage {
 
     Node node() {
         return UiKit.pageScroll(root);
+    }
+
+    private VBox repairCard(PlayController play) {
+        Button repair = UiKit.button(I18n.tr("settings.repair"), "icon-refresh", "button-border", play::repairCurrent);
+        play.onPhase(phase -> repair.setDisable(phase != PlayController.Phase.IDLE));
+        return UiKit.card(UiKit.optionItem(I18n.tr("settings.repair"), I18n.tr("settings.repair_hint"), repair));
+    }
+
+    private Node logRow() {
+        Button open = UiKit.button(I18n.tr("advanced.logs_open"), "icon-folder", "button-border",
+                () -> ctx.openInSystem(ctx.dirs.logsDir()));
+        return UiKit.optionItem(I18n.tr("advanced.logs"), I18n.tr("advanced.logs_hint"), open);
+    }
+
+    /** «О программе»: the last block of the page, logo, name, version, one sentence. */
+    private VBox aboutCard() {
+        Region logo = new Region();
+        logo.getStyleClass().add("about-logo");
+        logo.setMinSize(48, 48);
+        logo.setPrefSize(48, 48);
+        logo.setMaxSize(48, 48);
+        Label description = UiKit.label(I18n.tr("about.description"), "about-text");
+        description.setWrapText(true);
+        VBox text = new VBox(2, UiKit.label(I18n.tr("app.title"), "card-title"),
+                UiKit.label(I18n.tr("app.version", LauncherApp.VERSION), "card-subtitle"), description);
+        HBox.setHgrow(text, Priority.ALWAYS);
+        HBox row = new HBox(16, logo, text);
+        row.setAlignment(Pos.CENTER_LEFT);
+        return UiKit.card(UiKit.label(I18n.tr("advanced.about"), "section-head"), row);
     }
 
     private Node memoryRow() {
@@ -78,28 +112,6 @@ final class SettingsPage {
         return UiKit.optionItem(I18n.tr("settings.java"), I18n.tr("settings.java_hint"), javaBox);
     }
 
-    private Node threadsRow() {
-        Slider slider = new Slider(1, 64, ctx.config.getDownloadThreads());
-        slider.setPrefWidth(260);
-        Label value = UiKit.label(String.valueOf(ctx.config.getDownloadThreads()), "value-label");
-        slider.valueProperty().addListener((obs, old, v) -> {
-            ctx.config.setDownloadThreads(v.intValue());
-            value.setText(String.valueOf(ctx.config.getDownloadThreads()));
-            ctx.saveConfig();
-        });
-        return UiKit.optionItem(I18n.tr("settings.threads"), I18n.tr("settings.threads_hint"), slider, value);
-    }
-
-    private Node jvmArgsRow() {
-        TextField field = new TextField(ctx.config.getJvmArgs());
-        field.setPrefWidth(320);
-        field.textProperty().addListener((obs, old, text) -> {
-            ctx.config.setJvmArgs(text);
-            ctx.saveConfig();
-        });
-        return UiKit.optionItem(I18n.tr("settings.jvm_args"), I18n.tr("settings.jvm_args_hint"), field);
-    }
-
     private Node languageRow() {
         ComboBox<String> box = new ComboBox<>();
         box.getItems().setAll(LANGUAGES);
@@ -124,24 +136,6 @@ final class SettingsPage {
             }
         });
         return UiKit.optionItem(I18n.tr("settings.language"), I18n.tr("settings.language_hint"), box);
-    }
-
-    private Node serversUrlRow() {
-        // A new address must also become an allowed host, otherwise the download layer blocks it.
-        return textRow("settings.servers_url", "settings.servers_url_hint", ctx.pack.getServersUrl(), value -> {
-            ctx.pack.setServersUrl(value);
-            HttpUtils.allowHosts(value);
-        });
-    }
-
-    private Node textRow(String titleKey, String hintKey, String value, java.util.function.Consumer<String> setter) {
-        TextField field = new TextField(value);
-        field.setPrefWidth(320);
-        field.textProperty().addListener((obs, old, text) -> {
-            setter.accept(text);
-            ctx.savePack();
-        });
-        return UiKit.optionItem(I18n.tr(titleKey), I18n.tr(hintKey), field);
     }
 
     private Node folderRow() {
