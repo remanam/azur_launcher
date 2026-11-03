@@ -131,8 +131,10 @@ final class HomePage {
             protected void updateItem(ServerEntry entry, boolean empty) {
                 super.updateItem(entry, empty);
                 setText(null);
-                setGraphic(new HBox(10, UiKit.label(I18n.tr("home.server"), "chip-key"),
-                        UiKit.label(entry == null ? I18n.tr("home.default_server") : entry.name(), "chip-name")));
+                HBox chip = new HBox(8, UiKit.label(I18n.tr("home.server"), "chip-key"),
+                        UiKit.label(entry == null ? I18n.tr("home.default_server") : entry.name(), "chip-name"));
+                chip.setAlignment(Pos.CENTER_LEFT);
+                setGraphic(chip);
             }
         });
         serverBox.setOnAction(e -> {
