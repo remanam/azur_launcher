@@ -70,10 +70,11 @@ final class HomePage {
     private final Label statusHint = UiKit.label("", "status-hint");
     private final VBox statusBox = new VBox(4, new HBox(8, statusIcon, statusTitle), statusHint);
     private final Button mainButton;
-    private final Label updateLabel = UiKit.label("", "home-sub");
-    private final Button updateButton = UiKit.button("", null, "launch-button", () -> { });
-    private final VBox updateBox = new VBox(8, updateLabel, updateButton);
-    private boolean updateRequired;
+    private final Label updateChipLabel = UiKit.label("", "update-chip-label");
+    private final Button updateChip = UiKit.button("", null, "update-chip", () -> { });
+    private UpdateNotice notice = UpdateNotice.NONE;
+    private final UpdateDialog updateDialog;
+    private String dialogShownFor = "";
     private final FeedPanel feed;
     private final SelectableText errorLabel = UiKit.selectable("", null);
     private final SelectableText detailsLabel = UiKit.selectable("", "home-error-details");
@@ -99,8 +100,10 @@ final class HomePage {
     private final Timeline refresher = new Timeline(
             new KeyFrame(Duration.millis(PackState.TTL_MS), event -> refreshState(false)));
 
-    HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAdvanced) {
+    HomePage(AppContext ctx, PlayController play, PackState packState, Runnable openAdvanced,
+             java.util.function.Supplier<UpdateNotice.Restart> restartLauncher, Runnable quit) {
         this.ctx = ctx;
+        this.updateDialog = new UpdateDialog(restartLauncher, quit, () -> play.phase() != PlayController.Phase.IDLE);
         this.openAdvanced = openAdvanced;
         this.play = play;
         this.packState = packState;
@@ -155,17 +158,18 @@ final class HomePage {
         statusHint.setWrapText(true);
         showBanner("");
         showError(null, null);
-        updateLabel.setWrapText(true);
-        updateBox.setAlignment(Pos.CENTER_LEFT);
-        updateBox.setVisible(false);
-        updateBox.setManaged(false);
+        HBox chipContent = new HBox(6, Icons.of("icon-update-arrow", 16), updateChipLabel);
+        chipContent.setAlignment(Pos.CENTER_LEFT);
+        updateChip.setGraphic(chipContent);
+        updateChip.setVisible(false);
+        updateChip.setManaged(false);
         packTag.getStyleClass().add("tag-ok");
 
         HBox serverRow = new HBox(14, serverBox, UiKit.spacer(), dot, statusLabel);
         serverRow.setAlignment(Pos.CENTER_LEFT);
         HBox packRow = new HBox(12, packTitle, packTag);
         packRow.setAlignment(Pos.CENTER_LEFT);
-        info.getChildren().addAll(serverRow, packRow, bannerLabel, aboutHead, aboutText, updateBox, errorBox);
+        info.getChildren().addAll(serverRow, packRow, bannerLabel, aboutHead, aboutText, errorBox);
         card.getStyleClass().add("forge-card");
         HBox.setHgrow(card, Priority.ALWAYS);
 
@@ -185,7 +189,8 @@ final class HomePage {
         HBox nickChip = new HBox(10, avatarHolder, nickText);
         nickChip.getStyleClass().add("nick-chip");
         nickChip.setAlignment(Pos.CENTER_LEFT);
-        HBox header = new HBox(14, UiKit.spacer(), feed.bell(), nickChip, gear);
+        Label versionLabel = UiKit.label(I18n.tr("home.version", com.azur.launcher.AppVersion.APP), "home-version");
+        HBox header = new HBox(14, versionLabel, UiKit.spacer(), updateChip, feed.bell(), nickChip, gear);
         header.getStyleClass().add("home-header");
         header.setAlignment(Pos.CENTER_RIGHT);
         VBox top = new VBox(header, feed.banner());
@@ -208,7 +213,7 @@ final class HomePage {
         Node history = feed.history();
         StackPane.setAlignment(history, Pos.TOP_RIGHT);
         StackPane.setMargin(history, new javafx.geometry.Insets(54, 190, 0, 0));
-        root.getChildren().addAll(screen, history);
+        root.getChildren().addAll(screen, history, updateDialog.node());
         syncStatusSlot();
 
         ctx.onAccountsChanged(this::renderAccount);
@@ -225,26 +230,34 @@ final class HomePage {
     }
 
     /**
-     * Launcher self-update notice (JavaFX thread). READY: version + "Update and restart" (a required update also
-     * blocks Play); WRAPPER_OLD: link to the site, nothing is applied.
+     * Launcher self-update (JavaFX thread): a chip in the header next to the bell, "Launcher X.Y.Z" with an arrow.
+     * RESTART opens the restart dialog (once by itself per version), SITE opens the website; a required update blocks Play.
      */
-    void showUpdate(UpdateService.Status status, Runnable restart) {
-        UpdateService.Kind kind = status.kind();
-        boolean ready = kind == UpdateService.Kind.READY;
-        boolean old = kind == UpdateService.Kind.WRAPPER_OLD;
-        updateRequired = (ready || old) && status.manifest().required();
-        if (ready) {
-            String version = status.manifest().version();
-            updateLabel.setText(updateRequired ? I18n.tr("update.required", version) : I18n.tr("update.available", version));
-            updateButton.setText(I18n.tr("update.button"));
-            updateButton.setOnAction(event -> restart.run());
-        } else if (old) {
-            updateLabel.setText(I18n.tr("update.wrapper_old", status.manifest().minWrapper()));
-            updateButton.setText(I18n.tr("update.site"));
-            updateButton.setOnAction(event -> ctx.host.showDocument(SITE_URL));
+    void showUpdate(UpdateService.Status status) {
+        notice = UpdateNotice.of(status);
+        updateChip.setVisible(notice.visible());
+        updateChip.setManaged(notice.visible());
+        updateChip.getStyleClass().remove("update-chip-required");
+        if (notice.required()) {
+            updateChip.getStyleClass().add("update-chip-required");
         }
-        updateBox.setVisible(ready || old);
-        updateBox.setManaged(ready || old);
+        if (notice.visible()) {
+            boolean site = notice.chip() == UpdateNotice.Chip.SITE;
+            updateChipLabel.setText(I18n.tr("update.chip", notice.version()));
+            updateChip.setTooltip(new Tooltip(I18n.tr(site ? "update.wrapper_old" : notice.required() ? "update.required"
+                    : "update.available", notice.version())));
+            updateChip.setOnAction(event -> {
+                if (site) {
+                    ctx.host.showDocument(SITE_URL);
+                } else {
+                    updateDialog.open(notice.version());
+                }
+            });
+        }
+        if (notice.opensDialogFor(dialogShownFor)) {
+            dialogShownFor = notice.version();
+            updateDialog.open(notice.version());
+        }
         render();
     }
 
@@ -471,7 +484,7 @@ final class HomePage {
         String text = buttonText();
         mainButton.setText(text);
         boolean loginStep = wizardActive && wizard.step() == 1;
-        mainButton.setDisable(loginStep || updateRequired || feed.blocksPlay() && phase == PlayController.Phase.IDLE);
+        mainButton.setDisable(loginStep || notice.blocksPlay() || feed.blocksPlay() && phase == PlayController.Phase.IDLE);
         mainButton.getStyleClass().remove("stopping");
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");

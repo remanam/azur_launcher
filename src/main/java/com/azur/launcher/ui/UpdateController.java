@@ -24,6 +24,7 @@ final class UpdateController {
 
     private static final long FIRST_DELAY_SECONDS = 3;
     private static final long PERIOD_HOURS = 4;
+    private static final long HALT_AFTER_MILLIS = 2500;
 
     private final AppContext ctx;
     private final UpdateService service;
@@ -77,16 +78,30 @@ final class UpdateController {
         Platform.runLater(() -> listener.accept(status));
     }
 
-    /** "Update and restart": starts a new copy (the bootstrap applies the staged jar) and exits this one. */
-    void restart(Runnable exit) {
+    /**
+     * "Restart now": starts a new copy (the bootstrap applies the staged jar) and closes this one for sure (a watchdog
+     * halts the JVM if the shutdown hangs). The game must not run: GAME_BUSY changes nothing.
+     */
+    UpdateNotice.Restart restart(Runnable exit) {
         if (!service.mayRestart()) {
-            return;
+            return UpdateNotice.Restart.GAME_BUSY;
         }
-        if (Restarter.relaunch()) {
-            exit.run();
-        } else {
-            ctx.log("Launcher update: cannot restart automatically, close and open the launcher");
+        if (!Restarter.relaunch()) {
+            ctx.log("Launcher update: cannot restart automatically, the player must reopen the launcher");
+            return UpdateNotice.Restart.FAILED;
         }
+        exit.run();
+        Thread watchdog = new Thread(() -> {
+            try {
+                Thread.sleep(HALT_AFTER_MILLIS);
+            } catch (InterruptedException ignored) {
+                // halts anyway
+            }
+            Runtime.getRuntime().halt(0);
+        }, "azur-restart-halt");
+        watchdog.setDaemon(true);
+        watchdog.start();
+        return UpdateNotice.Restart.STARTED;
     }
 
     void stop() {
