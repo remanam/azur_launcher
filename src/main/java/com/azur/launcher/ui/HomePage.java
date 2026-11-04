@@ -288,7 +288,14 @@ final class HomePage {
                 }
                 applyServer(pick(loaded), loaded.list().servers(), null);
             } catch (Exception e) {
-                applyServer(cached == null ? null : pick(cached), cached == null ? null : cached.list().servers(), e.getMessage());
+                if (cached != null) {
+                    applyServer(pick(cached), cached.list().servers(), e.getMessage());
+                    return;
+                }
+                ctx.log("Server list: using the built-in default server: " + e.getMessage());
+                ctx.setStatus(I18n.tr("servers.fallback", e.getMessage()));
+                applyServer(com.azur.launcher.servers.BuiltinServers.isles(),
+                        com.azur.launcher.servers.BuiltinServers.all(), null);
             }
         });
     }
