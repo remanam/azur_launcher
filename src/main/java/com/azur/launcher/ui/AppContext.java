@@ -10,6 +10,7 @@ import com.azur.launcher.auth.StringVault;
 import com.azur.launcher.api.CommunityApi;
 import com.azur.launcher.auth.PlayerTokenStore;
 import com.azur.launcher.config.AppDirs;
+import com.azur.launcher.AppVersion;
 import com.azur.launcher.config.ConfigManager;
 import com.azur.launcher.config.LauncherConfig;
 import com.azur.launcher.config.PackSettings;
@@ -52,6 +53,8 @@ final class AppContext {
     final Stage stage;
     /** Server list and pack sync settings (servers.json address, API address). */
     final PackSettings pack;
+    /** Opt-in anonymous telemetry; a no-op while the player has not ticked it (default). */
+    final com.azur.launcher.telemetry.TelemetryClient telemetry;
     /** Background work (network, disk). Daemon threads, so they never block exit. */
     final ExecutorService io = Executors.newCachedThreadPool(runnable -> {
         Thread thread = new Thread(runnable, "azur-io");
@@ -86,12 +89,27 @@ final class AppContext {
         // The signed server list and our own mirror live on our https host; allow it before the first request
         // (the policy is a central allowlist, so a host not added here is never fetched).
         HttpUtils.allowHosts(this.pack.getServersUrl());
+        this.telemetry = new com.azur.launcher.telemetry.TelemetryClient(config::isTelemetryEnabled, config::getTelemetryId, AppVersion.APP,
+                telemetrySender(this.pack.getServersUrl()));
         this.site = createSiteAuth(dirs, this.pack.getServersUrl());
         this.accountController = site == null ? null : new AccountController(site, io, state -> Platform.runLater(() -> accountViews.forEach(v -> v.accept(state))),
                 url -> Platform.runLater(() -> host.showDocument(url)), AppContext::deviceName, this::siteSessionChanged);
         if (accountController != null) {
             accountController.load();
         }
+    }
+
+    /** The site origin of the servers URL (https only); a dev run without one sends nothing. */
+    private static com.azur.launcher.telemetry.TelemetrySender telemetrySender(String serversUrl) {
+        try {
+            java.net.URI u = java.net.URI.create(serversUrl);
+            if ("https".equals(u.getScheme()) && u.getHost() != null) {
+                return new com.azur.launcher.telemetry.HttpTelemetrySender("https://" + u.getHost());
+            }
+        } catch (IllegalArgumentException ignored) {
+            // falls through to the silent sender
+        }
+        return (path, json) -> { };
     }
 
     private static String deviceName() {

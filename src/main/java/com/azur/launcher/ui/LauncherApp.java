@@ -75,6 +75,7 @@ public class LauncherApp extends Application {
         build();
         stage.show();
         updateStore.confirmStarted(AppVersion.APP);
+        ctx.telemetry.report("start", true, "", 0);
         if (updates != null) {
             updates.start();
         }

@@ -17,6 +17,7 @@ import com.azur.launcher.profile.InstanceStore;
 import com.azur.launcher.profile.ServerProfiles;
 import com.azur.launcher.servers.ServerEntry;
 import com.azur.launcher.sync.PackSyncService;
+import com.azur.launcher.telemetry.ErrorCode;
 
 import javafx.application.Platform;
 
@@ -167,7 +168,7 @@ final class PlayController implements GameStarter {
                 }
                 ctx.log("Play step: " + step);
                 ctx.setStatus(I18n.tr("play.step." + step.name().toLowerCase()));
-            });
+            }, (step, ms, failure) -> ctx.telemetry.report(telemetryStep(step), failure == null, failure == null ? "" : ErrorCode.classify(failure), ms));
         } catch (java.util.concurrent.CancellationException e) {
             ctx.log("Play cancelled by the player");
             fail(I18n.tr("play.cancelled"), false);
@@ -178,6 +179,15 @@ final class PlayController implements GameStarter {
             ctx.log("Launch failed: " + e.getMessage());
             fail(e.getMessage(), true);
         }
+    }
+
+    /** The fixed step words the site accepts. */
+    private static String telemetryStep(PlayFlow.Step step) {
+        return switch (step) {
+            case GAME -> "install";
+            case PACK -> "download";
+            case LAUNCH -> "launch";
+        };
     }
 
     private void fail(String message, boolean dialog) {

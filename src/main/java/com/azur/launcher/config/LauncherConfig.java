@@ -24,6 +24,10 @@ public class LauncherConfig {
     private boolean darkMode = false;
     private String lastServerId = "";
     private String language = "ru";
+    /** Anonymous launcher telemetry (steps, error words, timings). OFF until the player ticks it. */
+    private boolean telemetryEnabled = false;
+    /** Random install id (32 hex), created when telemetry is switched on, erased when it is switched off. */
+    private String telemetryId = "";
 
     public String getVersionId() {
         return versionId;
@@ -95,6 +99,28 @@ public class LauncherConfig {
 
     public void setWindowHeight(int windowHeight) {
         this.windowHeight = windowHeight;
+    }
+
+    public boolean isTelemetryEnabled() {
+        return telemetryEnabled;
+    }
+
+    public String getTelemetryId() {
+        return telemetryId == null ? "" : telemetryId;
+    }
+
+    /** On: creates the install id when missing. Off: forgets it and returns the old id so the caller can ask the site to erase its rows. */
+    public String setTelemetryEnabled(boolean value) {
+        String old = getTelemetryId();
+        telemetryEnabled = value;
+        if (value && old.isEmpty()) {
+            telemetryId = java.util.UUID.randomUUID().toString().replace("-", "");
+        }
+        if (!value) {
+            telemetryId = "";
+            return old;
+        }
+        return "";
     }
 
     public boolean isShareKeyWithGame() {

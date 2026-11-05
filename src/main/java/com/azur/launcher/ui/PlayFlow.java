@@ -53,14 +53,24 @@ final class PlayFlow {
         return reachable && !server.isBlank() && !local.equals(server);
     }
 
+    /** Told after every step that ran: how long it took and why it failed (null on success). */
+    @FunctionalInterface
+    interface StepReport {
+        void done(Step step, long ms, Exception failure);
+    }
+
     static void run(Steps steps, Consumer<Step> onStep) throws StepFailed {
+        run(steps, onStep, (step, ms, failure) -> { });
+    }
+
+    static void run(Steps steps, Consumer<Step> onStep, StepReport report) throws StepFailed {
         if (!steps.gameReady()) {
-            perform(Step.GAME, onStep, steps::installGame);
+            perform(Step.GAME, onStep, report, steps::installGame);
         }
         if (!steps.packCurrent()) {
-            perform(Step.PACK, onStep, steps::installPack);
+            perform(Step.PACK, onStep, report, steps::installPack);
         }
-        perform(Step.LAUNCH, onStep, steps::launch);
+        perform(Step.LAUNCH, onStep, report, steps::launch);
     }
 
     @FunctionalInterface
@@ -68,11 +78,14 @@ final class PlayFlow {
         void run() throws Exception;
     }
 
-    private static void perform(Step step, Consumer<Step> onStep, Work work) throws StepFailed {
+    private static void perform(Step step, Consumer<Step> onStep, StepReport report, Work work) throws StepFailed {
         onStep.accept(step);
+        long started = System.nanoTime();
         try {
             work.run();
+            report.done(step, (System.nanoTime() - started) / 1_000_000, null);
         } catch (Exception e) {
+            report.done(step, (System.nanoTime() - started) / 1_000_000, e);
             throw new StepFailed(step, e);
         }
     }

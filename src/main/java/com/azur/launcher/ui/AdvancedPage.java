@@ -42,7 +42,7 @@ final class AdvancedPage {
         Button back = UiKit.button(I18n.tr("advanced.back"), null, "button-border", onBack);
         HBox header = new HBox(16, back, UiKit.label(I18n.tr("settings.advanced"), "page-title"));
         header.setAlignment(Pos.CENTER_LEFT);
-        VBox options = new VBox(0, languageRow(), memoryRow(), javaRow(), folderRow(), logRow());
+        VBox options = new VBox(0, languageRow(), memoryRow(), javaRow(), folderRow(), logRow(), telemetryRow());
         VBox player = UiKit.card(UiKit.label(I18n.tr("advanced.player"), "card-title"), new PlayerSection(ctx).node());
         VBox page = new VBox(18, header);
         if (ctx.accountController != null) {
@@ -67,6 +67,12 @@ final class AdvancedPage {
         Button repair = UiKit.button(I18n.tr("settings.repair"), "icon-refresh", "button-border", play::repairCurrent);
         play.onPhase(phase -> repair.setDisable(phase != PlayController.Phase.IDLE));
         return UiKit.card(UiKit.optionItem(I18n.tr("settings.repair"), I18n.tr("settings.repair_hint"), repair));
+    }
+
+    private Node telemetryRow() {
+        HBox row = new HBox(TelemetryOption.node(ctx));
+        row.getStyleClass().add("options-list-item");
+        return row;
     }
 
     private Node logRow() {
