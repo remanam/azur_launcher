@@ -106,7 +106,7 @@ final class FirstRunWizard {
     }
 
     private VBox installStep() {
-        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.node(ctx), installButton, progress.node(), UiKit.withCopy(installNote));
+        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.notice(ctx), installButton, progress.node(), UiKit.withCopy(installNote));
     }
 
     private VBox playStep() {

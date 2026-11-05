@@ -25,22 +25,43 @@ class TelemetryTest {
     private static final String ID = "0123456789abcdef0123456789abcdef";
 
     @Test
-    void offByDefaultAndSendsNothing() throws Exception {
+    void onByDefaultWithRandomIdAndSwitchOffStopsSending() throws Exception {
         LauncherConfig config = new LauncherConfig();
-        assertFalse(config.isTelemetryEnabled());
-        assertEquals("", config.getTelemetryId());
+        assertTrue(config.isTelemetryEnabled());
+        assertTrue(config.getTelemetryId().matches("[0-9a-f]{32}"));
         List<String> sent = new CopyOnWriteArrayList<>();
-        TelemetryClient c = new TelemetryClient(config::isTelemetryEnabled, config::getTelemetryId, "1.0.6", "macos", (p, j) -> sent.add(j));
+        CountDownLatch one = new CountDownLatch(1);
+        TelemetryClient c = new TelemetryClient(config::isTelemetryEnabled, config::getTelemetryId, "1.0.6", "macos", (p, j) -> {
+            sent.add(j);
+            one.countDown();
+        });
+        c.report("install", true, "", 5);
+        assertTrue(one.await(3, TimeUnit.SECONDS));
+        config.setTelemetryEnabled(false);
+        assertEquals("", config.getTelemetryId());
         c.report("install", true, "", 5);
         Thread.sleep(100);
-        assertTrue(sent.isEmpty());
+        assertEquals(1, sent.size());
         assertEquals(0, c.queued());
+    }
+
+    @Test
+    void noticeAndPrivacyTextsExistInBothLanguages() throws Exception {
+        for (String lang : new String[] {"ru", "en"}) {
+            java.util.Properties p = new java.util.Properties();
+            try (var in = TelemetryTest.class.getResourceAsStream("/messages_" + lang + ".properties");
+                    var r = new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8)) {
+                p.load(r);
+            }
+            for (String k : new String[] {"telemetry.notice", "telemetry.privacy", "telemetry.forget", "telemetry.title"}) {
+                assertFalse(p.getProperty(k, "").isBlank(), lang + " " + k);
+            }
+        }
     }
 
     @Test
     void sentBodyMatchesTheSiteContractAndCarriesNoPersonalData() throws Exception {
         LauncherConfig config = new LauncherConfig();
-        config.setTelemetryEnabled(true);
         assertEquals(32, config.getTelemetryId().length());
         List<String> sent = new CopyOnWriteArrayList<>();
         CountDownLatch two = new CountDownLatch(2);
@@ -55,6 +76,7 @@ class TelemetryTest {
         for (String body : sent) {
             assertTrue(SITE_BODY.matcher(body).matches(), body);
             assertFalse(body.contains("/") || body.contains("\\"), "no paths");
+            assertFalse(body.matches("(?is).*(nick|name|path|ip|log|user).*"), "no forbidden fields");
         }
     }
 
@@ -81,7 +103,6 @@ class TelemetryTest {
     @Test
     void switchingOffForgetsIdAndAsksSiteToErase() throws Exception {
         LauncherConfig config = new LauncherConfig();
-        config.setTelemetryEnabled(true);
         String id = config.getTelemetryId();
         assertEquals(id, config.getTelemetryId(), "id is stable while on");
         String old = config.setTelemetryEnabled(false);

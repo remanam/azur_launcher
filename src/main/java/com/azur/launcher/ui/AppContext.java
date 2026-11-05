@@ -53,7 +53,7 @@ final class AppContext {
     final Stage stage;
     /** Server list and pack sync settings (servers.json address, API address). */
     final PackSettings pack;
-    /** Opt-in anonymous telemetry; a no-op while the player has not ticked it (default). */
+    /** Anonymous telemetry, on by default; a no-op once the player switches it off in Advanced. */
     final com.azur.launcher.telemetry.TelemetryClient telemetry;
     /** Background work (network, disk). Daemon threads, so they never block exit. */
     final ExecutorService io = Executors.newCachedThreadPool(runnable -> {

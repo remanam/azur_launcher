@@ -24,8 +24,8 @@ public class LauncherConfig {
     private boolean darkMode = false;
     private String lastServerId = "";
     private String language = "ru";
-    /** Anonymous launcher telemetry (steps, error words, timings). OFF until the player ticks it. */
-    private boolean telemetryEnabled = false;
+    /** Anonymous launcher telemetry (steps, error words, timings). ON by default (owner decision 2026-11-05); the player switches it off in Settings > Advanced. */
+    private boolean telemetryEnabled = true;
     /** Random install id (32 hex), created when telemetry is switched on, erased when it is switched off. */
     private String telemetryId = "";
 
@@ -106,20 +106,21 @@ public class LauncherConfig {
     }
 
     public String getTelemetryId() {
+        if (telemetryEnabled && (telemetryId == null || telemetryId.isEmpty())) {
+            telemetryId = java.util.UUID.randomUUID().toString().replace("-", "");
+        }
         return telemetryId == null ? "" : telemetryId;
     }
 
     /** On: creates the install id when missing. Off: forgets it and returns the old id so the caller can ask the site to erase its rows. */
     public String setTelemetryEnabled(boolean value) {
-        String old = getTelemetryId();
+        String old = telemetryId == null ? "" : telemetryId;
         telemetryEnabled = value;
-        if (value && old.isEmpty()) {
-            telemetryId = java.util.UUID.randomUUID().toString().replace("-", "");
-        }
         if (!value) {
             telemetryId = "";
             return old;
         }
+        getTelemetryId();
         return "";
     }
 

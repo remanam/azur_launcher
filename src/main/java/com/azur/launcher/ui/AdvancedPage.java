@@ -95,7 +95,7 @@ final class AdvancedPage {
         HBox.setHgrow(text, Priority.ALWAYS);
         HBox row = new HBox(16, logo, text);
         row.setAlignment(Pos.CENTER_LEFT);
-        return UiKit.card(UiKit.label(I18n.tr("advanced.about"), "section-head"), row);
+        return UiKit.card(UiKit.label(I18n.tr("advanced.about"), "section-head"), row, TelemetryOption.notice(ctx));
     }
 
     private Node memoryRow() {
