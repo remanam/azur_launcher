@@ -15,9 +15,13 @@ public final class KeysetTestSupport {
 
     public static final Instant NOW = Instant.parse("2026-11-05T00:00:00Z");
 
+    /** Root A (working). */
     public final KeyPair primary = newKey();
+    /** Root B (emergency). */
     public final KeyPair reserve = newKey();
-    public final RootKeys roots = new RootKeys(raw(primary), raw(reserve));
+    /** Root C (emergency). */
+    public final KeyPair c = newKey();
+    public final RootKeys roots = new RootKeys(List.of(raw(primary)), List.of(raw(reserve), raw(c)));
 
     /** A keyset document under construction. */
     public static final class Doc {
@@ -92,6 +96,16 @@ public final class KeysetTestSupport {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    /** {@code env} with {@code anchors} (envelopes, oldest first) embedded. */
+    public static byte[] withAnchors(byte[] env, byte[]... anchors) {
+        String e = new String(env, StandardCharsets.UTF_8);
+        List<String> list = new ArrayList<>();
+        for (byte[] a : anchors) {
+            list.add(new String(a, StandardCharsets.UTF_8));
+        }
+        return (e.substring(0, e.lastIndexOf('}')) + ",\"anchors\":[" + String.join(",", list) + "]}").getBytes(StandardCharsets.UTF_8);
     }
 
     /** The envelope signed by each of {@code signers}. */

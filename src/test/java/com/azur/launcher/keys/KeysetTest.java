@@ -81,14 +81,14 @@ class KeysetTest {
         KeyPair evil = newKey();
         Keyset attacker = open(envelope(doc().version(1L << 40).key("evil", Keyset.LAUNCHER, evil), ks.primary), null);
         // the primary alone can neither start a new epoch nor touch root keys
-        assertEquals(KeysetException.Reason.NEEDS_RESERVE,
+        assertEquals(KeysetException.Reason.NEEDS_EMERGENCY,
                 refused(envelope(doc().epoch(1).key("evil", Keyset.LAUNCHER, evil), ks.primary), attacker));
         // the reserve: epoch 1, primary revoked, a new delegated root
         KeyPair newRoot = newKey();
         String primaryId = Ed25519.keyId(raw(ks.primary));
         Keyset recovered = open(envelope(doc().epoch(1).key("l2", Keyset.LAUNCHER, launcher)
                 .key("root2", Keyset.ROOT, newRoot, NOW.plusSeconds(365L * 86400)).revoke(primaryId), ks.reserve), attacker);
-        assertTrue(recovered.byReserve());
+        assertTrue(recovered.byEmergency());
         // the stolen primary is useless now, whatever the version
         assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(doc().epoch(1).version(1L << 41)
                 .key("l2", Keyset.LAUNCHER, launcher).key("root2", Keyset.ROOT, newRoot, NOW.plusSeconds(365L * 86400))
@@ -102,12 +102,20 @@ class KeysetTest {
     }
 
     @Test
-    void formatRules() {
+    void formatRules() throws Exception {
         assertEquals(KeysetException.Reason.BAD_FORMAT, refused(envelope(doc().key("a", Keyset.SERVERS, servers)
                 .key("b", Keyset.LAUNCHER, servers), ks.primary), null), "one key in two roles");
         assertEquals(KeysetException.Reason.BAD_FORMAT, refused(envelope(doc().key("a", "admin", servers), ks.primary), null));
         assertEquals(KeysetException.Reason.BAD_FORMAT, refused(envelope(doc().key("a", Keyset.SERVERS, ks.primary), ks.reserve), null));
-        assertEquals(KeysetException.Reason.BAD_FORMAT, refused(envelope(doc().revoke(Ed25519.keyId(raw(ks.reserve))), ks.reserve), null));
+        // B cannot sign its own revocation; B and C together cannot revoke both (neither signature counts)
+        assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(doc().revoke(Ed25519.keyId(raw(ks.reserve))), ks.reserve), null));
+        assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(doc().revoke(Ed25519.keyId(raw(ks.reserve)))
+                .revoke(Ed25519.keyId(raw(ks.c))), ks.reserve, ks.c), null));
+        // a delegated emergency root that drops itself and revokes B and C would leave none: refused
+        KeyPair e2 = newKey();
+        Keyset withE2 = open(envelope(doc().key("e2", Keyset.ROOT_EMERGENCY, e2, NOW.plusSeconds(3650L * 86400)), ks.reserve), null);
+        assertEquals(KeysetException.Reason.BAD_FORMAT, refused(envelope(doc().version(2).revoke(Ed25519.keyId(raw(ks.reserve)))
+                .revoke(Ed25519.keyId(raw(ks.c))), e2), withE2));
         assertThrows(KeysetException.class, () -> Keyset.open(envelope(doc(), ks.primary), RootKeys.NONE, null, NOW));
     }
 
@@ -115,8 +123,75 @@ class KeysetTest {
     void rootKeysFile() {
         String text = "# c\nprimary " + KeysetTestSupport.b64(ks.primary) + "\nreserve " + KeysetTestSupport.b64(ks.reserve) + "\n";
         RootKeys r = RootKeys.parse(text);
-        assertArrayEquals(raw(ks.primary), r.primary());
+        assertArrayEquals(raw(ks.primary), r.working().get(0));
+        assertEquals(1, r.emergency().size(), "old two-line file");
+        String a = KeysetTestSupport.b64(ks.primary);
+        String b = KeysetTestSupport.b64(ks.reserve);
+        String c = KeysetTestSupport.b64(ks.c);
+        RootKeys three = RootKeys.parse("working " + a + "\nemergency " + b + "\nemergency " + c + "\n");
+        assertEquals(2, three.emergency().size());
+        RootKeys bare = RootKeys.parse(a + "\n" + b + "\n" + c + "\n");
+        assertArrayEquals(raw(ks.primary), bare.working().get(0), "bare lines: first is the working root");
+        assertArrayEquals(raw(ks.c), bare.emergency().get(1));
         assertEquals(RootKeys.NONE, RootKeys.parse("# empty dev file\n"));
-        assertThrows(IllegalArgumentException.class, () -> RootKeys.parse("primary " + KeysetTestSupport.b64(ks.primary)));
+        assertThrows(IllegalArgumentException.class, () -> RootKeys.parse("primary " + a));
+        assertThrows(IllegalArgumentException.class, () -> RootKeys.parse("emergency " + b + "\nemergency " + c));
+        assertThrows(IllegalArgumentException.class, () -> RootKeys.parse("working " + a + "\nemergency " + a));
+        assertThrows(IllegalArgumentException.class, () -> RootKeys.parse("admin " + a + "\nemergency " + b));
+    }
+
+    @Test
+    void eachEmergencyRootAloneStartsAnEpochAndRevokedRootsAreRefused() throws Exception {
+        String a = Ed25519.keyId(raw(ks.primary));
+        for (KeyPair e : List.of(ks.reserve, ks.c)) {
+            Keyset v1 = open(envelope(doc().version(3).key("s1", Keyset.SERVERS, servers), ks.primary), null);
+            byte[] rec = envelope(doc().epoch(1).version(4).key("s1", Keyset.SERVERS, servers).revoke(a), e);
+            Keyset v2 = open(rec, v1);
+            assertTrue(v2.byEmergency());
+            open(rec, null); // a fresh install accepts it too
+            assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(doc().epoch(1).version(99)
+                    .key("s1", Keyset.SERVERS, servers).revoke(a), ks.primary), v2), "revoked A");
+            assertEquals(KeysetException.Reason.ROLLBACK, refused(envelope(doc().epoch(0).version(1L << 40)
+                    .key("s1", Keyset.SERVERS, servers), e), v2), "old epoch");
+        }
+    }
+
+    @Test
+    void lostEmergencyRootIsReplacedByTheOther() throws Exception {
+        for (KeyPair[] pair : List.of(new KeyPair[] {ks.reserve, ks.c}, new KeyPair[] {ks.c, ks.reserve})) {
+            KeyPair lost = pair[0];
+            KeyPair other = pair[1];
+            KeyPair replacement = newKey();
+            String lostId = Ed25519.keyId(raw(lost));
+            Keyset v1 = open(envelope(doc().key("s1", Keyset.SERVERS, servers), ks.primary), null);
+            KeysetTestSupport.Doc rec = doc().epoch(1).version(2).key("s1", Keyset.SERVERS, servers)
+                    .key("e2", Keyset.ROOT_EMERGENCY, replacement, NOW.plusSeconds(3650L * 86400)).revoke(lostId);
+            assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(rec, lost), v1), "own revocation");
+            byte[] anchor = envelope(rec, other);
+            Keyset v2 = open(anchor, v1);
+            KeysetTestSupport.Doc next = doc().epoch(2).version(3).key("s1", Keyset.SERVERS, servers)
+                    .key("e2", Keyset.ROOT_EMERGENCY, replacement, NOW.plusSeconds(3650L * 86400)).revoke(lostId);
+            assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(next, lost), v2), "revoked emergency root");
+            open(envelope(next, replacement), v2);
+            // a fresh install learns the replacement only through the anchor chain
+            assertEquals(KeysetException.Reason.BAD_SIGNATURE, refused(envelope(next, replacement), null));
+            Keyset fresh = open(KeysetTestSupport.withAnchors(envelope(next, replacement), anchor), null);
+            assertTrue(fresh.anchored());
+        }
+    }
+
+    @Test
+    void workingRootLimitsUnknownRootAndAnchorRules() throws Exception {
+        Keyset v1 = open(envelope(doc().key("s1", Keyset.SERVERS, servers), ks.primary), null);
+        assertEquals(KeysetException.Reason.NEEDS_EMERGENCY,
+                refused(envelope(doc().epoch(1).version(2).key("s1", Keyset.SERVERS, servers), ks.primary), v1));
+        assertEquals(KeysetException.Reason.NEEDS_EMERGENCY, refused(envelope(doc().version(2).key("s1", Keyset.SERVERS, servers)
+                .revoke(Ed25519.keyId(raw(ks.c))), ks.primary), v1), "A revoking C");
+        assertEquals(KeysetException.Reason.BAD_SIGNATURE,
+                refused(envelope(doc().epoch(1).version(2).key("s1", Keyset.SERVERS, servers), newKey()), v1), "unknown root");
+        // an anchor signed by the working root does not count
+        byte[] fakeAnchor = envelope(doc().version(2).key("s1", Keyset.SERVERS, servers), ks.primary);
+        assertEquals(KeysetException.Reason.BAD_FORMAT, refused(KeysetTestSupport.withAnchors(
+                envelope(doc().version(3).key("s1", Keyset.SERVERS, servers), ks.primary), fakeAnchor), null));
     }
 }

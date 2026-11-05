@@ -120,7 +120,7 @@ public final class KeysetService {
                 seen = true;
                 if (changed) {
                     log.accept("Keyset: accepted epoch " + fresh.epoch() + " version " + fresh.version() + ", expires "
-                            + fresh.expiresAt() + (fresh.byReserve() ? " (reserve root)" : ""));
+                            + fresh.expiresAt() + (fresh.byEmergency() ? " (emergency root)" : "") + (fresh.anchored() ? " (via anchors)" : ""));
                     write(bytes);
                 }
             } catch (KeysetException e) {

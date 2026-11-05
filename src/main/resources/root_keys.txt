@@ -1,2 +1,3 @@
 # Root public keys of the keyset (docs/KEYSET.md). EMPTY in git = dev build: the old single-key path.
-# packaging/release.sh fills it from AZUR_ROOT_KEYS_FILE for a release (lines: primary <base64>, reserve <base64>).
+# packaging/release.sh fills it from AZUR_ROOT_KEYS_FILE for a release: one root per line, 'working <base64>' (A) and
+# 'emergency <base64>' (B, C); old names primary/reserve still parse.
