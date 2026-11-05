@@ -110,6 +110,19 @@ public final class AppDirs {
         return root.resolve("servers_pubkey.txt");
     }
 
+    /**
+     * The last accepted keyset (root-signed list of working keys). Outside the cache folder on purpose: once it exists
+     * the old single-key path stays off.
+     */
+    public Path keysetFile() {
+        return root.resolve("keyset.json");
+    }
+
+    /** Optional override of the embedded root keys; honoured only in a dev run ({@code -Dazur.home}). */
+    public Path rootKeysFile() {
+        return root.resolve("root_keys.txt");
+    }
+
     /** The pack client's own state (backups, journals); separate from the launcher config. */
     public Path updaterHome() {
         return root.resolve("updater");

@@ -37,8 +37,10 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
 2. On success write `<data>/cache/servers.json` (atomic). A file that fails any check is never cached.
 3. On network error or a rejected download use the cache: valid = silent, expired = shown with a "stale" banner
    (correct signature required), bad signature = ignored.
-4. Public key: `servers_pubkey.txt` in the jar (base64 of the 32 raw bytes); a file `<data>/servers_pubkey.txt` overrides it.
-   Replace the embedded dev key with the production key (`azur-servers pubkey`) before a release.
+4. Keys: with a keyset (`docs/KEYSET.md`, jars with root keys) the signature must come from a `servers` key of the
+   keyset and the `pack.key` of an entry is ignored (manifest keys come from the keyset). Without one (TRANSITION/LEGACY):
+   `servers_pubkey.txt` in the jar (base64 of the 32 raw bytes; `<data>/servers_pubkey.txt` overrides it in a dev run)
+   and the entry's `pack.key`. Keep `pack.key` in the published list while launchers up to 1.0.6 exist.
 
 ## Signing (owner)
 Same key file as `azur-dist` (`~/.azur-dist/signing.key`, base64 seed):

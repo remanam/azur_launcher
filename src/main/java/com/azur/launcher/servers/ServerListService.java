@@ -9,7 +9,9 @@ import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Clock;
+import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Loads the signed list from the network and keeps the last good copy on disk. When the network (or the
@@ -32,7 +34,7 @@ public final class ServerListService {
     private static final String PUBLIC_KEY_RESOURCE = "/servers_pubkey.txt";
 
     private final Path cacheFile;
-    private final PublicKey key;
+    private final Supplier<List<PublicKey>> keys;
     private final String url;
     private final Fetcher fetcher;
     private final Clock clock;
@@ -40,8 +42,14 @@ public final class ServerListService {
 
     public ServerListService(Path cacheFile, PublicKey key, String url, Fetcher fetcher, Clock clock,
                              Consumer<String> log) {
+        this(cacheFile, () -> List.of(key), url, fetcher, clock, log);
+    }
+
+    /** {@code keys} is read at every check: the servers keys of the current keyset (or the legacy key). */
+    public ServerListService(Path cacheFile, Supplier<List<PublicKey>> keys, String url, Fetcher fetcher, Clock clock,
+                             Consumer<String> log) {
         this.cacheFile = cacheFile;
-        this.key = key;
+        this.keys = keys;
         this.url = url;
         this.fetcher = fetcher;
         this.clock = clock;
@@ -78,7 +86,7 @@ public final class ServerListService {
             log.accept("Server list: fetching " + url);
             try {
                 byte[] bytes = fetcher.fetch(url);
-                ServerList list = ServerListVerifier.open(bytes, key, clock.instant());
+                ServerList list = ServerListVerifier.open(bytes, keys.get(), clock.instant());
                 log.accept("Server list: network OK, " + bytes.length + " bytes in " + (clock.millis() - start)
                         + " ms, signature OK, valid until " + list.validUntil() + ", " + list.servers().size() + " server(s)");
                 saveCache(bytes);
@@ -143,13 +151,13 @@ public final class ServerListService {
         }
         byte[] bytes = Files.readAllBytes(cacheFile);
         try {
-            return new Loaded(ServerListVerifier.open(bytes, key, clock.instant()), Source.CACHE);
+            return new Loaded(ServerListVerifier.open(bytes, keys.get(), clock.instant()), Source.CACHE);
         } catch (ServerListException e) {
             if (e.reason() != ServerListException.Reason.EXPIRED) {
                 throw new IOException("cached list rejected: " + reasonOf(e), e);
             }
             try {
-                return new Loaded(ServerListVerifier.openIgnoringExpiry(bytes, key, clock.instant()),
+                return new Loaded(ServerListVerifier.openIgnoringExpiry(bytes, keys.get(), clock.instant()),
                         Source.CACHE_STALE);
             } catch (ServerListException inner) {
                 throw new IOException("cached list rejected: " + reasonOf(inner), inner);

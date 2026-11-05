@@ -22,10 +22,31 @@ if [ -n "${AZUR_SERVERS_PUBKEY_FILE:-}" ]; then
   PUBKEY=$(tr -d '[:space:]' < "$AZUR_SERVERS_PUBKEY_FILE")
   [ "${#PUBKEY}" -eq 44 ] || { echo "public key must be 44 base64 chars (32 raw bytes)" >&2; exit 1; }
   cp "$PUBRES" "$PUBRES.orig"
-  trap 'mv -f "$PUBRES.orig" "$PUBRES"' EXIT INT TERM
   printf '%s\n' "$PUBKEY" > "$PUBRES"
   echo "embedding production servers public key from $AZUR_SERVERS_PUBKEY_FILE"
 fi
+
+# Root keys of the keyset (docs/plans/KEY_ROTATION.md): AZUR_ROOT_KEYS_FILE=<root_keys.txt with 'primary <b64>' and
+# 'reserve <b64>' lines, public keys only>. A release without them never leaves the single-key path and can never
+# rotate keys, so it is refused unless AZUR_ALLOW_NO_ROOTS=1 (dev builds).
+ROOTRES=src/main/resources/root_keys.txt
+if [ -n "${AZUR_ROOT_KEYS_FILE:-}" ]; then
+  [ -f "$AZUR_ROOT_KEYS_FILE" ] || { echo "AZUR_ROOT_KEYS_FILE not found: $AZUR_ROOT_KEYS_FILE" >&2; exit 1; }
+  grep -Eq '^primary [A-Za-z0-9+/]{43}=$' "$AZUR_ROOT_KEYS_FILE" && grep -Eq '^reserve [A-Za-z0-9+/]{43}=$' "$AZUR_ROOT_KEYS_FILE" \
+    || { echo "root keys file needs lines 'primary <base64>' and 'reserve <base64>'" >&2; exit 1; }
+  cp "$ROOTRES" "$ROOTRES.orig"
+  grep -E '^(primary|reserve) ' "$AZUR_ROOT_KEYS_FILE" > "$ROOTRES"
+  echo "embedding root public keys from $AZUR_ROOT_KEYS_FILE"
+elif [ "${AZUR_ALLOW_NO_ROOTS:-0}" != "1" ]; then
+  echo "AZUR_ROOT_KEYS_FILE is not set: a release needs the root keys (or AZUR_ALLOW_NO_ROOTS=1 for a dev build)" >&2
+  exit 1
+fi
+restore_keys() {
+  [ -f "$PUBRES.orig" ] && mv -f "$PUBRES.orig" "$PUBRES"
+  [ -f "$ROOTRES.orig" ] && mv -f "$ROOTRES.orig" "$ROOTRES"
+  return 0
+}
+trap restore_keys EXIT INT TERM
 
 ./gradlew ${GRADLE_FLAGS:-} --quiet clean releaseJar
 

@@ -1,5 +1,6 @@
 package com.azur.launcher.update;
 
+import com.azur.launcher.keys.KeyTrust;
 import com.azur.launcher.net.Hashes;
 
 import java.io.IOException;
@@ -7,8 +8,10 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PublicKey;
+import java.time.Clock;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Launcher self-update, stage 1: reads the signed manifest, and for a newer version downloads the jar, checks size,
@@ -30,8 +33,14 @@ public final class UpdateService {
         void download(String url, Path target, String sha256, long size) throws IOException;
     }
 
+    /** Parses and verifies launcher.json (legacy single key, or the keyset launcher keys: {@link #forTrust}). */
+    @FunctionalInterface
+    public interface Opener {
+        UpdateManifest open(byte[] raw) throws UpdateException;
+    }
+
     private final UpdateStore store;
-    private final PublicKey key;
+    private final Opener opener;
     private final String manifestUrl;
     private final Transport transport;
     private final String runningVersion;
@@ -41,8 +50,14 @@ public final class UpdateService {
 
     public UpdateService(UpdateStore store, PublicKey key, String manifestUrl, Transport transport,
                          String runningVersion, String wrapperVersion, BooleanSupplier gameBusy, Consumer<String> log) {
+        this(store, raw -> UpdateManifest.open(raw, key), manifestUrl, transport, runningVersion, wrapperVersion,
+                gameBusy, log);
+    }
+
+    public UpdateService(UpdateStore store, Opener opener, String manifestUrl, Transport transport,
+                         String runningVersion, String wrapperVersion, BooleanSupplier gameBusy, Consumer<String> log) {
         this.store = store;
-        this.key = key;
+        this.opener = opener;
         this.manifestUrl = manifestUrl;
         this.transport = transport;
         this.runningVersion = runningVersion;
@@ -51,13 +66,30 @@ public final class UpdateService {
         this.log = log;
     }
 
+    /**
+     * The launcher's opener: with a keyset a signature by one of its {@code launcher} keys is required; a jar without root
+     * keys uses the legacy single key; in TRANSITION/LOCKED no update is accepted. Versions only go up ({@link #check}).
+     */
+    public static Opener forTrust(Supplier<KeyTrust> trust, Clock clock) {
+        return raw -> {
+            KeyTrust t = trust.get();
+            if (t.mode() == KeyTrust.Mode.KEYSET) {
+                return UpdateManifest.openWithKeys(raw, t.launcherKeys(clock.instant()));
+            }
+            if (t.legacyLauncherSignature() && t.legacyKey() != null) {
+                return UpdateManifest.open(raw, t.legacyKey());
+            }
+            throw new UpdateException("launcher update needs a valid keyset (" + t.mode() + ": " + t.reason() + ")");
+        };
+    }
+
     /** One check (blocking; call from a background thread). Never throws. */
     public Status check() {
         if (gameBusy.getAsBoolean()) {
             return new Status(Kind.BUSY, null, "game is running or preparing");
         }
         try {
-            UpdateManifest manifest = UpdateManifest.open(transport.get(manifestUrl), key);
+            UpdateManifest manifest = opener.open(transport.get(manifestUrl));
             if (!LauncherVersions.newer(manifest.version(), runningVersion) || store.isRejected(manifest.version())) {
                 return new Status(Kind.UP_TO_DATE, manifest, "");
             }

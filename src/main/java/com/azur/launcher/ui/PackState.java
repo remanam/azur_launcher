@@ -32,7 +32,7 @@ final class PackState {
     }
 
     static PackState live(AppContext ctx) {
-        return new PackState(ctx, PackSyncService.standard(ctx.dirs));
+        return new PackState(ctx, PackSyncService.standard(ctx.dirs, ctx.keysets));
     }
 
     /** @param server the selected server or null (default instance: no pack to track) */

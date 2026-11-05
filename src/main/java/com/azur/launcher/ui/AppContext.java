@@ -55,6 +55,8 @@ final class AppContext {
     final PackSettings pack;
     /** Anonymous telemetry, on by default; a no-op once the player switches it off in Advanced. */
     final com.azur.launcher.telemetry.TelemetryClient telemetry;
+    /** Root-signed working keys (servers, pack, launcher); every signature check asks it. */
+    final com.azur.launcher.keys.KeysetService keysets;
     /** Background work (network, disk). Daemon threads, so they never block exit. */
     final ExecutorService io = Executors.newCachedThreadPool(runnable -> {
         Thread thread = new Thread(runnable, "azur-io");
@@ -89,6 +91,7 @@ final class AppContext {
         // The signed server list and our own mirror live on our https host; allow it before the first request
         // (the policy is a central allowlist, so a host not added here is never fetched).
         HttpUtils.allowHosts(this.pack.getServersUrl());
+        this.keysets = createKeysets(dirs, this.pack.getServersUrl());
         config.migrateTelemetryNotice(accounts.selected() != null);
         this.telemetry = new com.azur.launcher.telemetry.TelemetryClient(config::isTelemetrySendable, config::getTelemetryId, AppVersion.APP,
                 telemetrySender(this.pack.getServersUrl()));
@@ -152,6 +155,30 @@ final class AppContext {
         if (accountController != null) {
             view.accept(accountController.state());
         }
+    }
+
+    /** Embedded roots (a dev run may override them with {@code <data>/root_keys.txt}) + the legacy servers key. */
+    private com.azur.launcher.keys.KeysetService createKeysets(AppDirs dirs, String serversUrl) {
+        com.azur.launcher.keys.RootKeys roots;
+        try {
+            boolean dev = !System.getProperty(AppDirs.HOME_PROPERTY, "").isBlank();
+            roots = dev && java.nio.file.Files.isRegularFile(dirs.rootKeysFile())
+                    ? com.azur.launcher.keys.RootKeys.parse(java.nio.file.Files.readString(dirs.rootKeysFile()))
+                    : com.azur.launcher.keys.RootKeys.embedded();
+        } catch (java.io.IOException | RuntimeException e) {
+            log("Root keys unreadable, keyset disabled: " + e.getMessage());
+            roots = com.azur.launcher.keys.RootKeys.NONE;
+        }
+        java.security.PublicKey legacy = null;
+        try {
+            legacy = com.azur.launcher.servers.ServerListService.appKey(dirs.serversKeyFile());
+        } catch (java.io.IOException | java.security.GeneralSecurityException e) {
+            log("Legacy servers key unreadable: " + e.getMessage());
+        }
+        String origin = siteOrigin(serversUrl);
+        return new com.azur.launcher.keys.KeysetService(dirs.keysetFile(), roots, legacy,
+                origin.isEmpty() ? "" : origin + "/dl/keyset.json", HttpUtils::getListBytes, java.time.Clock.systemUTC(),
+                this::log, AppVersion.APP);
     }
 
     private static SiteAuth createSiteAuth(AppDirs dirs, String serversUrl) {

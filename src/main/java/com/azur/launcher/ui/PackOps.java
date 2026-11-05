@@ -40,7 +40,7 @@ final class PackOps {
     /** Downloads only the differing pack files; a local copy that still verifies counts as success. */
     static Outcome installPack(AppContext ctx, ServerEntry entry, Instance instance, InstallProgress progress) {
         progress.step(InstallProgress.Step.CHECK);
-        return update(PackSyncService.standard(ctx.dirs), entry, instance.gameDir(),
+        return update(PackSyncService.standard(ctx.dirs, ctx.keysets), entry, instance.gameDir(),
                 (phase, file, done, total) -> {
                     if ("download".equals(phase)) {
                         progress.bytes(InstallProgress.Step.PACK, done, total);
@@ -51,7 +51,7 @@ final class PackOps {
     }
 
     static PackSyncService newService(AppContext ctx) {
-        return PackSyncService.standard(ctx.dirs);
+        return PackSyncService.standard(ctx.dirs, ctx.keysets);
     }
 
     /**

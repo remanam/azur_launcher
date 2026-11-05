@@ -1,6 +1,7 @@
 package com.azur.launcher.sync;
 
 import com.azur.launcher.config.AppDirs;
+import com.azur.launcher.keys.KeysetService;
 import com.azur.launcher.net.HostPolicy;
 import com.azur.launcher.net.HttpUtils;
 import com.azur.launcher.pack.PackClient;
@@ -11,6 +12,8 @@ import com.azur.launcher.pack.PackState;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -40,18 +43,30 @@ public final class PackSyncService {
     private final Path home;
     private final Supplier<HostPolicy> policy;
     private final boolean upgradeHttp;
+    private final Supplier<Optional<List<byte[]>>> packKeys;
     private volatile String banner = "";
 
     /** @param home the client's own state folder; @param policy evaluated per run (the allowed set may grow) */
     public PackSyncService(Path home, Supplier<HostPolicy> policy, boolean upgradeHttp) {
+        this(home, policy, upgradeHttp, Optional::empty);
+    }
+
+    /** @param packKeys evaluated per run: the pack keys of the keyset, empty = the key of the server entry (legacy) */
+    public PackSyncService(Path home, Supplier<HostPolicy> policy, boolean upgradeHttp,
+                           Supplier<Optional<List<byte[]>>> packKeys) {
         this.home = home;
         this.policy = policy;
         this.upgradeHttp = upgradeHttp;
+        this.packKeys = packKeys;
     }
 
-    /** The launcher's service: state under {@code <data>/updater}, host policy of {@link HttpUtils}. */
-    public static PackSyncService standard(AppDirs dirs) {
-        return new PackSyncService(dirs.updaterHome(), () -> HttpUtils.downloader().policy(), true);
+    /**
+     * The launcher's service: state under {@code <data>/updater}, host policy of {@link HttpUtils}, manifest keys from
+     * the keyset (refreshed when older than {@link KeysetService#MAX_AGE}, so a revoked pack key stops working fast).
+     */
+    public static PackSyncService standard(AppDirs dirs, KeysetService keys) {
+        return new PackSyncService(dirs.updaterHome(), () -> HttpUtils.downloader().policy(), true,
+                () -> keys.refreshIfStale(KeysetService.MAX_AGE).packKeys(Instant.now()));
     }
 
     /** Pack version this launcher installed into {@code instance} (local file read), or empty. */
@@ -88,7 +103,7 @@ public final class PackSyncService {
     /** Brings {@code instance} to the pack of {@code source}. */
     public Result sync(PackSource source, Path instance, SyncProgress progress) {
         try {
-            PackClient client = new PackClient(home, policy.get());
+            PackClient client = new PackClient(home, policy.get(), packKeys.get());
             PackClient.Checked checked = client.check(secure(source), instance);
             banner = checked.status().maintenance() ? nz(checked.status().message()) : "";
             String version = client.update(checked, instance, progress::onProgress);

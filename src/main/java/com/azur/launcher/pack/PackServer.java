@@ -20,6 +20,8 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 import java.util.function.LongConsumer;
 
 /**
@@ -35,7 +37,7 @@ public final class PackServer {
     private static final Gson GSON = new Gson();
 
     private final URI base;
-    private final byte[] publicKey;
+    private final List<byte[]> keys;
     private final HostPolicy policy;
     private final HttpClient http = ProxyConfig.configure(HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NEVER)
@@ -43,6 +45,11 @@ public final class PackServer {
             .build();
 
     public PackServer(PackSource source, HostPolicy policy) throws PackException {
+        this(source, policy, Optional.empty());
+    }
+
+    /** @param trusted the pack keys of the keyset; empty = the key of the server entry (legacy) */
+    public PackServer(PackSource source, HostPolicy policy, Optional<List<byte[]>> trusted) throws PackException {
         if (!source.present()) {
             throw new PackException(PackException.NO_PACK, "the server list gives no pack address or key for this server");
         }
@@ -54,7 +61,7 @@ public final class PackServer {
         if (base.getHost() == null) {
             throw new PackException(PackException.NETWORK, "the pack server address is wrong");
         }
-        this.publicKey = source.publicKey();
+        this.keys = trusted.isPresent() ? List.copyOf(trusted.get()) : List.of(source.publicKey());
         this.policy = policy;
         checkPolicy(base.toString());
     }
@@ -118,7 +125,7 @@ public final class PackServer {
 
     public PackManifest manifest() throws PackException {
         try (InputStream in = get("manifest.json", 0, Duration.ofSeconds(30)).body()) {
-            return SignatureVerifier.open(in.readNBytes(SignatureVerifier.MAX_MANIFEST + 1), publicKey);
+            return SignatureVerifier.open(in.readNBytes(SignatureVerifier.MAX_MANIFEST + 1), keys);
         } catch (IOException e) {
             if (e instanceof PackException pe) {
                 throw pe;

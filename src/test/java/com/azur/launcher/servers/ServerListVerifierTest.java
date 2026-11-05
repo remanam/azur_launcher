@@ -74,7 +74,7 @@ class ServerListVerifierTest {
         ServerListException e = assertThrows(ServerListException.class,
                 () -> ServerListVerifier.open(env, key.getPublic(), later));
         assertEquals(ServerListException.Reason.EXPIRED, e.reason());
-        assertEquals(2, ServerListVerifier.openIgnoringExpiry(env, key.getPublic(), later).servers().size());
+        assertEquals(2, ServerListVerifier.openIgnoringExpiry(env, java.util.List.of(key.getPublic()), later).servers().size());
     }
 
     @Test

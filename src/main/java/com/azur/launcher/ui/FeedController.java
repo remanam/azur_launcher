@@ -1,7 +1,7 @@
 package com.azur.launcher.ui;
 
 import com.azur.launcher.feed.FeedService;
-import com.azur.launcher.servers.ServerListService;
+import com.azur.launcher.keys.KeysetService;
 
 import javafx.application.Platform;
 
@@ -18,13 +18,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Reads the notice feed 2 s after start and every 15 minutes while the launcher is open (not while the game runs). */
+/** Reads the notice feed (and refreshes the keyset first) 2 s after start and every 15 minutes while the launcher is open (not while the game runs). */
 final class FeedController {
 
     private static final long FIRST_DELAY_SECONDS = 2;
     private static final long PERIOD_MINUTES = 15;
 
     private final FeedService service;
+    private final KeysetService keysets;
     private final ScheduledExecutorService timer = Executors.newSingleThreadScheduledExecutor(runnable -> {
         Thread thread = new Thread(runnable, "azur-feed");
         thread.setDaemon(true);
@@ -32,8 +33,9 @@ final class FeedController {
     });
     private Consumer<com.azur.launcher.feed.FeedDocument> listener = doc -> { };
 
-    private FeedController(FeedService service) {
+    private FeedController(FeedService service, KeysetService keysets) {
         this.service = service;
+        this.keysets = keysets;
     }
 
     /** Null without a servers URL (dev run) or without the key. The feed host is the host of the servers URL. */
@@ -46,7 +48,8 @@ final class FeedController {
             URI base = URI.create(serversUrl);
             String url = base.resolve("/dl/feed.json").toString();
             return new FeedController(new FeedService(ctx.dirs.cacheDir(), url,
-                    ServerListService.appKey(ctx.dirs.serversKeyFile()), new HttpTransport(base.getHost()), gameBusy, ctx::log));
+                    () -> ctx.keysets.trust().serverKeys(java.time.Instant.now()), new HttpTransport(base.getHost()), gameBusy,
+                    ctx::log), ctx.keysets);
         } catch (Exception e) {
             ctx.log("Feed disabled: " + e.getMessage());
             return null;
@@ -68,6 +71,7 @@ final class FeedController {
     }
 
     private void checkNow() {
+        keysets.refreshIfStale(KeysetService.MAX_AGE); // an open launcher picks up key revocations on this timer too
         if (service.refresh()) {
             com.azur.launcher.feed.FeedDocument doc = service.current();
             Platform.runLater(() -> listener.accept(doc));

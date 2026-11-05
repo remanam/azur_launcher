@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PublicKey;
+import java.util.List;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Reads the signed feed: conditional GET (If-None-Match, a 304 costs almost nothing), signature check, and the last
@@ -28,7 +30,7 @@ public final class FeedService {
     private final Path cacheFile;
     private final Path etagFile;
     private final String url;
-    private final PublicKey key;
+    private final Supplier<List<PublicKey>> keys;
     private final Transport transport;
     private final BooleanSupplier gameBusy;
     private final Consumer<String> log;
@@ -37,10 +39,16 @@ public final class FeedService {
 
     public FeedService(Path cacheDir, String url, PublicKey key, Transport transport, BooleanSupplier gameBusy,
                        Consumer<String> log) {
+        this(cacheDir, url, () -> List.of(key), transport, gameBusy, log);
+    }
+
+    /** {@code keys} is read at every check: the servers keys of the current keyset (or the legacy key). */
+    public FeedService(Path cacheDir, String url, Supplier<List<PublicKey>> keys, Transport transport,
+                       BooleanSupplier gameBusy, Consumer<String> log) {
         this.cacheFile = cacheDir.resolve("feed.json");
         this.etagFile = cacheDir.resolve("feed.etag");
         this.url = url;
-        this.key = key;
+        this.keys = keys;
         this.transport = transport;
         this.gameBusy = gameBusy;
         this.log = log;
@@ -66,7 +74,7 @@ public final class FeedService {
                 log.accept("Feed: HTTP " + response.status());
                 return false;
             }
-            FeedDocument fresh = FeedDocument.open(response.body(), key);
+            FeedDocument fresh = FeedDocument.open(response.body(), keys.get());
             boolean changed = current == null || !current.generated().equals(fresh.generated());
             current = fresh;
             etag = response.etag() == null ? "" : response.etag();
@@ -83,7 +91,7 @@ public final class FeedService {
     private void loadCache() {
         try {
             if (Files.isRegularFile(cacheFile)) {
-                current = FeedDocument.open(Files.readAllBytes(cacheFile), key);
+                current = FeedDocument.open(Files.readAllBytes(cacheFile), keys.get());
                 etag = Files.isRegularFile(etagFile) ? Files.readString(etagFile).trim() : "";
             }
         } catch (IOException | UpdateException e) {

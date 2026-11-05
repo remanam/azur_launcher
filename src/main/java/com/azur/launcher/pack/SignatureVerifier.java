@@ -1,27 +1,22 @@
 package com.azur.launcher.pack;
 
+import com.azur.launcher.keys.Ed25519;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.annotations.SerializedName;
 
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.Signature;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Opens the signed manifest envelope {@code {payload, sig, key_id}}. The signed bytes are exactly the base64-decoded
  * {@code payload} (the publisher's JSON as it was signed, no re-serialisation); the signature is Ed25519 over them
- * with the pack key from the signed server list.
+ * with a pack key of the keyset (or, legacy, the key of the signed server list entry).
  */
 public final class SignatureVerifier {
 
     public static final int MAX_MANIFEST = 4 << 20;
-    /** DER prefix of an Ed25519 SubjectPublicKeyInfo; the 32 raw key bytes follow. */
-    private static final byte[] SPKI_PREFIX = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
     private static final Gson GSON = new Gson();
 
     private record Envelope(String payload, String sig, @SerializedName("key_id") String keyId) {
@@ -32,6 +27,11 @@ public final class SignatureVerifier {
 
     /** @throws PackException code {@code signature} when the signature or the manifest is wrong */
     public static PackManifest open(byte[] data, byte[] publicKey) throws PackException {
+        return open(data, List.of(publicKey));
+    }
+
+    /** Same with any of {@code keys} (the pack keys of the keyset, or the one key of the server entry). */
+    public static PackManifest open(byte[] data, List<byte[]> keys) throws PackException {
         if (data.length > MAX_MANIFEST) {
             throw wrong("the manifest is too large");
         }
@@ -40,7 +40,7 @@ public final class SignatureVerifier {
             Envelope env = GSON.fromJson(new String(data, StandardCharsets.UTF_8), Envelope.class);
             raw = Base64.getDecoder().decode(env.payload());
             byte[] sig = Base64.getDecoder().decode(env.sig());
-            if (!verify(publicKey, raw, sig)) {
+            if (keys.stream().noneMatch(k -> verify(k, raw, sig))) {
                 throw wrong("signature check failed: wrong server or the key changed");
             }
         } catch (IllegalArgumentException | NullPointerException | JsonSyntaxException e) {
@@ -59,21 +59,7 @@ public final class SignatureVerifier {
     }
 
     public static boolean verify(byte[] publicKey, byte[] message, byte[] signature) {
-        if (publicKey == null || publicKey.length != 32) {
-            return false;
-        }
-        try {
-            byte[] spki = new byte[SPKI_PREFIX.length + 32];
-            System.arraycopy(SPKI_PREFIX, 0, spki, 0, SPKI_PREFIX.length);
-            System.arraycopy(publicKey, 0, spki, SPKI_PREFIX.length, 32);
-            PublicKey key = KeyFactory.getInstance("Ed25519").generatePublic(new X509EncodedKeySpec(spki));
-            Signature s = Signature.getInstance("Ed25519");
-            s.initVerify(key);
-            s.update(message);
-            return s.verify(signature);
-        } catch (GeneralSecurityException e) {
-            return false;
-        }
+        return Ed25519.verify(publicKey, message, signature);
     }
 
     private static PackException wrong(String message) {

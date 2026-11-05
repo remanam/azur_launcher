@@ -4,7 +4,7 @@ import com.azur.launcher.AppVersion;
 import com.azur.launcher.Launcher;
 import com.azur.launcher.net.Checks;
 import com.azur.launcher.net.HttpUtils;
-import com.azur.launcher.servers.ServerListService;
+import com.azur.launcher.keys.KeysetService;
 import com.azur.launcher.update.Restarter;
 import com.azur.launcher.update.UpdateService;
 import com.azur.launcher.update.UpdateStore;
@@ -49,7 +49,8 @@ final class UpdateController {
         }
         try {
             String wrapper = System.getProperty(Launcher.WRAPPER_PROPERTY, AppVersion.WRAPPER);
-            UpdateService service = new UpdateService(store, ServerListService.appKey(ctx.dirs.serversKeyFile()),
+            UpdateService service = new UpdateService(store,
+                    UpdateService.forTrust(() -> ctx.keysets.refreshIfStale(KeysetService.MAX_AGE), java.time.Clock.systemUTC()),
                     URI.create(serversUrl).resolve("/dl/launcher.json").toString(), new HttpTransport(),
                     AppVersion.APP, wrapper, gameBusy, ctx::log);
             return new UpdateController(ctx, service);

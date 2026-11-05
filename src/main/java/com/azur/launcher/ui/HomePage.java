@@ -283,7 +283,7 @@ final class HomePage {
             ServerListService service;
             try {
                 service = new ServerListService(ctx.dirs.serversCacheFile(),
-                        ServerListService.appKey(ctx.dirs.serversKeyFile()), ctx.pack.getServersUrl(),
+                        () -> ctx.keysets.trust().serverKeys(java.time.Instant.now()), ctx.pack.getServersUrl(),
                         HttpUtils::getListBytes, Clock.systemUTC(), ctx::log);
             } catch (Exception e) {
                 ctx.log("Server list: cannot start: " + e);
@@ -295,6 +295,7 @@ final class HomePage {
                 applyServer(pick(cached), cached.list().servers(), null);
             }
             try {
+                ctx.keysets.refreshIfStale(com.azur.launcher.keys.KeysetService.MAX_AGE); // revocations before the list
                 ServerListService.Loaded loaded = service.load();
                 if (loaded.source() != ServerListService.Source.NETWORK) {
                     ctx.log("Server list from cache (server unavailable)");
@@ -344,7 +345,7 @@ final class HomePage {
             try {
                 Instance current = instance();
                 snap = packState.read(current, entry, force);
-                version = PackSyncService.standard(ctx.dirs).installedVersion(current.gameDir());
+                version = PackSyncService.standard(ctx.dirs, ctx.keysets).installedVersion(current.gameDir());
             } catch (Exception e) {
                 ctx.log("Home: state unavailable: " + e.getMessage());
             }

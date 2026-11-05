@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -40,16 +41,23 @@ public final class PackClient {
 
     private final Path home;
     private final HostPolicy policy;
+    private final Optional<List<byte[]>> packKeys;
 
     /** @param home the client's own state folder (state, backups); never inside the game folder */
     public PackClient(Path home, HostPolicy policy) {
+        this(home, policy, Optional.empty());
+    }
+
+    /** @param packKeys the pack keys of the keyset; empty = the key of the server entry (legacy) */
+    public PackClient(Path home, HostPolicy policy, Optional<List<byte[]>> packKeys) {
         this.home = home;
         this.policy = policy;
+        this.packKeys = packKeys;
     }
 
     /** Contacts the server, verifies the manifest, plans the changes. Writes nothing. */
     public Checked check(PackSource source, Path game) throws IOException {
-        PackServer server = new PackServer(source, policy);
+        PackServer server = new PackServer(source, policy, packKeys);
         PackServer.Status status = server.status();
         PackManifest manifest = server.manifest();
         if (compareVersion(VERSION, manifest.minUpdater()) < 0) {

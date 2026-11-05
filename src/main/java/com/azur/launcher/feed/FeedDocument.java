@@ -1,5 +1,6 @@
 package com.azur.launcher.feed;
 
+import com.azur.launcher.keys.Ed25519;
 import com.azur.launcher.update.UpdateException;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -8,9 +9,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.JsonParser;
 
 import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
 import java.security.PublicKey;
-import java.security.Signature;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -54,6 +53,11 @@ public record FeedDocument(String generated, List<FeedNotice> notices, List<Feed
 
     /** Parses and verifies; throws {@link UpdateException} for a bad format or signature. */
     public static FeedDocument open(byte[] raw, PublicKey key) throws UpdateException {
+        return open(raw, List.of(key));
+    }
+
+    /** Same with any of {@code keys} (the servers keys of the keyset). */
+    public static FeedDocument open(byte[] raw, List<PublicKey> keys) throws UpdateException {
         if (raw.length > MAX_BYTES) {
             throw new UpdateException("feed too large");
         }
@@ -75,7 +79,7 @@ public record FeedDocument(String generated, List<FeedNotice> notices, List<Feed
                  | ClassCastException e) {
             throw new UpdateException("not a feed");
         }
-        if (!signatureValid(doc.signedMessage().getBytes(StandardCharsets.UTF_8), signature, key)) {
+        if (!Ed25519.verifyAny(keys, doc.signedMessage().getBytes(StandardCharsets.UTF_8), signature)) {
             throw new UpdateException("bad signature");
         }
         return doc;
@@ -83,16 +87,5 @@ public record FeedDocument(String generated, List<FeedNotice> notices, List<Feed
 
     private static JsonArray array(JsonObject json, String name) {
         return json.has(name) && json.get(name).isJsonArray() ? json.getAsJsonArray(name) : new JsonArray();
-    }
-
-    private static boolean signatureValid(byte[] message, byte[] signature, PublicKey key) {
-        try {
-            Signature verifier = Signature.getInstance("Ed25519");
-            verifier.initVerify(key);
-            verifier.update(message);
-            return verifier.verify(signature);
-        } catch (GeneralSecurityException e) {
-            return false;
-        }
     }
 }

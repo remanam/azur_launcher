@@ -1,5 +1,6 @@
 package com.azur.launcher.servers;
 
+import com.azur.launcher.keys.Ed25519;
 import com.azur.launcher.pack.PackSource;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -7,10 +8,7 @@ import com.google.gson.JsonParseException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
-import java.security.KeyFactory;
 import java.security.PublicKey;
-import java.security.Signature;
-import java.security.spec.X509EncodedKeySpec;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -29,8 +27,6 @@ public final class ServerListVerifier {
 
     public static final int SCHEMA = 2;
     private static final int MAX_BYTES = 1 << 20;
-    /** DER prefix of an Ed25519 SubjectPublicKeyInfo; the 32 raw key bytes follow. */
-    private static final byte[] SPKI_PREFIX = {0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00};
     private static final Gson GSON = new Gson();
 
     private ServerListVerifier() {
@@ -38,28 +34,30 @@ public final class ServerListVerifier {
 
     /** Builds a key from its base64 raw 32-byte form (what {@code azur-servers pubkey} prints). */
     public static PublicKey publicKey(String base64) throws GeneralSecurityException {
-        byte[] raw = Base64.getDecoder().decode(base64.trim());
-        if (raw.length != 32) {
-            throw new GeneralSecurityException("Ed25519 public key must be 32 bytes");
+        try {
+            return Ed25519.publicKey(Ed25519.raw(base64));
+        } catch (IllegalArgumentException e) {
+            throw new GeneralSecurityException(e.getMessage());
         }
-        byte[] der = new byte[SPKI_PREFIX.length + 32];
-        System.arraycopy(SPKI_PREFIX, 0, der, 0, SPKI_PREFIX.length);
-        System.arraycopy(raw, 0, der, SPKI_PREFIX.length, 32);
-        return KeyFactory.getInstance("Ed25519").generatePublic(new X509EncodedKeySpec(der));
     }
 
     /** Verifies signature, format and expiry. */
     public static ServerList open(byte[] envelope, PublicKey key, Instant now) throws ServerListException {
-        return open(envelope, key, now, false);
+        return open(envelope, List.of(key), now, false);
+    }
+
+    /** Same with any of {@code keys} (the servers keys of the keyset). */
+    public static ServerList open(byte[] envelope, List<PublicKey> keys, Instant now) throws ServerListException {
+        return open(envelope, keys, now, false);
     }
 
     /** Same, but an expired (yet correctly signed) file is accepted; used for the cached copy only. */
-    public static ServerList openIgnoringExpiry(byte[] envelope, PublicKey key, Instant now)
+    public static ServerList openIgnoringExpiry(byte[] envelope, List<PublicKey> keys, Instant now)
             throws ServerListException {
-        return open(envelope, key, now, true);
+        return open(envelope, keys, now, true);
     }
 
-    private static ServerList open(byte[] envelope, PublicKey key, Instant now, boolean ignoreExpiry)
+    private static ServerList open(byte[] envelope, List<PublicKey> keys, Instant now, boolean ignoreExpiry)
             throws ServerListException {
         if (envelope.length > MAX_BYTES) {
             throw new ServerListException(ServerListException.Reason.BAD_FORMAT, "file too large");
@@ -73,7 +71,7 @@ public final class ServerListVerifier {
         } catch (RuntimeException e) {
             throw new ServerListException(ServerListException.Reason.BAD_FORMAT, "not a signed envelope");
         }
-        if (!signatureValid(payload, sig, key)) {
+        if (!Ed25519.verifyAny(keys, payload, sig)) {
             throw new ServerListException(ServerListException.Reason.BAD_SIGNATURE, "bad signature");
         }
         ServerList list = parse(payload);
@@ -81,17 +79,6 @@ public final class ServerListVerifier {
             throw new ServerListException(ServerListException.Reason.EXPIRED, "expired " + list.validUntil());
         }
         return list;
-    }
-
-    private static boolean signatureValid(byte[] payload, byte[] sig, PublicKey key) {
-        try {
-            Signature verifier = Signature.getInstance("Ed25519");
-            verifier.initVerify(key);
-            verifier.update(payload);
-            return verifier.verify(sig);
-        } catch (GeneralSecurityException e) {
-            return false;
-        }
     }
 
     static ServerList parse(byte[] payload) throws ServerListException {
