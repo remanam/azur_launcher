@@ -7,7 +7,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
- * Opt-in telemetry (default OFF). {@link #report} never blocks and never throws: it drops the event when telemetry is off,
+ * Anonymous telemetry (on by default, but only after the notice was shown; the {@code enabled} supplier covers both). {@link #report} never blocks and never throws: it drops the event when telemetry is off,
  * when the queue (32) is full or when the site does not answer. One daemon thread sends, one attempt per event. The only
  * identifier is the random install id; see docs/plans/ANALYTICS.md and the site's /privacy.
  */
@@ -42,8 +42,11 @@ public final class TelemetryClient {
     }
 
     public void report(TelemetryEvent event) {
+        if (!enabled.getAsBoolean()) {
+            return; // off, or the notice has not been shown yet: nothing is queued, no id is created
+        }
         String id = installId.get();
-        if (!enabled.getAsBoolean() || id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty()) {
             return;
         }
         if (!queue.offer(json(id, event))) {

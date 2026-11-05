@@ -18,6 +18,9 @@ final class TelemetryOption {
 
     /** The notice instead of a question: what is sent, where to switch it off, link to the privacy page. */
     static Node notice(AppContext ctx) {
+        if (ctx.config.markTelemetryNoticeShown()) {
+            ctx.saveConfig();
+        }
         Label text = UiKit.label(I18n.tr("telemetry.notice"), "option-subtitle");
         text.setWrapText(true);
         text.setMaxWidth(420);

@@ -89,7 +89,8 @@ final class AppContext {
         // The signed server list and our own mirror live on our https host; allow it before the first request
         // (the policy is a central allowlist, so a host not added here is never fetched).
         HttpUtils.allowHosts(this.pack.getServersUrl());
-        this.telemetry = new com.azur.launcher.telemetry.TelemetryClient(config::isTelemetryEnabled, config::getTelemetryId, AppVersion.APP,
+        config.migrateTelemetryNotice(accounts.selected() != null);
+        this.telemetry = new com.azur.launcher.telemetry.TelemetryClient(config::isTelemetrySendable, config::getTelemetryId, AppVersion.APP,
                 telemetrySender(this.pack.getServersUrl()));
         this.site = createSiteAuth(dirs, this.pack.getServersUrl());
         this.accountController = site == null ? null : new AccountController(site, io, state -> Platform.runLater(() -> accountViews.forEach(v -> v.accept(state))),

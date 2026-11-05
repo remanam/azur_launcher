@@ -28,6 +28,8 @@ public class LauncherConfig {
     private boolean telemetryEnabled = true;
     /** Random install id (32 hex), created when telemetry is switched on, erased when it is switched off. */
     private String telemetryId = "";
+    /** The telemetry notice has been shown (wizard step 2, About, or an already finished wizard). null = old file, decided once at start. Nothing is sent before. */
+    private Boolean telemetryNoticeShown;
 
     public String getVersionId() {
         return versionId;
@@ -103,6 +105,31 @@ public class LauncherConfig {
 
     public boolean isTelemetryEnabled() {
         return telemetryEnabled;
+    }
+
+    public boolean isTelemetryNoticeShown() {
+        return Boolean.TRUE.equals(telemetryNoticeShown);
+    }
+
+    /** Returns true when the flag changed (the caller saves the config). */
+    public boolean markTelemetryNoticeShown() {
+        boolean changed = !isTelemetryNoticeShown();
+        telemetryNoticeShown = true;
+        return changed;
+    }
+
+    /** Old files have no flag: an installation with a finished wizard has seen the notice, a fresh one has not. */
+    public boolean migrateTelemetryNotice(boolean wizardFinished) {
+        if (telemetryNoticeShown != null) {
+            return false;
+        }
+        telemetryNoticeShown = wizardFinished;
+        return wizardFinished;
+    }
+
+    /** Events leave the launcher only when telemetry is on AND the player has seen the notice. */
+    public boolean isTelemetrySendable() {
+        return telemetryEnabled && isTelemetryNoticeShown();
     }
 
     public String getTelemetryId() {

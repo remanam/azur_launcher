@@ -141,4 +141,53 @@ class TelemetryTest {
         assertEquals("linux", TelemetryClient.osName("Linux"));
         assertEquals("other", TelemetryClient.osName("FreeBSD"));
     }
+
+    @Test
+    void nothingIsSentOrQueuedBeforeTheNoticeIsShownThenItIs() throws Exception {
+        LauncherConfig config = new LauncherConfig();
+        assertTrue(config.migrateTelemetryNotice(false) == false);
+        List<String> sent = new CopyOnWriteArrayList<>();
+        CountDownLatch one = new CountDownLatch(1);
+        TelemetryClient c = new TelemetryClient(config::isTelemetrySendable, config::getTelemetryId, "1.0.6", "linux", (p, j) -> {
+            sent.add(j);
+            one.countDown();
+        });
+        c.report("start", true, "", 0);
+        Thread.sleep(100);
+        assertEquals(0, sent.size());
+        assertEquals(0, c.queued());
+        assertTrue(config.markTelemetryNoticeShown());
+        assertFalse(config.markTelemetryNoticeShown());
+        c.report("install", true, "", 1);
+        assertTrue(one.await(3, TimeUnit.SECONDS));
+        assertEquals(1, sent.size());
+        assertTrue(sent.get(0).contains("\"step\":\"install\""));
+    }
+
+    @Test
+    void finishedWizardCountsAsNoticeShownAndSwitchStillWorks() throws Exception {
+        LauncherConfig old = new LauncherConfig();
+        assertTrue(old.migrateTelemetryNotice(true));
+        assertTrue(old.isTelemetrySendable());
+        assertFalse(old.migrateTelemetryNotice(false), "decided once");
+        List<String> sent = new CopyOnWriteArrayList<>();
+        List<String> forgotten = new CopyOnWriteArrayList<>();
+        CountDownLatch forget = new CountDownLatch(1);
+        TelemetryClient c = new TelemetryClient(old::isTelemetrySendable, old::getTelemetryId, "1.0.6", "linux", (p, j) -> {
+            if (p.equals(TelemetryClient.FORGET_PATH)) {
+                forgotten.add(j);
+                forget.countDown();
+            } else {
+                sent.add(j);
+            }
+        });
+        String id = old.getTelemetryId();
+        c.forget(old.setTelemetryEnabled(false));
+        assertTrue(forget.await(3, TimeUnit.SECONDS));
+        assertTrue(forgotten.get(0).contains(id));
+        assertFalse(old.isTelemetrySendable());
+        c.report("install", true, "", 1);
+        Thread.sleep(100);
+        assertEquals(0, sent.size());
+    }
 }
