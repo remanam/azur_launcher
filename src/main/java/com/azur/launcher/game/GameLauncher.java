@@ -59,6 +59,7 @@ public class GameLauncher {
     private volatile Path gameLogFile;
     private volatile HangHandler hangHandler;
     private volatile LaunchWatchdog watchdog;
+    private volatile java.util.concurrent.Callable<List<String>> loginArgs;
 
     public GameLauncher(GamePaths paths, Consumer<String> logger, DownloadManager.ProgressListener progressListener) {
         this.paths = paths;
@@ -70,6 +71,12 @@ public class GameLauncher {
     /** Uses {@code instance} instead of the default one from {@link AppDirs}. */
     public GameLauncher withInstance(Instance instance) {
         this.fixedInstance = instance;
+        return this;
+    }
+
+    /** Extra JVM arguments chosen at the last moment (login ticket and key file paths); called after the files are prepared. */
+    public GameLauncher withLoginArgs(java.util.concurrent.Callable<List<String>> supplier) {
+        this.loginArgs = supplier;
         return this;
     }
 
@@ -153,7 +160,11 @@ public class GameLauncher {
             profile.setAssetIndexName(prepared.assetIndexName());
             profile.setMaxMemoryMb(pin.ramMaxMb());
             profile.setMinMemoryMb(pin.ramMinMb());
-            profile.setExtraJvmArgs(pin.jvmArgs());
+            List<String> jvmArgs = new java.util.ArrayList<>(pin.jvmArgs());
+            if (loginArgs != null) {
+                jvmArgs.addAll(loginArgs.call());
+            }
+            profile.setExtraJvmArgs(jvmArgs);
             profile.setWindowWidth(config.getWindowWidth());
             profile.setWindowHeight(config.getWindowHeight());
             profile.setAccount(LaunchContext.from(account));

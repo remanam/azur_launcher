@@ -71,6 +71,11 @@ public final class AppDirs {
         return root.resolve("accounts").resolve("player.vault");
     }
 
+    /** Site sign-in of this device (device id, refresh token, Ed25519 key) in the encrypted vault. */
+    public Path siteSessionVaultFile() {
+        return root.resolve("accounts").resolve("site.vault");
+    }
+
     /** Default game directory (versions, libraries, assets). */
     public Path gameDir() {
         return root.resolve("game");

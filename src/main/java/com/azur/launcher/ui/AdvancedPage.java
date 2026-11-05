@@ -44,7 +44,16 @@ final class AdvancedPage {
         header.setAlignment(Pos.CENTER_LEFT);
         VBox options = new VBox(0, languageRow(), memoryRow(), javaRow(), folderRow(), logRow());
         VBox player = UiKit.card(UiKit.label(I18n.tr("advanced.player"), "card-title"), new PlayerSection(ctx).node());
-        VBox page = new VBox(18, header, player, UiKit.card(options), repairCard(play), aboutCard());
+        VBox page = new VBox(18, header);
+        if (ctx.accountController != null) {
+            VBox account = UiKit.card(UiKit.label(I18n.tr("account.title"), "card-title"), ctx.sitePanel().node());
+            page.getChildren().add(account);
+            ctx.bindAccount(state -> {
+                player.setVisible(!state.signedIn());
+                player.setManaged(!state.signedIn());
+            });
+        }
+        page.getChildren().addAll(player, UiKit.card(options), repairCard(play), aboutCard());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
         detectJava();

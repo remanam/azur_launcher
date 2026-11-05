@@ -1538,3 +1538,16 @@
     -fx-padding: 8 18 8 18;
     -fx-font-size: 14px;
 }
+
+/* ---- site account block (stage 4) ---- */
+.account-code {
+    -fx-font-family: "Philosopher";
+    -fx-font-size: 36px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -azur-primary;
+}
+
+.account-note {
+    -fx-font-size: 14px;
+    -fx-text-fill: -azur-on-surface-variant;
+}

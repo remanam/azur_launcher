@@ -62,6 +62,27 @@ final class FirstRunWizard {
     }
 
     private VBox accountStep() {
+        if (ctx.accountController == null) {
+            return nickStep();
+        }
+        SiteLoginPanel panel = ctx.sitePanel();
+        VBox nickBox = nickStep();
+        nickBox.setVisible(false);
+        nickBox.setManaged(false);
+        Label noAccountHint = UiKit.label(I18n.tr("account.nick_only_hint"), "account-note");
+        noAccountHint.setVisible(false);
+        noAccountHint.setManaged(false);
+        Button nickOnly = UiKit.button(I18n.tr("account.btn.nick_only"), null, "button-border", () -> {
+            nickBox.setVisible(true);
+            nickBox.setManaged(true);
+            noAccountHint.setVisible(true);
+            noAccountHint.setManaged(true);
+        });
+        VBox box = step(1, "wizard.1.title_site", "wizard.1.hint_site", panel.node(), nickOnly, noAccountHint, nickBox);
+        return box;
+    }
+
+    private VBox nickStep() {
         TextField nick = new TextField();
         nick.setPromptText(I18n.tr("wizard.nick_prompt"));
         nick.setMaxWidth(320);

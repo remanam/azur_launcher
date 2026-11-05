@@ -1,6 +1,12 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.account.AccountController;
+import com.azur.launcher.account.AccountFlowState;
+import com.azur.launcher.account.HttpSiteApi;
+import com.azur.launcher.account.SessionStorage;
+import com.azur.launcher.account.SiteAuth;
 import com.azur.launcher.auth.AccountStore;
+import com.azur.launcher.auth.StringVault;
 import com.azur.launcher.api.CommunityApi;
 import com.azur.launcher.auth.PlayerTokenStore;
 import com.azur.launcher.config.AppDirs;
@@ -38,6 +44,10 @@ final class AppContext {
     final ProxySettings proxySettings;
     /** Token of the community API (registration, roles); empty until the player registers. */
     final PlayerTokenStore playerTokens;
+    /** Sign-in through the site (device flow); {@code null} in a dev run without a servers URL. */
+    final SiteAuth site;
+    /** Account block state + background sign-in; {@code null} together with {@link #site}. */
+    final AccountController accountController;
     final HostServices host;
     final Stage stage;
     /** Server list and pack sync settings (servers.json address, API address). */
@@ -55,6 +65,7 @@ final class AppContext {
     private final List<Runnable> accountListeners = new ArrayList<>();
     private Consumer<String> logView = line -> { };
     private Consumer<String> statusView = text -> { };
+    private final List<Consumer<AccountFlowState>> accountViews = new java.util.concurrent.CopyOnWriteArrayList<>();
     private DoubleConsumer progressView = value -> { };
 
     AppContext(AppDirs dirs, ConfigManager configManager, LauncherConfig config, AccountStore accounts,
@@ -75,6 +86,75 @@ final class AppContext {
         // The signed server list and our own mirror live on our https host; allow it before the first request
         // (the policy is a central allowlist, so a host not added here is never fetched).
         HttpUtils.allowHosts(this.pack.getServersUrl());
+        this.site = createSiteAuth(dirs, this.pack.getServersUrl());
+        this.accountController = site == null ? null : new AccountController(site, io, state -> Platform.runLater(() -> accountViews.forEach(v -> v.accept(state))),
+                url -> Platform.runLater(() -> host.showDocument(url)), AppContext::deviceName, this::siteSessionChanged);
+        if (accountController != null) {
+            accountController.load();
+        }
+    }
+
+    private static String deviceName() {
+        String host;
+        try {
+            host = java.net.InetAddress.getLocalHost().getHostName();
+        } catch (java.io.IOException | RuntimeException e) {
+            host = "";
+        }
+        return "Азур Лаунчер" + (host.isBlank() ? "" : " (" + host + ")");
+    }
+
+    /** Signed in: the account nick becomes the selected player; signed out: the saved nicks apply again. */
+    private void siteSessionChanged(java.util.Optional<com.azur.launcher.account.SiteSession> session) {
+        session.ifPresent(s -> {
+            if (com.azur.launcher.auth.OfflineAccount.isValidName(s.nick())) {
+                accounts.selectOffline(com.azur.launcher.auth.OfflineAccount.of(s.nick()));
+                try {
+                    accounts.save();
+                } catch (java.io.IOException e) {
+                    log("Cannot save accounts: " + e.getMessage());
+                }
+            }
+        });
+        Platform.runLater(this::fireAccountsChanged);
+    }
+
+    /** A new account block bound to the shared state (the wizard and «Дополнительно» each have one). */
+    SiteLoginPanel sitePanel() {
+        SiteLoginPanel panel = new SiteLoginPanel(accountController, siteOrigin(pack.getServersUrl()) + "/account",
+                url -> host.showDocument(url), System::currentTimeMillis);
+        bindAccount(panel::show);
+        return panel;
+    }
+
+    /** The account block (Home wizard, Advanced) listens here; the last state is replayed to a new listener. */
+    void bindAccount(Consumer<AccountFlowState> view) {
+        accountViews.add(view);
+        if (accountController != null) {
+            view.accept(accountController.state());
+        }
+    }
+
+    private static SiteAuth createSiteAuth(AppDirs dirs, String serversUrl) {
+        String origin = siteOrigin(serversUrl);
+        if (origin.isEmpty()) {
+            return null;
+        }
+        return new SiteAuth(new HttpSiteApi(origin), SessionStorage.vault(StringVault.system(dirs.siteSessionVaultFile())),
+                System::currentTimeMillis, Thread::sleep);
+    }
+
+    /** {@code https://host} of the servers URL (the site lives next to the signed list), or empty. */
+    static String siteOrigin(String serversUrl) {
+        try {
+            java.net.URI uri = java.net.URI.create(serversUrl == null ? "" : serversUrl.trim());
+            if (uri.getScheme() == null || uri.getHost() == null) {
+                return "";
+            }
+            return uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
+        } catch (IllegalArgumentException e) {
+            return "";
+        }
     }
 
     /**

@@ -19,6 +19,8 @@ public class LauncherConfig {
     private int hangSeconds = 120;
     /** Seconds the start may take without the "loaded" marker (0 = no limit). */
     private int startupLimitSeconds = 480;
+    /** Hand the device key to the game in a 0600 file so reconnects sign in without the launcher (false = ticket only). */
+    private boolean shareKeyWithGame = true;
     private boolean darkMode = false;
     private String lastServerId = "";
     private String language = "ru";
@@ -93,6 +95,14 @@ public class LauncherConfig {
 
     public void setWindowHeight(int windowHeight) {
         this.windowHeight = windowHeight;
+    }
+
+    public boolean isShareKeyWithGame() {
+        return shareKeyWithGame;
+    }
+
+    public void setShareKeyWithGame(boolean value) {
+        this.shareKeyWithGame = value;
     }
 
     public int getHangSeconds() {

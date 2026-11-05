@@ -1,6 +1,11 @@
 package com.azur.launcher.ui;
 
+import com.azur.launcher.account.LoginHandoff;
+import com.azur.launcher.account.SiteErrors;
+import com.azur.launcher.account.SiteException;
+import com.azur.launcher.account.SiteSession;
 import com.azur.launcher.auth.AuthAccount;
+import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.game.GameLauncher;
 import com.azur.launcher.game.PinService;
 import com.azur.launcher.i18n.I18n;
@@ -34,6 +39,8 @@ final class PlayController implements GameStarter {
     private volatile Phase phase = Phase.IDLE;
     private GameLauncher game;
     private volatile boolean cancelled;
+    /** Game directory of the last start: leftover login files are removed there when the game exits. */
+    private volatile Path lastGameDir;
     private final InstallProgress installProgress = new InstallProgress();
     /** The server Home shows; {@code null} = the embedded default instance. */
     private volatile ServerEntry server;
@@ -101,7 +108,8 @@ final class PlayController implements GameStarter {
             ctx.setStatus(I18n.tr("play.cancelling"));
             return;
         }
-        AuthAccount account = ctx.accounts.selected();
+        AuthAccount account = ctx.site == null || ctx.site.session().isEmpty()
+                ? ctx.accounts.selected() : siteAccount(ctx.site.session().get());
         if (account == null) {
             error(I18n.tr("home.sign_in_needed"));
             return;
@@ -114,6 +122,36 @@ final class PlayController implements GameStarter {
         cancelled = false;
         setPhase(Phase.PREPARING);
         ctx.io.submit(() -> prepareAndLaunch(server, account));
+    }
+
+    /** Signed in through the site: the game nick is the account nick (exact case), the saved nicks are not used. */
+    private AuthAccount siteAccount(SiteSession session) {
+        if (!OfflineAccount.isValidName(session.nick())) {
+            error(I18n.tr("account.err.nick_rules"));
+            return null;
+        }
+        return OfflineAccount.of(session.nick());
+    }
+
+    /** Ticket + key files for the game; a refused device stops the launch with one polite sentence, a lost network does not. */
+    private List<String> loginArgs(Instance instance) throws IOException {
+        if (ctx.site == null) {
+            return List.of();
+        }
+        try {
+            LoginHandoff.Prepared prepared = new LoginHandoff(ctx.site, "")
+                    .prepare(instance.gameDir(), ctx.config.isShareKeyWithGame());
+            if (!prepared.notice().isEmpty()) {
+                ctx.log("Login handoff: " + prepared.notice());
+            }
+            return prepared.jvmArgs();
+        } catch (SiteException e) {
+            ctx.log("Login handoff refused: " + e.code());
+            if (SiteErrors.dropsSession(e)) {
+                Platform.runLater(() -> ctx.accountController.sessionRefused(SiteErrors.key(e)));
+            }
+            throw new IOException(I18n.tr(SiteErrors.key(e)), e);
+        }
     }
 
     private void prepareAndLaunch(ServerEntry server, AuthAccount account) {
@@ -218,6 +256,8 @@ final class PlayController implements GameStarter {
             installProgress.finish();
             GameLauncher launcher = new GameLauncher(ctx.gamePaths(), ctx::log, progress()).withInstance(instance);
             launcher.addExitSink(code -> Platform.runLater(() -> onExit(code, launcher)));
+            lastGameDir = instance.gameDir();
+            launcher.withLoginArgs(() -> loginArgs(instance));
             game = launcher;
             launcher.setHangHandler((message, keyLines, dump) -> askTerminate(message, keyLines, dump, launcher));
             launcher.launch(ctx.config, account);
@@ -280,6 +320,10 @@ final class PlayController implements GameStarter {
 
     private void onExit(int code, GameLauncher launcher) {
         setPhase(Phase.IDLE);
+        Path dir = lastGameDir;
+        if (dir != null) {
+            ctx.io.submit(() -> LoginHandoff.cleanup(dir));
+        }
         ctx.setStatus(I18n.tr("home.exited", code));
         if (code != 0) {
             Path logFile = launcher.gameLogFile();

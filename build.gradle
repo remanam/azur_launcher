@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.azur'
-version = '1.0.4'
+version = '1.0.5'
 
 java {
     toolchain {
@@ -132,4 +132,12 @@ tasks.named('test', Test) {
     useJUnitPlatform()
     // i18n and CJK tests read paths relative to the project, not the repository root.
     workingDir = projectDir
+}
+
+// Dev tool: one PNG of the account blocks (sign-in code and signed-in), no window. Output: -Psnapshot=<file>.
+tasks.register('snapshotAccount', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.azur.launcher.ui.AccountSnapshot'
+    systemProperty 'snapshot.out', project.findProperty('snapshot') ?: layout.buildDirectory.file('account.png').get().asFile.path
 }
