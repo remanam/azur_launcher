@@ -9,7 +9,7 @@ package com.azur.launcher;
  */
 public final class AppVersion {
 
-    public static final String APP = "1.0.6";
+    public static final String APP = "1.0.7";
     public static final String WRAPPER = "1.0.0";
 
     private AppVersion() {
