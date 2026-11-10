@@ -28,6 +28,8 @@ class PackUnitTest {
     @Test
     void unsafePathsAreRefused() {
         assertTrue(PackPaths.isSafeRel("mods/a.jar"));
+        assertTrue(PackPaths.isSafeRel("servers.dat"));
+        assertFalse(PackPaths.isSafeRel("options.txt"));
         for (String bad : List.of("../mods/a.jar", "mods/../x/a", "/mods/a.jar", "mods\\a.jar", "saves/level.dat",
                 "mods", "mods//a", "mods/a.", "C:/x/y", "mods/./a")) {
             assertFalse(PackPaths.isSafeRel(bad), bad);

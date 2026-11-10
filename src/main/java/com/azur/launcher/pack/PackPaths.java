@@ -13,6 +13,9 @@ public final class PackPaths {
     public static final List<String> ALLOWED_ROOTS =
             List.of("mods", "config", "defaultconfigs", "resourcepacks", "shaderpacks");
 
+    /** The only files at the instance root the pack may write (keep-if-exists). */
+    public static final List<String> ROOT_FILES = List.of("servers.dat");
+
     private PackPaths() {
     }
 
@@ -32,7 +35,10 @@ public final class PackPaths {
                 return false;
             }
         }
-        return parts.length >= 2 && ALLOWED_ROOTS.contains(parts[0]);
+        if (parts.length == 1) {
+            return ROOT_FILES.contains(p);
+        }
+        return ALLOWED_ROOTS.contains(parts[0]);
     }
 
     /** Joins {@code base} and a safe relative path and refuses any existing symlink on the way. */
