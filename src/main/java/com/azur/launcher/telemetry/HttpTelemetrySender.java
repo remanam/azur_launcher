@@ -15,8 +15,6 @@ import java.time.Duration;
 public final class HttpTelemetrySender implements TelemetrySender {
 
     private final String origin;
-    private final HttpClient client = HttpClient.newBuilder().proxy(ProxyConfig.selector())
-            .connectTimeout(Duration.ofSeconds(3)).followRedirects(HttpClient.Redirect.NEVER).build();
 
     public HttpTelemetrySender(String origin) {
         this.origin = origin.endsWith("/") ? origin.substring(0, origin.length() - 1) : origin;
@@ -32,7 +30,7 @@ public final class HttpTelemetrySender implements TelemetrySender {
                 .header("Content-Type", "application/json").header("User-Agent", HttpUtils.USER_AGENT)
                 .POST(HttpRequest.BodyPublishers.ofString(json, StandardCharsets.UTF_8)).build();
         try {
-            int code = client.send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
+            int code = com.azur.launcher.net.SharedHttp.client().send(request, HttpResponse.BodyHandlers.discarding()).statusCode();
             if (code / 100 != 2) {
                 throw new IOException("HTTP " + code);
             }

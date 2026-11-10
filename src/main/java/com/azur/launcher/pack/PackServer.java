@@ -39,10 +39,6 @@ public final class PackServer {
     private final URI base;
     private final List<byte[]> keys;
     private final HostPolicy policy;
-    private final HttpClient http = ProxyConfig.configure(HttpClient.newBuilder()
-            .followRedirects(HttpClient.Redirect.NEVER)
-            .connectTimeout(Duration.ofSeconds(15)))
-            .build();
 
     public PackServer(PackSource source, HostPolicy policy) throws PackException {
         this(source, policy, Optional.empty());
@@ -92,7 +88,7 @@ public final class PackServer {
         }
         HttpResponse<InputStream> resp;
         try {
-            resp = http.send(req.build(), HttpResponse.BodyHandlers.ofInputStream());
+            resp = com.azur.launcher.net.SharedHttp.client().send(req.build(), HttpResponse.BodyHandlers.ofInputStream());
         } catch (IOException e) {
             throw new PackException(PackException.NETWORK, "cannot reach the pack server", e);
         } catch (InterruptedException e) {

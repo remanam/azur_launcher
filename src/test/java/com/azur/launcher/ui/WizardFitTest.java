@@ -36,9 +36,8 @@ class WizardFitTest {
             note.setWrapText(true);
             note.setMaxWidth(420);
             Button install = UiKit.button(I18n.tr("wizard.install"), null, "launch-button", () -> { });
-            Node progress = new InstallProgressView().node();
             heights[0] = height(FirstRunWizard.step(1, "wizard.1.title_site", "wizard.1.hint_site", panel.node()));
-            heights[1] = height(FirstRunWizard.step(2, "wizard.2.title", "wizard.2.hint", note, install, progress));
+            heights[1] = height(FirstRunWizard.step(2, "wizard.2.title", "wizard.2.hint", note, install));
             heights[2] = height(FirstRunWizard.step(3, "wizard.3.title", "wizard.3.hint",
                     UiKit.button(I18n.tr("home.btn.play"), "icon-play", "launch-button", () -> { })));
             done.countDown();

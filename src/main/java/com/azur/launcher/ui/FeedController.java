@@ -78,11 +78,9 @@ final class FeedController {
         }
     }
 
-    /** Direct connection (no proxy), https only, only the servers host, If-None-Match. */
+    /** The shared connection pool, https only, only the servers host, If-None-Match. */
     private static final class HttpTransport implements FeedService.Transport {
         private final String host;
-        private final HttpClient client = HttpClient.newBuilder().proxy(HttpClient.Builder.NO_PROXY)
-                .connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
 
         HttpTransport(String host) {
             this.host = host;
@@ -99,7 +97,7 @@ final class FeedController {
                 request.header("If-None-Match", etag);
             }
             try {
-                HttpResponse<byte[]> response = client.send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
+                HttpResponse<byte[]> response = com.azur.launcher.net.SharedHttp.client().send(request.build(), HttpResponse.BodyHandlers.ofByteArray());
                 return new FeedService.Response(response.statusCode(), response.headers().firstValue("ETag").orElse(""),
                         response.body());
             } catch (InterruptedException e) {

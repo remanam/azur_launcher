@@ -137,6 +137,11 @@ public class GameLauncher {
             new PinService(AppDirs.system(), paths, internalLogger).requirePinned(instance);
             Path contentRoot = instance.gameDir();
             Files.createDirectories(contentRoot);
+            try {
+                OptionsDefaults.apply(contentRoot, I18n.resolve(config.getLanguage()));
+            } catch (java.io.IOException e) {
+                log("options.txt defaults skipped: " + e.getMessage());
+            }
 
             Path javaExecutable = resolveJava(config, versionId);
             log("Java: " + javaExecutable);

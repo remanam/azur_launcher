@@ -430,7 +430,6 @@ final class HomePage {
         InstallProgress.Step before = shownStep;
         InstallProgress.Snapshot snapshot = installProgress.snapshot();
         progressView.show(snapshot);
-        wizard.progress().show(snapshot);
         shownStep = snapshot.step();
         if (before != shownStep) {
             render();
@@ -444,19 +443,16 @@ final class HomePage {
             installProgress.finish();
             InstallProgress.Snapshot done = installProgress.snapshot();
             progressView.show(done);
-            wizard.progress().show(done);
             PauseTransition hide = new PauseTransition(Duration.seconds(3));
             hide.setOnFinished(e -> {
                 if (!updating) {
                     progressView.hide();
-                    wizard.progress().hide();
                     render();
                 }
             });
             hide.play();
         } else {
             progressView.hide();
-            wizard.progress().hide();
         }
     }
 

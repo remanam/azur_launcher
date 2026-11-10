@@ -55,6 +55,7 @@ public final class ProxyConfig {
         current = config == null ? NONE : config;
         System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "");
         Authenticator.setDefault(new ProxyAuthenticator());
+        SharedHttp.invalidate();
     }
 
     public boolean active() {

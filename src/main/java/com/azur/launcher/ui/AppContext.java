@@ -101,6 +101,15 @@ final class AppContext {
         if (accountController != null) {
             accountController.load();
         }
+        warmUpSite(this.pack.getServersUrl());
+    }
+
+    /** Opens the TLS connection to the site in the background: the sign-in and the first requests then skip the handshake. */
+    private static void warmUpSite(String serversUrl) {
+        String origin = siteOrigin(serversUrl);
+        if (!origin.isEmpty() && HttpUtils.downloader().policy().allows(origin + "/api/health")) {
+            com.azur.launcher.net.SharedHttp.warmUp(java.net.URI.create(origin + "/api/health"));
+        }
     }
 
     /** The site origin of the servers URL (https only); a dev run without one sends nothing. */
@@ -157,6 +166,7 @@ final class AppContext {
 
     /** A new account block bound to the shared state (the wizard and «Дополнительно» each have one). */
     SiteLoginPanel sitePanel() {
+        warmUpSite(pack.getServersUrl());
         String origin = siteOrigin(pack.getServersUrl());
         SiteLoginPanel panel = new SiteLoginPanel(accountController, origin + "/account", origin + "/register", origin + "/reset",
                 config.isAllowCodeLogin(), url -> host.showDocument(url), System::currentTimeMillis);
@@ -311,5 +321,6 @@ final class AppContext {
 
     void shutdown() {
         io.shutdownNow();
+        com.azur.launcher.net.SharedHttp.close();
     }
 }

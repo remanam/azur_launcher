@@ -21,8 +21,6 @@ public final class HttpSiteApi implements SiteApi {
     private static final Gson GSON = new Gson();
 
     private final String origin;
-    private final HttpClient client = HttpClient.newBuilder().proxy(ProxyConfig.selector())
-            .connectTimeout(Duration.ofSeconds(10)).followRedirects(HttpClient.Redirect.NEVER).build();
 
     /** @param origin for example {@code https://example.test}, no trailing slash */
     public HttpSiteApi(String origin) {
@@ -109,7 +107,7 @@ public final class HttpSiteApi implements SiteApi {
                 .POST(HttpRequest.BodyPublishers.ofByteArray(body)).build();
         HttpResponse<String> response;
         try {
-            response = client.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            response = com.azur.launcher.net.SharedHttp.client().send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new SiteException("no answer from the site", e);
         } catch (InterruptedException e) {

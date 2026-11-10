@@ -18,7 +18,6 @@ final class FirstRunWizard {
     private final Runnable install;
     private final Runnable play;
     private final StackPane root = new StackPane();
-    private final InstallProgressView progress = new InstallProgressView();
     private int step;
     private final Button installButton;
     private final SelectableText installNote = UiKit.selectable("", "home-sub");
@@ -34,11 +33,6 @@ final class FirstRunWizard {
 
     Node node() {
         return root;
-    }
-
-    /** The install progress block of step 2 (Home feeds it). */
-    InstallProgressView progress() {
-        return progress;
     }
 
     int step() {
@@ -109,7 +103,7 @@ final class FirstRunWizard {
     }
 
     private VBox installStep() {
-        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.notice(ctx), installButton, progress.node(), UiKit.withCopy(installNote));
+        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.notice(ctx), installButton, UiKit.withCopy(installNote));
     }
 
     private VBox playStep() {
