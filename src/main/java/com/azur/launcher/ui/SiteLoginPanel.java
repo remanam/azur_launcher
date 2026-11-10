@@ -2,6 +2,7 @@ package com.azur.launcher.ui;
 
 import com.azur.launcher.account.AccountController;
 import com.azur.launcher.account.AccountFlowState;
+import com.azur.launcher.account.SignInUi;
 import com.azur.launcher.i18n.I18n;
 
 import javafx.animation.Animation;
@@ -37,6 +38,8 @@ final class SiteLoginPanel {
     private final Timeline ticker = new Timeline();
     private final Label countdown = UiKit.label("", "account-note");
     private AccountFlowState state;
+    private SignInForm form;
+    boolean submitted; // package-private for FormProbe
 
     SiteLoginPanel(AccountController controller, String cabinetUrl, String registerUrl, String resetUrl, boolean codeLogin, Consumer<String> open,
                    LongSupplier clock) {
@@ -58,9 +61,12 @@ final class SiteLoginPanel {
 
     void show(AccountFlowState value) {
         state = value;
+        if (value.phase() != AccountFlowState.Phase.STARTING) {
+            submitted = false;
+        }
         root.getChildren().setAll(switch (value.phase()) {
             case SIGNED_OUT -> signedOut(value);
-            case STARTING -> new VBox(8, UiKit.label(I18n.tr("account.starting"), "home-sub"));
+            case STARTING -> submitted ? signedOut(value) : new VBox(8, UiKit.label(I18n.tr("account.starting"), "home-sub"));
             case WAITING -> waiting(value);
             case SIGNED_IN -> signedIn(value);
         });
@@ -72,42 +78,110 @@ final class SiteLoginPanel {
         }
     }
 
-    /** Default sign-in: «e-mail or nick» + password (over https to the site only). The password stays in the field only until the click. */
+    /**
+     * Default sign-in: «e-mail or nick» + password (over https to the site only). The form is built once and reused, so a
+     * running request keeps the same screen: the button shows a spinner, fields lock, a failure is a plate under the fields.
+     */
     private Node signedOut(AccountFlowState s) {
-        TextField login = new TextField();
-        login.setPromptText(I18n.tr("account.login_prompt"));
-        login.setMaxWidth(320);
-        PasswordField password = new PasswordField();
-        password.setPromptText(I18n.tr("account.password_prompt"));
-        password.setMaxWidth(320);
-        Label error = UiKit.label(s.errorKey() == null ? "" : I18n.tr(s.errorKey()), "field-msg");
-        error.getStyleClass().add("field-error");
-        error.setMinHeight(20);
-        error.setWrapText(true);
-        error.setMaxWidth(420);
+        if (form == null) {
+            form = buildForm();
+        }
+        form.apply(SignInUi.button(s, submitted), SignInUi.notice(s.errorKey()));
+        return form.root;
+    }
+
+    private SignInForm buildForm() {
+        SignInForm f = new SignInForm();
         Runnable submit = () -> {
-            if (login.getText().isBlank() || password.getText().isEmpty()) {
-                error.setText(I18n.tr("account.err.fill_both"));
+            if (f.locked) {
                 return;
             }
-            char[] secret = password.getText().toCharArray();
-            password.clear();
-            controller.signInWithPassword(login.getText(), secret, I18n.language());
+            if (f.login.getText().isBlank() || f.password.getText().isEmpty()) {
+                f.apply(SignInUi.Button.ERROR, SignInUi.notice("account.err.fill_both"));
+                return;
+            }
+            char[] secret = f.password.getText().toCharArray();
+            f.password.clear();
+            submitted = true;
+            f.apply(SignInUi.Button.LOADING, null);
+            controller.signInWithPassword(f.login.getText(), secret, I18n.language());
         };
-        login.setOnAction(e -> password.requestFocus());
-        password.setOnAction(e -> submit.run());
+        f.login.setOnAction(e -> f.password.requestFocus());
+        f.password.setOnAction(e -> submit.run());
+        f.signIn.setOnAction(e -> submit.run());
         Label hint = UiKit.label(I18n.tr("account.signed_out.hint"), "home-sub");
         wrap(hint);
         javafx.scene.control.Hyperlink forgot = new javafx.scene.control.Hyperlink(I18n.tr("account.btn.forgot"));
         forgot.setStyle("-fx-text-fill: #e08a45; -fx-border-color: transparent;");
         forgot.setOnAction(e -> open.accept(resetUrl));
-        VBox box = new VBox(10, hint, login, password, forgot, error,
-                UiKit.button(I18n.tr("account.btn.sign_in"), null, "launch-button", submit),
+        HBox fields = new HBox(10, f.login, f.password);
+        HBox buttons = new HBox(10, f.signIn,
                 UiKit.button(I18n.tr("account.btn.register"), null, "button-border", () -> open.accept(registerUrl)));
+        buttons.setAlignment(Pos.CENTER_LEFT);
+        f.root.getChildren().addAll(hint, fields, forgot, f.plate, buttons);
         if (codeLogin) {
-            box.getChildren().add(UiKit.button(I18n.tr("account.btn.sign_in_code"), null, "button-border", controller::signIn));
+            f.root.getChildren().add(UiKit.button(I18n.tr("account.btn.sign_in_code"), null, "button-border", controller::signIn));
         }
-        return box;
+        return f;
+    }
+
+    /** The widgets of the password form and the code that paints a {@link SignInUi} state onto them. */
+    private static final class SignInForm {
+        final VBox root = new VBox(8);
+        final TextField login = new TextField();
+        final PasswordField password = new PasswordField();
+        final Button signIn = UiKit.button(I18n.tr("account.btn.sign_in"), null, "launch-button", () -> { });
+        final HBox plate = new HBox(8);
+        final Label plateText = UiKit.label("", "notice-text");
+        final javafx.scene.control.ProgressIndicator spinner = new javafx.scene.control.ProgressIndicator();
+        boolean locked;
+
+        SignInForm() {
+            login.setPromptText(I18n.tr("account.login_prompt"));
+            login.setPrefWidth(200);
+            password.setPromptText(I18n.tr("account.password_prompt"));
+            password.setPrefWidth(200);
+            plateText.setWrapText(true);
+            plateText.setMaxWidth(400);
+            plate.setAlignment(Pos.CENTER_LEFT);
+            plate.getStyleClass().add("notice-plate");
+            plate.setManaged(false);
+            plate.setVisible(false);
+            spinner.setMaxSize(20, 20);
+            spinner.setPrefSize(20, 20);
+            spinner.getStyleClass().add("button-spinner");
+        }
+
+        void apply(SignInUi.Button button, SignInUi.Notice notice) {
+            locked = SignInUi.fieldsLocked(button);
+            login.setDisable(locked);
+            password.setDisable(locked);
+            signIn.setDisable(locked);
+            boolean loading = button == SignInUi.Button.LOADING;
+            signIn.setText(loading ? I18n.tr("account.signing_in") : I18n.tr("account.btn.sign_in"));
+            signIn.setGraphic(loading ? spinner : null);
+            login.getStyleClass().remove("field-invalid");
+            password.getStyleClass().remove("field-invalid");
+            plate.getStyleClass().removeAll("notice-error", "notice-warn", "notice-info");
+            boolean show = notice != null;
+            plate.setManaged(show);
+            plate.setVisible(show);
+            if (!show) {
+                return;
+            }
+            plate.getStyleClass().add("notice-" + notice.kind().name().toLowerCase(java.util.Locale.ROOT));
+            plateText.setText(I18n.tr(notice.key()));
+            plate.getChildren().setAll(Icons.of("icon-info", 16), plateText);
+            TextField target = switch (notice.field()) {
+                case LOGIN -> login;
+                case PASSWORD -> password;
+                case NONE -> null;
+            };
+            if (target != null) {
+                target.getStyleClass().add("field-invalid");
+                javafx.application.Platform.runLater(target::requestFocus);
+            }
+        }
     }
 
     private Node waiting(AccountFlowState s) {

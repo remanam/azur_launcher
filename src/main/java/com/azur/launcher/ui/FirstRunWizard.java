@@ -117,13 +117,15 @@ final class FirstRunWizard {
                 UiKit.button(I18n.tr("home.btn.play"), "icon-play", "launch-button", play));
     }
 
-    private static VBox step(int n, String titleKey, String hintKey, Node... content) {
+    static VBox step(int n, String titleKey, String hintKey, Node... content) {
         Label hint = UiKit.label(I18n.tr(hintKey), "home-sub");
         hint.setWrapText(true);
         hint.setMaxWidth(420);
         hint.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
-        VBox box = new VBox(16, UiKit.label(I18n.tr("wizard.step", n), "wizard-step"),
-                UiKit.label(I18n.tr(titleKey), "card-heading"), hint);
+        javafx.scene.layout.HBox head = new javafx.scene.layout.HBox(12, UiKit.label(I18n.tr(titleKey), "card-heading"),
+                UiKit.spacer(), UiKit.label(I18n.tr("wizard.step", n), "wizard-step"));
+        head.setAlignment(Pos.CENTER_LEFT);
+        VBox box = new VBox(8, head, hint);
         box.getChildren().addAll(content);
         box.setAlignment(Pos.TOP_LEFT);
         return box;

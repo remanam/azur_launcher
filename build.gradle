@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.azur'
-version = '1.0.12'
+version = '1.0.13'
 
 java {
     toolchain {
@@ -156,5 +156,13 @@ tasks.register('probeLayout', JavaExec) {
     def home = layout.buildDirectory.dir('probe-home').get().asFile
     doFirst { home.deleteDir(); home.mkdirs(); new File(home, 'pack.json').text = '{"serversUrl":"https://example.test/servers.json"}' }
     systemProperty 'azur.home', home.path
+    systemProperty 'probe.out', project.findProperty('probe') ?: layout.buildDirectory.dir('probe').get().asFile.path
+}
+
+// Dev tool: PNG of the sign-in form in the error and loading states. -Pprobe=<out dir>.
+tasks.register('probeForm', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.azur.launcher.ui.FormProbe$Main'
     systemProperty 'probe.out', project.findProperty('probe') ?: layout.buildDirectory.dir('probe').get().asFile.path
 }

@@ -169,6 +169,59 @@ final class UiKit {
         return scroll;
     }
 
+    /**
+     * Wraps a scroll pane with a soft gradient at the bottom edge while content is hidden below the view (a hint that the
+     * form scrolls), and scrolls to the focused control on Tab. The wrapper is mouse-transparent over the hint.
+     */
+    static StackPane withScrollHint(ScrollPane scroll) {
+        Region fade = new Region();
+        fade.getStyleClass().add("card-scroll-more");
+        fade.setMouseTransparent(true);
+        fade.setPrefHeight(34);
+        fade.setMaxHeight(34);
+        StackPane.setAlignment(fade, Pos.BOTTOM_CENTER);
+        fade.setVisible(false);
+        Runnable update = () -> {
+            Node content = scroll.getContent();
+            boolean more = content != null && content.getLayoutBounds().getHeight() > scroll.getViewportBounds().getHeight() + 1
+                    && scroll.getVvalue() < scroll.getVmax() - 0.01;
+            fade.setVisible(more);
+        };
+        scroll.vvalueProperty().addListener((o, a, b) -> update.run());
+        scroll.viewportBoundsProperty().addListener((o, a, b) -> update.run());
+        scroll.contentProperty().addListener((o, a, b) -> update.run());
+        scroll.sceneProperty().addListener((o, old, scene) -> {
+            if (scene != null) {
+                scene.focusOwnerProperty().addListener((obs, was, now) -> scrollTo(scroll, now));
+            }
+        });
+        scroll.needsLayoutProperty().addListener((o, a, b) -> update.run());
+        return new StackPane(scroll, fade);
+    }
+
+    private static void scrollTo(ScrollPane scroll, Node focused) {
+        Node content = scroll.getContent();
+        if (focused == null || content == null) {
+            return;
+        }
+        for (Node n = focused; n != null; n = n.getParent()) {
+            if (n == content) {
+                javafx.geometry.Bounds b = content.sceneToLocal(focused.localToScene(focused.getBoundsInLocal()));
+                double extra = content.getLayoutBounds().getHeight() - scroll.getViewportBounds().getHeight();
+                if (extra > 0) {
+                    double top = scroll.getVvalue() * extra;
+                    double view = scroll.getViewportBounds().getHeight();
+                    if (b.getMinY() < top) {
+                        scroll.setVvalue(Math.max(0, b.getMinY() - 8) / extra);
+                    } else if (b.getMaxY() > top + view) {
+                        scroll.setVvalue(Math.min(extra, b.getMaxY() + 8 - view) / extra);
+                    }
+                }
+                return;
+            }
+        }
+    }
+
     static StackPane avatar(String text, String boxClass, String textClass) {
         String initial = text == null || text.isBlank() ? "?" : text.substring(0, 1).toUpperCase();
         StackPane avatar = new StackPane(label(initial, textClass));

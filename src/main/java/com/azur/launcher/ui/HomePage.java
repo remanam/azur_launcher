@@ -177,14 +177,15 @@ final class HomePage {
         ScrollPane cardScroll = UiKit.pageScroll(card);
         cardScroll.setFitToHeight(true);
         cardScroll.setMinHeight(0);
-        HBox.setHgrow(cardScroll, Priority.ALWAYS);
 
         Region hero = new Region();
         hero.getStyleClass().add("hero-art");
         hero.setMinWidth(300);
         hero.setPrefWidth(340);
         hero.setMaxWidth(340);
-        HBox middle = new HBox(16, cardScroll, hero);
+        javafx.scene.layout.StackPane cardWithHint = UiKit.withScrollHint(cardScroll);
+        HBox.setHgrow(cardWithHint, Priority.ALWAYS);
+        HBox middle = new HBox(16, cardWithHint, hero);
         middle.getStyleClass().add("home-middle");
 
         Button gear = UiKit.button("", null, "gear-button", openAdvanced);
