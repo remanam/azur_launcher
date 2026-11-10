@@ -62,6 +62,10 @@ public final class AccountSnapshot {
         }
         I18n.setLanguage("ru");
         SiteApi api = new SiteApi() {
+            public Polled login(String l, char[] p, String n, String k, String lang) {
+                return new Polled(false, "", "", "");
+            }
+
             public Started start(String n, String k) {
                 return new Started("dc", "K7QM-X2PD", "3fa9-0c71-b8e2-44d6", "https://example.test/link?code=K7QMX2PD", 600, 3);
             }
@@ -93,13 +97,13 @@ public final class AccountSnapshot {
         SiteAuth auth = new SiteAuth(api, empty, () -> now, ms -> { });
         AccountController controller = new AccountController(auth, Runnable::run, s -> { }, u -> { }, () -> "PC", s -> { });
 
-        SiteLoginPanel waiting = new SiteLoginPanel(controller, "https://example.test/account", u -> { }, () -> now + 31_000);
+        SiteLoginPanel waiting = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", true, u -> { }, () -> now + 31_000);
         waiting.show(AccountFlowState.waiting(auth.begin("Азур Лаунчер (PC)")));
 
         com.azur.launcher.account.DeviceKey key = com.azur.launcher.account.DeviceKey.generate();
         SiteSession session = new SiteSession("d1", "r", "art", key.seedBase64Url(), key.publicKeyBase64Url(),
                 "Азур Лаунчер (MacBook)", now - 3L * 24 * 3600 * 1000, 0);
-        SiteLoginPanel signedIn = new SiteLoginPanel(controller, "https://example.test/account", u -> { }, () -> now);
+        SiteLoginPanel signedIn = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", true, u -> { }, () -> now);
         signedIn.show(AccountFlowState.signedIn(session));
 
         VBox left = UiKit.card(UiKit.label(I18n.tr("wizard.1.title_site"), "card-title"), waiting.node());

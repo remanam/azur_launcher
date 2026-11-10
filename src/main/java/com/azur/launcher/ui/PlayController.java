@@ -110,7 +110,7 @@ final class PlayController implements GameStarter {
             return;
         }
         AuthAccount account = ctx.site == null || ctx.site.session().isEmpty()
-                ? ctx.accounts.selected() : siteAccount(ctx.site.session().get());
+                ? ctx.anonymousAccount() : siteAccount(ctx.site.session().get());
         if (account == null) {
             error(I18n.tr("home.sign_in_needed"));
             return;

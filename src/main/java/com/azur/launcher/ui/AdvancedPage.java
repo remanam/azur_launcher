@@ -49,8 +49,9 @@ final class AdvancedPage {
             VBox account = UiKit.card(UiKit.label(I18n.tr("account.title"), "card-title"), ctx.sitePanel().node());
             page.getChildren().add(account);
             ctx.bindAccount(state -> {
-                player.setVisible(!state.signedIn());
-                player.setManaged(!state.signedIn());
+                boolean shown = ctx.config.isAllowAnonymous() && !state.signedIn();
+                player.setVisible(shown);
+                player.setManaged(shown);
             });
         }
         page.getChildren().addAll(player, UiKit.card(options), repairCard(play), aboutCard());

@@ -52,6 +52,26 @@ public final class AccountController {
         io.execute(() -> run(mine));
     }
 
+    /** Password sign-in; the array is wiped by {@link SiteAuth#login}. A second click while running does nothing (the array is wiped here). */
+    public void signInWithPassword(String login, char[] password, String lang) {
+        if (!state.canStart()) {
+            java.util.Arrays.fill(password, '\0');
+            return;
+        }
+        set(AccountFlowState.starting());
+        io.execute(() -> {
+            try {
+                SiteSession done = auth.login(login, password, deviceName.get(), lang);
+                set(AccountFlowState.signedIn(done));
+                onChanged.accept(Optional.of(done));
+            } catch (SiteException e) {
+                set(AccountFlowState.signedOut(SiteErrors.key(e)));
+            } catch (IOException | RuntimeException e) {
+                set(AccountFlowState.signedOut("account.err.generic"));
+            }
+        });
+    }
+
     private void run(AtomicBoolean mine) {
         try {
             SiteAuth.Pending pending = auth.begin(deviceName.get());

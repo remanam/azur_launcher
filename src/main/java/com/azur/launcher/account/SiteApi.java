@@ -1,6 +1,6 @@
 package com.azur.launcher.account;
 
-/** The launcher half of the site API (site `/api/launcher/*`). No passwords: the site approves a code in the browser. */
+/** The launcher half of the site API (site `/api/launcher/*`). The password only travels in {@link #login} over https and is never kept. */
 public interface SiteApi {
 
     record Started(String deviceCode, String userCode, String fingerprint, String verifyUrl, int expiresIn, int interval) {
@@ -12,6 +12,12 @@ public interface SiteApi {
 
     record Ticket(String ticket, String nick, String refresh) {
     }
+
+    /**
+     * Signs in with the site login (e-mail or nick) and password and links this device at once (no approval in the cabinet).
+     * The caller owns {@code password} and wipes it after the call; implementations must not keep or log it.
+     */
+    Polled login(String login, char[] password, String deviceName, String publicKeyBase64Url, String lang) throws SiteException;
 
     Started start(String deviceName, String publicKeyBase64Url) throws SiteException;
 

@@ -9,7 +9,7 @@ import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
 /**
- * Account sign-in through the site (device flow, no password in the launcher), the device key and the one-time login ticket.
+ * Account sign-in through the site (password over https, or the device flow with a code approved in the cabinet), the device key and the one-time login ticket.
  * Pure logic over {@link SiteApi} and {@link SessionStorage}; the clock and the pause between polls are injected for tests.
  */
 public final class SiteAuth {
@@ -47,6 +47,23 @@ public final class SiteAuth {
     public Pending begin(String deviceName) throws SiteException {
         DeviceKey key = DeviceKey.generate();
         return new Pending(api.start(deviceName, key.publicKeyBase64Url()), key, deviceName, clock.getAsLong());
+    }
+
+    /**
+     * Password sign-in: a new device key, {@code device/login}, the session is stored. The password is wiped here whatever happens;
+     * nothing about it is kept, stored or logged. Throws {@link SiteException} (bad_credentials, rate_limited, not_verified, ...).
+     */
+    public SiteSession login(String login, char[] password, String deviceName, String lang) throws SiteException, IOException {
+        try {
+            DeviceKey key = DeviceKey.generate();
+            SiteApi.Polled r = api.login(login.trim(), password, deviceName, key.publicKeyBase64Url(), lang);
+            SiteSession s = new SiteSession(r.deviceId(), r.refresh(), r.nick(), key.seedBase64Url(), key.publicKeyBase64Url(),
+                    deviceName, clock.getAsLong(), 0);
+            storage.write(s);
+            return s;
+        } finally {
+            java.util.Arrays.fill(password, '\0');
+        }
     }
 
     /**

@@ -34,6 +34,11 @@ class HttpSiteApiTest {
                         + "\"verify_url\":\"https://example.test/link?code=ABCDEFGH\",\"expires_in\":600,\"interval\":3}";
                 case "/api/launcher/device/poll" -> out = polls++ == 0 ? "{\"status\":\"pending\"}"
                         : "{\"status\":\"approved\",\"device_id\":\"d1\",\"refresh_token\":\"r1\",\"nick\":\"art\"}";
+                case "/api/launcher/device/login" -> {
+                    String pw = com.google.gson.JsonParser.parseString(body).getAsJsonObject().get("password").getAsString();
+                    status = pw.equals("pa\"ss\\w<o>rd&é") ? 200 : 401;
+                    out = status == 200 ? "{\"device_id\":\"d9\",\"refresh_token\":\"r9\",\"nick\":\"art\"}" : "{\"error\":\"bad_credentials\"}";
+                }
                 case "/api/launcher/ticket" -> {
                     status = body.contains("\"r1\"") ? 200 : 401;
                     out = status == 200 ? "{\"ticket\":\"t1\",\"nick\":\"art\",\"refresh_token\":\"r2\"}" : "{\"error\":\"bad_device\"}";
@@ -74,6 +79,27 @@ class HttpSiteApiTest {
         String ticketCall = bodies.get(bodies.size() - 1);
         assertTrue(ticketCall.startsWith("/api/launcher/ticket ") && ticketCall.contains("\"device_id\":\"d1\"")
                 && ticketCall.contains("\"refresh_token\":\"r1\""));
+    }
+
+    @Test
+    void passwordLoginSendsTheExactPasswordWipesItAndStoresNoSecret() throws Exception {
+        SessionStorage storage = FakeSite.memory();
+        SiteAuth auth = new SiteAuth(api, storage, () -> 5L, ms -> { });
+        char[] pw = "pa\"ss\\w<o>rd&é".toCharArray();
+        SiteSession s = auth.login("  Art@Example.org ", pw, "PC", "en");
+        assertEquals("d9", s.deviceId());
+        assertEquals("r9", storage.read().orElseThrow().refresh());
+        assertArrayEquals(new char[pw.length], pw, "the password array is wiped after the call");
+        String call = bodies.get(0);
+        assertTrue(call.startsWith("/api/launcher/device/login ") && call.contains("\"login\":\"Art@Example.org\""));
+        assertFalse(call.contains(s.key().seedBase64Url()), "the private key never goes to the site");
+        char[] wrong = "nope".toCharArray();
+        SiteException e = assertThrows(SiteException.class, () -> auth.login("art", wrong, "PC", "ru"));
+        assertEquals("bad_credentials", e.code());
+        assertEquals("account.err.bad_credentials", SiteErrors.key(e));
+        assertFalse(SiteErrors.dropsSession(e));
+        assertArrayEquals(new char[4], wrong);
+        assertFalse(e.getMessage().contains("nope"), "no password in an error message");
     }
 
     @Test

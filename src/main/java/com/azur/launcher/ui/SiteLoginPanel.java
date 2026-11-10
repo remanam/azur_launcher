@@ -11,6 +11,8 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
@@ -26,6 +28,8 @@ final class SiteLoginPanel {
 
     private final AccountController controller;
     private final String cabinetUrl;
+    private final String registerUrl;
+    private final boolean codeLogin;
     private final Consumer<String> open;
     private final LongSupplier clock;
     private final VBox root = new VBox(12);
@@ -33,9 +37,12 @@ final class SiteLoginPanel {
     private final Label countdown = UiKit.label("", "account-note");
     private AccountFlowState state;
 
-    SiteLoginPanel(AccountController controller, String cabinetUrl, Consumer<String> open, LongSupplier clock) {
+    SiteLoginPanel(AccountController controller, String cabinetUrl, String registerUrl, boolean codeLogin, Consumer<String> open,
+                   LongSupplier clock) {
         this.controller = controller;
         this.cabinetUrl = cabinetUrl;
+        this.registerUrl = registerUrl;
+        this.codeLogin = codeLogin;
         this.open = open;
         this.clock = clock;
         root.setAlignment(Pos.TOP_LEFT);
@@ -63,16 +70,37 @@ final class SiteLoginPanel {
         }
     }
 
+    /** Default sign-in: «e-mail or nick» + password (over https to the site only). The password stays in the field only until the click. */
     private Node signedOut(AccountFlowState s) {
+        TextField login = new TextField();
+        login.setPromptText(I18n.tr("account.login_prompt"));
+        login.setMaxWidth(320);
+        PasswordField password = new PasswordField();
+        password.setPromptText(I18n.tr("account.password_prompt"));
+        password.setMaxWidth(320);
+        Label error = UiKit.label(s.errorKey() == null ? "" : I18n.tr(s.errorKey()), "field-msg");
+        error.getStyleClass().add("field-error");
+        error.setMinHeight(20);
+        error.setWrapText(true);
+        error.setMaxWidth(420);
+        Runnable submit = () -> {
+            if (login.getText().isBlank() || password.getText().isEmpty()) {
+                error.setText(I18n.tr("account.err.fill_both"));
+                return;
+            }
+            char[] secret = password.getText().toCharArray();
+            password.clear();
+            controller.signInWithPassword(login.getText(), secret, I18n.language());
+        };
+        login.setOnAction(e -> password.requestFocus());
+        password.setOnAction(e -> submit.run());
         Label hint = UiKit.label(I18n.tr("account.signed_out.hint"), "home-sub");
         wrap(hint);
-        VBox box = new VBox(12, hint,
-                UiKit.button(I18n.tr("account.btn.sign_in"), null, "launch-button", controller::signIn));
-        if (s.errorKey() != null) {
-            Label error = UiKit.label(I18n.tr(s.errorKey()), "field-msg");
-            error.getStyleClass().add("field-error");
-            error.setMinHeight(20);
-            box.getChildren().add(error);
+        VBox box = new VBox(10, hint, login, password, error,
+                UiKit.button(I18n.tr("account.btn.sign_in"), null, "launch-button", submit),
+                UiKit.button(I18n.tr("account.btn.register"), null, "button-border", () -> open.accept(registerUrl)));
+        if (codeLogin) {
+            box.getChildren().add(UiKit.button(I18n.tr("account.btn.sign_in_code"), null, "button-border", controller::signIn));
         }
         return box;
     }

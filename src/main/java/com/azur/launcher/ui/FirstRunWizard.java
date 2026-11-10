@@ -66,6 +66,9 @@ final class FirstRunWizard {
             return nickStep();
         }
         SiteLoginPanel panel = ctx.sitePanel();
+        if (!ctx.config.isAllowAnonymous()) {
+            return step(1, "wizard.1.title_site", "wizard.1.hint_site", panel.node());
+        }
         VBox nickBox = nickStep();
         nickBox.setVisible(false);
         nickBox.setManaged(false);

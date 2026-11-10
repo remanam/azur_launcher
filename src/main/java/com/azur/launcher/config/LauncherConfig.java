@@ -21,6 +21,12 @@ public class LauncherConfig {
     private int startupLimitSeconds = 480;
     /** Hand the device key to the game in a 0600 file so reconnects sign in without the launcher (false = ticket only). */
     private boolean shareKeyWithGame = true;
+    /** Play with a saved nick and no site account (nick field, «Играть без аккаунта»). OFF by default (T-138); the nick code stays for dev and as a switch. */
+    @com.google.gson.annotations.SerializedName("allow_anonymous")
+    private boolean allowAnonymous = false;
+    /** Show «Войти по коду из кабинета» (device flow approved in the cabinet) next to the password form. */
+    @com.google.gson.annotations.SerializedName("allow_code_login")
+    private boolean allowCodeLogin = true;
     private boolean darkMode = false;
     private String lastServerId = "";
     private String language = "ru";
@@ -149,6 +155,14 @@ public class LauncherConfig {
         }
         getTelemetryId();
         return "";
+    }
+
+    public boolean isAllowAnonymous() {
+        return allowAnonymous;
+    }
+
+    public boolean isAllowCodeLogin() {
+        return allowCodeLogin;
     }
 
     public boolean isShareKeyWithGame() {

@@ -17,6 +17,22 @@ final class FakeSite implements SiteApi {
     int ticketNo;
     int refreshNo = 1;
 
+    SiteException loginError;
+    String lastLogin = "";
+    String lastLoginPassword = "";
+
+    @Override
+    public Polled login(String login, char[] password, String name, String pubkey, String lang) throws SiteException {
+        calls.add("login");
+        lastLogin = login;
+        lastLoginPassword = new String(password);
+        lastPubkey = pubkey;
+        if (loginError != null) {
+            throw loginError;
+        }
+        return new Polled(true, "dev-pw", "refresh-pw", "Art");
+    }
+
     @Override
     public Started start(String name, String pubkey) {
         calls.add("start");

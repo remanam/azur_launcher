@@ -12,6 +12,10 @@ public final class SiteErrors {
         }
         return switch (e.code()) {
             case "bad_device", "unauthorized" -> "account.err.revoked";
+            case "bad_credentials" -> "account.err.bad_credentials";
+            case "not_verified" -> "account.err.not_verified";
+            case "too_many_devices" -> "account.err.too_many_devices";
+            case "not_found" -> "account.err.password_off";
             case "banned" -> "account.err.banned";
             case "no_nick" -> "account.err.no_nick";
             case "rate_limited" -> "account.err.rate_limited";

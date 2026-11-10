@@ -141,10 +141,25 @@ final class AppContext {
         Platform.runLater(this::fireAccountsChanged);
     }
 
+    /** The saved nick counts as a player only without a site (dev run) or when `allow_anonymous` is on; otherwise a site sign-in is needed. */
+    com.azur.launcher.auth.AuthAccount anonymousAccount() {
+        return site == null || config.isAllowAnonymous() ? accounts.selected() : null;
+    }
+
+    /** Who plays now: the signed-in site account (nick in exact case), else {@link #anonymousAccount()}. */
+    com.azur.launcher.auth.AuthAccount currentPlayer() {
+        if (site != null && site.session().isPresent()
+                && com.azur.launcher.auth.OfflineAccount.isValidName(site.session().get().nick())) {
+            return com.azur.launcher.auth.OfflineAccount.of(site.session().get().nick());
+        }
+        return anonymousAccount();
+    }
+
     /** A new account block bound to the shared state (the wizard and «Дополнительно» each have one). */
     SiteLoginPanel sitePanel() {
-        SiteLoginPanel panel = new SiteLoginPanel(accountController, siteOrigin(pack.getServersUrl()) + "/account",
-                url -> host.showDocument(url), System::currentTimeMillis);
+        String origin = siteOrigin(pack.getServersUrl());
+        SiteLoginPanel panel = new SiteLoginPanel(accountController, origin + "/account", origin + "/register",
+                config.isAllowCodeLogin(), url -> host.showDocument(url), System::currentTimeMillis);
         bindAccount(panel::show);
         return panel;
     }

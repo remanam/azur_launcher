@@ -114,7 +114,7 @@ final class HomePage {
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
         wizard = new FirstRunWizard(ctx, this::install, this::playFromWizard);
-        wizardActive = HomeState.wizardNeeded(ctx.accounts.selected() != null);
+        wizardActive = HomeState.wizardNeeded(ctx.currentPlayer() != null);
 
         dot.getStyleClass().add("status-dot");
         serverBox.getStyleClass().add("server-chip");
@@ -508,7 +508,7 @@ final class HomePage {
     }
 
     private void renderStatus() {
-        HomeState.Status status = HomeState.status(ctx.accounts.selected() != null, installed, updateAvailable);
+        HomeState.Status status = HomeState.status(ctx.currentPlayer() != null, installed, updateAvailable);
         statusTitle.setText(I18n.tr(status.titleKey()));
         statusTitle.getStyleClass().removeAll("ok", "warn");
         statusTitle.getStyleClass().add(status.styleClass());
@@ -533,7 +533,7 @@ final class HomePage {
     }
 
     private void renderAccount() {
-        AuthAccount account = ctx.accounts.selected();
+        AuthAccount account = ctx.currentPlayer();
         if (account == null) {
             wizardActive = true;
             wizard.showStep(1);
