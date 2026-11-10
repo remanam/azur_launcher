@@ -22,7 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 
 /**
- * Dev tool, not a test: draws the sign-in (code shown) and the account (signed in) blocks side by side with the real stylesheet
+ * Dev tool, not a test: draws the sign-in form (nick/e-mail + password) and the account (signed in) blocks side by side with the real stylesheet
  * and writes one PNG ({@code -Dsnapshot.out=...}). Run: {@code ../tools/gradle.sh snapshotAccount}. No window is opened.
  */
 public final class AccountSnapshot {
@@ -97,22 +97,24 @@ public final class AccountSnapshot {
         SiteAuth auth = new SiteAuth(api, empty, () -> now, ms -> { });
         AccountController controller = new AccountController(auth, Runnable::run, s -> { }, u -> { }, () -> "PC", s -> { });
 
-        SiteLoginPanel waiting = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", true, u -> { }, () -> now + 31_000);
+        SiteLoginPanel waiting = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", "https://example.test/reset", true, u -> { }, () -> now + 31_000);
         waiting.show(AccountFlowState.waiting(auth.begin("Азур Лаунчер (PC)")));
 
         com.azur.launcher.account.DeviceKey key = com.azur.launcher.account.DeviceKey.generate();
         SiteSession session = new SiteSession("d1", "r", "art", key.seedBase64Url(), key.publicKeyBase64Url(),
                 "Азур Лаунчер (MacBook)", now - 3L * 24 * 3600 * 1000, 0);
-        SiteLoginPanel signedIn = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", true, u -> { }, () -> now);
+        SiteLoginPanel signedIn = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", "https://example.test/reset", true, u -> { }, () -> now);
         signedIn.show(AccountFlowState.signedIn(session));
 
-        VBox left = UiKit.card(UiKit.label(I18n.tr("wizard.1.title_site"), "card-title"), waiting.node());
+        SiteLoginPanel form = new SiteLoginPanel(controller, "https://example.test/account", "https://example.test/register", "https://example.test/reset", true, u -> { }, () -> now);
+        form.show(AccountFlowState.signedOut(null));
+        VBox left = UiKit.card(UiKit.label(I18n.tr("wizard.1.title_site"), "card-title"), form.node());
         VBox right = UiKit.card(UiKit.label(I18n.tr("account.title"), "card-title"), signedIn.node());
         left.setPrefWidth(480);
         right.setPrefWidth(480);
         HBox row = new HBox(20, left, right);
         row.setPadding(new Insets(20));
-        Scene scene = new Scene(row, 1040, 470, Color.web("#14110f"));
+        Scene scene = new Scene(row, 1040, 560, Color.web("#14110f"));
         scene.getStylesheets().add(AccountSnapshot.class.getResource("/app.css").toExternalForm());
         WritableImage image = scene.snapshot(null);
         javax.imageio.ImageIO.write(toBuffered(image), "png", out);

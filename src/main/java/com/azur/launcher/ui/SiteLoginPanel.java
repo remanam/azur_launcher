@@ -29,6 +29,7 @@ final class SiteLoginPanel {
     private final AccountController controller;
     private final String cabinetUrl;
     private final String registerUrl;
+    private final String resetUrl;
     private final boolean codeLogin;
     private final Consumer<String> open;
     private final LongSupplier clock;
@@ -37,11 +38,12 @@ final class SiteLoginPanel {
     private final Label countdown = UiKit.label("", "account-note");
     private AccountFlowState state;
 
-    SiteLoginPanel(AccountController controller, String cabinetUrl, String registerUrl, boolean codeLogin, Consumer<String> open,
+    SiteLoginPanel(AccountController controller, String cabinetUrl, String registerUrl, String resetUrl, boolean codeLogin, Consumer<String> open,
                    LongSupplier clock) {
         this.controller = controller;
         this.cabinetUrl = cabinetUrl;
         this.registerUrl = registerUrl;
+        this.resetUrl = resetUrl;
         this.codeLogin = codeLogin;
         this.open = open;
         this.clock = clock;
@@ -96,7 +98,10 @@ final class SiteLoginPanel {
         password.setOnAction(e -> submit.run());
         Label hint = UiKit.label(I18n.tr("account.signed_out.hint"), "home-sub");
         wrap(hint);
-        VBox box = new VBox(10, hint, login, password, error,
+        javafx.scene.control.Hyperlink forgot = new javafx.scene.control.Hyperlink(I18n.tr("account.btn.forgot"));
+        forgot.setStyle("-fx-text-fill: #e08a45; -fx-border-color: transparent;");
+        forgot.setOnAction(e -> open.accept(resetUrl));
+        VBox box = new VBox(10, hint, login, password, forgot, error,
                 UiKit.button(I18n.tr("account.btn.sign_in"), null, "launch-button", submit),
                 UiKit.button(I18n.tr("account.btn.register"), null, "button-border", () -> open.accept(registerUrl)));
         if (codeLogin) {
@@ -132,8 +137,11 @@ final class SiteLoginPanel {
     private static void wrap(Label label) {
         label.setWrapText(true);
         label.setMaxWidth(420);
+        label.setPrefWidth(420);
+        label.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
         label.setAlignment(Pos.TOP_LEFT);
         label.setTextAlignment(javafx.scene.text.TextAlignment.LEFT);
+        label.setStyle("-fx-text-alignment: left;");
     }
 
     private void updateCountdown() {

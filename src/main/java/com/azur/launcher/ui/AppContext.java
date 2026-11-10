@@ -158,7 +158,7 @@ final class AppContext {
     /** A new account block bound to the shared state (the wizard and «Дополнительно» each have one). */
     SiteLoginPanel sitePanel() {
         String origin = siteOrigin(pack.getServersUrl());
-        SiteLoginPanel panel = new SiteLoginPanel(accountController, origin + "/account", origin + "/register",
+        SiteLoginPanel panel = new SiteLoginPanel(accountController, origin + "/account", origin + "/register", origin + "/reset",
                 config.isAllowCodeLogin(), url -> host.showDocument(url), System::currentTimeMillis);
         bindAccount(panel::show);
         return panel;
