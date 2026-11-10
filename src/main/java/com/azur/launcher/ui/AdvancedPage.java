@@ -35,7 +35,8 @@ final class AdvancedPage {
     private final ComboBox<String> javaBox = new ComboBox<>();
     private List<JavaDetector.JavaInfo> detected = List.of();
 
-    AdvancedPage(AppContext ctx, Runnable onLanguageChanged, PlayController play, Runnable onBack) {
+    AdvancedPage(AppContext ctx, Runnable onLanguageChanged, PlayController play, Runnable onBack,
+                 UpdateController updates, java.util.function.Supplier<UpdateNotice.Restart> restart) {
         this.ctx = ctx;
         this.onLanguageChanged = onLanguageChanged;
 
@@ -54,7 +55,16 @@ final class AdvancedPage {
                 player.setManaged(shown);
             });
         }
-        page.getChildren().addAll(player, UiKit.card(options), repairCard(play), aboutCard());
+        page.getChildren().addAll(player, UiKit.card(options), repairCard(play));
+        if (updates != null) {
+            UpdatePanel panel = new UpdatePanel(
+                    () -> updates.panelState(play.phase() != PlayController.Phase.IDLE),
+                    updates::checkAsync, restart);
+            updates.onCheck(panel::refresh);
+            play.onPhase(phase -> panel.refresh());
+            page.getChildren().add(UiKit.card(panel.node()));
+        }
+        page.getChildren().add(aboutCard());
         page.getStyleClass().add("page");
         root.getChildren().add(page);
         detectJava();

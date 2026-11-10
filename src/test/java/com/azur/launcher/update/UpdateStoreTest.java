@@ -112,4 +112,24 @@ class UpdateStoreTest {
         assertEquals(Optional.empty(), store.select("1.0.0"));
         assertNull(store.pendingVersion());
     }
+
+    @Test
+    void jarThatReportsTheWrongVersionIsNotConfirmedAndRolledBack() throws Exception {
+        // 1.0.8..1.0.10 once reported AppVersion 1.0.7: confirmStarted never matched, the update was rejected later
+        stage("1.0.10", "v1010");
+        store.select("1.0.7");
+        store.confirmStarted("1.0.7");
+        now.addAndGet(61_000);
+        assertEquals(Optional.empty(), store.select("1.0.7"));
+        assertTrue(store.isRejected("1.0.10"));
+    }
+
+    @Test
+    void jarThatReportsItsOwnVersionStaysAfterTheGrace() throws Exception {
+        stage("1.0.10", "v1010");
+        store.select("1.0.7");
+        store.confirmStarted("1.0.10");
+        now.addAndGet(61_000);
+        assertEquals("v1010", Files.readString(store.select("1.0.7").orElseThrow()));
+    }
 }

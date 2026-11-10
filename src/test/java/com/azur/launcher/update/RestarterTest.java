@@ -61,4 +61,11 @@ class RestarterTest {
     void realStartOfAMissingProgramFailsWithoutThrowing() {
         assertFalse(Restarter.start(List.of("/definitely/not/here/азур launcher")));
     }
+
+    @Test
+    void translocatedMacAppIsRecognised() {
+        assertTrue(Restarter.isTranslocated("/private/var/folders/x/T/AppTranslocation/AB-12/d/Azur Launcher.app/Contents/MacOS/Azur Launcher"));
+        assertFalse(Restarter.isTranslocated("/Applications/Azur Launcher.app/Contents/MacOS/Azur Launcher"));
+        assertFalse(Restarter.isTranslocated(""));
+    }
 }

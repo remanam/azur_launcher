@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.azur'
-version = '1.0.10'
+version = '1.0.12'
 
 java {
     toolchain {
@@ -62,6 +62,11 @@ dependencies {
 }
 
 processResources {
+    // The launcher version is read at run time from this file (AppVersion): a jar always reports its own version.
+    inputs.property('launcherVersion', project.version)
+    filesMatching('azur-version.properties') {
+        expand(launcherVersion: project.version)
+    }
     // Licence texts shown on the About page: packaged as legal/LICENSE and legal/NOTICE.
     from(projectDir) {
         include 'LICENSE', 'NOTICE'
@@ -132,6 +137,7 @@ tasks.named('test', Test) {
     useJUnitPlatform()
     // i18n and CJK tests read paths relative to the project, not the repository root.
     workingDir = projectDir
+    systemProperty 'azur.expectedVersion', project.version.toString()
 }
 
 // Dev tool: one PNG of the account blocks (sign-in code and signed-in), no window. Output: -Psnapshot=<file>.
@@ -140,4 +146,15 @@ tasks.register('snapshotAccount', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.azur.launcher.ui.AccountSnapshot'
     systemProperty 'snapshot.out', project.findProperty('snapshot') ?: layout.buildDirectory.file('account.png').get().asFile.path
+}
+
+// Dev tool: runs the real launcher in a temp data dir and writes window PNGs + cut-off buttons per size. -Pprobe=<out dir>.
+tasks.register('probeLayout', JavaExec) {
+    group = 'verification'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.azur.launcher.ui.LayoutProbe$Main'
+    def home = layout.buildDirectory.dir('probe-home').get().asFile
+    doFirst { home.deleteDir(); home.mkdirs(); new File(home, 'pack.json').text = '{"serversUrl":"https://example.test/servers.json"}' }
+    systemProperty 'azur.home', home.path
+    systemProperty 'probe.out', project.findProperty('probe') ?: layout.buildDirectory.dir('probe').get().asFile.path
 }

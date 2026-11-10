@@ -23,6 +23,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Tooltip;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.BorderPane;
@@ -171,14 +172,19 @@ final class HomePage {
         packRow.setAlignment(Pos.CENTER_LEFT);
         info.getChildren().addAll(serverRow, packRow, bannerLabel, aboutHead, aboutText, errorBox);
         card.getStyleClass().add("forge-card");
-        HBox.setHgrow(card, Priority.ALWAYS);
+        // The card may be taller than the window (sign-in form, errors): it scrolls instead of pushing the header and
+        // the Play button out of the window (1.0.9/1.0.10: cut off and unclickable).
+        ScrollPane cardScroll = UiKit.pageScroll(card);
+        cardScroll.setFitToHeight(true);
+        cardScroll.setMinHeight(0);
+        HBox.setHgrow(cardScroll, Priority.ALWAYS);
 
         Region hero = new Region();
         hero.getStyleClass().add("hero-art");
         hero.setMinWidth(300);
         hero.setPrefWidth(340);
         hero.setMaxWidth(340);
-        HBox middle = new HBox(16, card, hero);
+        HBox middle = new HBox(16, cardScroll, hero);
         middle.getStyleClass().add("home-middle");
 
         Button gear = UiKit.button("", null, "gear-button", openAdvanced);

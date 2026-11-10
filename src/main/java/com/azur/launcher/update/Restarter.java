@@ -60,6 +60,15 @@ public final class Restarter {
         return Optional.of(List.of(java, "-cp", env.classPath(), MAIN_CLASS));
     }
 
+    /**
+     * macOS runs an app downloaded to Downloads and never moved from a read-only temporary copy
+     * ({@code /private/var/folders/.../AppTranslocation/<uuid>/d/X.app}); a restart opens that same copy. The
+     * bootstrap still picks {@code updates/current.jar}, but the player should move the app to Programs once.
+     */
+    public static boolean isTranslocated(String appPath) {
+        return appPath != null && appPath.contains("/AppTranslocation/");
+    }
+
     /** Starts the copy; the caller halts right after. False when the command is unknown or did not start. */
     public static boolean relaunch() {
         return relaunch(currentEnv(), path -> new java.io.File(path).isFile(), command -> {

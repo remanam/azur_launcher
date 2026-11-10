@@ -121,6 +121,7 @@ final class FirstRunWizard {
         Label hint = UiKit.label(I18n.tr(hintKey), "home-sub");
         hint.setWrapText(true);
         hint.setMaxWidth(420);
+        hint.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
         VBox box = new VBox(16, UiKit.label(I18n.tr("wizard.step", n), "wizard-step"),
                 UiKit.label(I18n.tr(titleKey), "card-heading"), hint);
         box.getChildren().addAll(content);

@@ -34,7 +34,10 @@ final class UpdateController {
         return thread;
     });
     private volatile UpdateService.Status last = new UpdateService.Status(UpdateService.Kind.UP_TO_DATE, null, "");
+    private volatile UpdateService.Status lastAny;
+    private volatile long lastCheckMillis;
     private Consumer<UpdateService.Status> listener = status -> { };
+    private Runnable panelListener = () -> { };
 
     private UpdateController(AppContext ctx, UpdateService service) {
         this.ctx = ctx;
@@ -66,17 +69,37 @@ final class UpdateController {
         value.accept(last);
     }
 
+    /** The Settings block redraws after every check, including failed and busy ones (JavaFX thread). */
+    void onCheck(Runnable value) {
+        panelListener = value;
+    }
+
+    /** What the Settings block shows now. */
+    UpdatePanelState panelState(boolean gameBusy) {
+        return UpdatePanelState.of(AppVersion.APP, lastAny, lastCheckMillis,
+                Restarter.isTranslocated(System.getProperty("jpackage.app-path", "")), gameBusy);
+    }
+
+    /** "Check now" button: one check on the update thread, result through the listeners. */
+    void checkAsync() {
+        timer.execute(this::checkNow);
+    }
+
     void start() {
         timer.scheduleWithFixedDelay(this::checkNow, FIRST_DELAY_SECONDS, PERIOD_HOURS * 3600, TimeUnit.SECONDS);
     }
 
     private void checkNow() {
         UpdateService.Status status = service.check();
-        if (status.kind() == UpdateService.Kind.BUSY || status.kind() == UpdateService.Kind.FAILED) {
-            return;
+        if (status.kind() != UpdateService.Kind.BUSY) {
+            lastAny = status;
+            lastCheckMillis = System.currentTimeMillis();
         }
-        last = status;
-        Platform.runLater(() -> listener.accept(status));
+        if (status.kind() != UpdateService.Kind.BUSY && status.kind() != UpdateService.Kind.FAILED) {
+            last = status;
+            Platform.runLater(() -> listener.accept(status));
+        }
+        Platform.runLater(panelListener);
     }
 
     /**

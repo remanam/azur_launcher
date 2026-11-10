@@ -103,10 +103,11 @@ public class LauncherApp extends Application {
         StackPane area = new StackPane();
         area.getStyleClass().add("content-area");
         play = new PlayController(ctx);
-        homePage = new HomePage(ctx, play, PackState.live(ctx), () -> navigate(Page.ADVANCED),
-                () -> updates == null ? UpdateNotice.Restart.FAILED : updates.restart(this::shutdown), this::shutdown);
+        java.util.function.Supplier<UpdateNotice.Restart> restart =
+                () -> updates == null ? UpdateNotice.Restart.FAILED : updates.restart(this::shutdown);
+        homePage = new HomePage(ctx, play, PackState.live(ctx), () -> navigate(Page.ADVANCED), restart, this::shutdown);
         area.getChildren().addAll(homePage.node(),
-                new AdvancedPage(ctx, this::build, play, () -> navigate(Page.HOME)).node());
+                new AdvancedPage(ctx, this::build, play, () -> navigate(Page.HOME), updates, restart).node());
         if (updates != null) {
             updates.onStatus(homePage::showUpdate);
         }
