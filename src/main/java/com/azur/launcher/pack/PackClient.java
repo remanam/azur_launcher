@@ -28,8 +28,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public final class PackClient {
 
-    /** Version of this client against the manifest's {@code min_updater_version}. */
-    public static final String VERSION = "0.1.0";
+    /** Launcher version (keep equal to build.gradle, a test checks it) against the manifest's {@code min_updater_version}. */
+    public static final String VERSION = "1.0.9";
     private static final int DOWNLOAD_THREADS = 4;
     private static final long PROGRESS_INTERVAL_NANOS = 100_000_000L;
     private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
@@ -61,7 +61,7 @@ public final class PackClient {
         PackServer.Status status = server.status();
         PackManifest manifest = server.manifest();
         if (compareVersion(VERSION, manifest.minUpdater()) < 0) {
-            throw new PackException(PackException.OUTDATED, "this pack needs a newer launcher");
+            throw new PackException(PackException.OUTDATED, manifest.minUpdater());
         }
         PackState state = PackState.load(home, game);
         return new Checked(server, manifest, PackPlan.build(manifest, game, state), state, status);

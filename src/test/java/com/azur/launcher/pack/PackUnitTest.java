@@ -56,4 +56,17 @@ class PackUnitTest {
         assertEquals(0, PackClient.compareVersion("1.0", "1"));
         assertTrue(PackClient.compareVersion("", "0.1.0") < 0);
     }
+
+    @Test
+    void unknownPathIsPathErrorNotSignature() {
+        PackManifest m = new PackManifest(1, "1", "t", "n", "0.1", List.of(new PackManifest.Entry(
+                "options.txt", "0".repeat(64), 1, "both", false, "overwrite", "/files/x")), null, null);
+        assertEquals(PackException.PATH, assertThrows(PackException.class, m::validate).code());
+    }
+
+    @Test
+    void launcherVersionMatchesBuild() throws Exception {
+        String g = java.nio.file.Files.readString(java.nio.file.Path.of("build.gradle"));
+        assertTrue(g.contains("version = '" + PackClient.VERSION + "'"));
+    }
 }

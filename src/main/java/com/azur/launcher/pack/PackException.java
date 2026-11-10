@@ -7,6 +7,7 @@ public final class PackException extends IOException {
 
     public static final String NO_PACK = "nopack";
     public static final String SIGNATURE = "signature";
+    public static final String PATH = "path";
     public static final String NETWORK = "network";
     public static final String OUTDATED = "outdated";
     public static final String APPLY = "apply";

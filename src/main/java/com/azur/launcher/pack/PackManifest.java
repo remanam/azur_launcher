@@ -53,7 +53,7 @@ public record PackManifest(
         Set<String> seen = new HashSet<>();
         for (Entry f : filesOrEmpty()) {
             if (!PackPaths.isSafeRel(f.path())) {
-                throw bad("unsafe path " + f.path());
+                throw path(f.path());
             }
             if (!PackPaths.validHash(f.sha256()) || f.size() < 0 || f.size() > MAX_FILE_SIZE || f.url() == null) {
                 throw bad("bad hash or size of " + f.path());
@@ -67,9 +67,14 @@ public record PackManifest(
         }
         for (String r : retiredOrEmpty()) {
             if (!PackPaths.isSafeRel(r)) {
-                throw bad("unsafe retired path " + r);
+                throw path(r);
             }
         }
+    }
+
+    /** A path this launcher does not know: a newer pack format, not a bad signature. */
+    private static PackException path(String rel) {
+        return new PackException(PackException.PATH, rel);
     }
 
     private static PackException bad(String message) {

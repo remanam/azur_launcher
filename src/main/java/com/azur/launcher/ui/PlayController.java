@@ -256,7 +256,7 @@ final class PlayController implements GameStarter {
             PackSyncService.Result result = outcome.result();
             if (!result.ok()) {
                 String key = "sync.err." + result.code();
-                throw new IOException(I18n.tr(key).equals(key) ? result.message() : I18n.tr(key));
+                throw new IOException(I18n.tr(key).equals(key) ? result.message() : I18n.tr(key, result.message()));
             }
         }
 
