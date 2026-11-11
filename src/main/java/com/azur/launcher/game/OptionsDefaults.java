@@ -12,7 +12,7 @@ import java.util.Map;
 
 /**
  * First-run defaults for the game's {@code options.txt}: only the keys that are MISSING are appended (the game language
- * from the launcher language, no accessibility onboarding screen, narrator off). Existing lines and line endings stay.
+ * from the launcher language, no accessibility onboarding screen, narrator off) and our resource packs (see {@link ResourcePackDefaults}). Existing lines and line endings stay.
  */
 public final class OptionsDefaults {
 
@@ -33,7 +33,8 @@ public final class OptionsDefaults {
                 missing.add(e.getKey() + ":" + e.getValue());
             }
         }
-        if (missing.isEmpty()) {
+        List<String> offer = ResourcePackDefaults.toOffer(gameDir);
+        if (missing.isEmpty() && offer.isEmpty()) {
             return;
         }
         String eol = text.contains("\r\n") ? "\r\n" : "\n";
@@ -44,10 +45,12 @@ public final class OptionsDefaults {
         for (String line : missing) {
             out.append(line).append(eol);
         }
+        String result = ResourcePackDefaults.update(out.toString(), offer);
         Files.createDirectories(gameDir);
         Path tmp = gameDir.resolve("options.txt.azur-tmp");
-        Files.writeString(tmp, out.toString(), StandardCharsets.UTF_8);
+        Files.writeString(tmp, result, StandardCharsets.UTF_8);
         Files.move(tmp, file, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        ResourcePackDefaults.saveMarker(gameDir, offer);
     }
 
     private static boolean hasKey(String text, String key) {
