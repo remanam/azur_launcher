@@ -17,12 +17,19 @@ public final class Restarter {
     /** What the JVM knows about itself. {@code sep} is the file separator of the OS ("\\" on Windows). */
     public record Env(boolean windows, String sep, String appPath, String javaHome, String classPath,
                       Optional<String> command, List<String> arguments) {
+        /** Separator of class path entries. */
+        String pathSeparator() {
+            return windows ? ";" : ":";
+        }
     }
 
     /** Starts a process; false when it could not be started (tests replace it). */
     public interface Starter {
         boolean start(List<String> command);
     }
+
+    /** Env variable of the new copy: pid of the old process, which {@link RestartWait} waits for before applying the update. */
+    public static final String WAIT_ENV = "AZUR_RESTART_WAIT_PID";
 
     static final String MAIN_CLASS = "com.azur.launcher.Launcher";
 
@@ -57,6 +64,9 @@ public final class Restarter {
         }
         String bin = env.javaHome() + env.sep() + "bin" + env.sep();
         String java = env.windows() ? (exists.test(bin + "javaw.exe") ? bin + "javaw.exe" : bin + "java.exe") : bin + "java";
+        if (!env.classPath().contains(env.pathSeparator()) && env.classPath().endsWith(".jar")) {
+            return Optional.of(List.of(java, "-jar", env.classPath()));
+        }
         return Optional.of(List.of(java, "-cp", env.classPath(), MAIN_CLASS));
     }
 
@@ -90,7 +100,9 @@ public final class Restarter {
 
     static boolean start(List<String> command) {
         try {
-            new ProcessBuilder(command).redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            ProcessBuilder builder = new ProcessBuilder(command);
+            builder.environment().put(WAIT_ENV, Long.toString(ProcessHandle.current().pid()));
+            builder.redirectOutput(ProcessBuilder.Redirect.DISCARD)
                     .redirectError(ProcessBuilder.Redirect.DISCARD).start();
             return true;
         } catch (IOException e) {

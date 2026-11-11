@@ -26,7 +26,7 @@ class WizardFitTest {
     @Test
     @EnabledIf("com.azur.launcher.ui.CardScrollTest#toolkitAvailable")
     void stepsFitAt960x600() throws Exception {
-        double[] heights = new double[3];
+        double[] heights = new double[2];
         CountDownLatch done = new CountDownLatch(1);
         Platform.runLater(() -> {
             I18n.setLanguage("ru");
@@ -35,11 +35,8 @@ class WizardFitTest {
             Label note = UiKit.label(I18n.tr("telemetry.notice"), "option-subtitle");
             note.setWrapText(true);
             note.setMaxWidth(420);
-            Button install = UiKit.button(I18n.tr("wizard.install"), null, "launch-button", () -> { });
             heights[0] = height(FirstRunWizard.step(1, "wizard.1.title_site", "wizard.1.hint_site", panel.node()));
-            heights[1] = height(FirstRunWizard.step(2, "wizard.2.title", "wizard.2.hint", note, install));
-            heights[2] = height(FirstRunWizard.step(3, "wizard.3.title", "wizard.3.hint",
-                    UiKit.button(I18n.tr("home.btn.play"), "icon-play", "launch-button", () -> { })));
+            heights[1] = height(FirstRunWizard.step(2, "wizard.2.title", "wizard.2.hint", note));
             done.countDown();
         });
         assertTrue(done.await(10, TimeUnit.SECONDS));

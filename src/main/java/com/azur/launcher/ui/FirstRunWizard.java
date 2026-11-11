@@ -11,22 +11,16 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
-/** First start, three screens: nickname, pack install, Play. Shown only while no account exists. */
+/** First start, {@link WizardSteps#TOTAL} screens: account, install and play (the bottom button runs the flow). Shown only while no account exists. */
 final class FirstRunWizard {
 
     private final AppContext ctx;
-    private final Runnable install;
-    private final Runnable play;
     private final StackPane root = new StackPane();
     private int step;
-    private final Button installButton;
     private final SelectableText installNote = UiKit.selectable("", "home-sub");
 
-    FirstRunWizard(AppContext ctx, Runnable install, Runnable play) {
+    FirstRunWizard(AppContext ctx) {
         this.ctx = ctx;
-        this.install = install;
-        this.play = play;
-        installButton = UiKit.button(I18n.tr("wizard.install"), null, "launch-button", install);
         root.setAlignment(Pos.TOP_LEFT);
         showStep(1);
     }
@@ -41,17 +35,11 @@ final class FirstRunWizard {
 
     void showStep(int step) {
         this.step = step;
-        root.getChildren().setAll(switch (step) {
-            case 1 -> accountStep();
-            case 2 -> installStep();
-            default -> playStep();
-        });
+        root.getChildren().setAll(step == 1 ? accountStep() : installStep());
     }
 
-    /** Called by Home while the install runs: the label with percent, or the failure sentence. */
-    void showInstall(String buttonText, boolean busy, String note) {
-        installButton.setText(buttonText);
-        installButton.setDisable(busy);
+    /** Called by Home: the failure sentence of the install (null = none). The ONE control button is Home's bottom one. */
+    void showInstall(String note) {
         installNote.show(note);
     }
 
@@ -103,12 +91,7 @@ final class FirstRunWizard {
     }
 
     private VBox installStep() {
-        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.notice(ctx), installButton, UiKit.withCopy(installNote));
-    }
-
-    private VBox playStep() {
-        return step(3, "wizard.3.title", "wizard.3.hint",
-                UiKit.button(I18n.tr("home.btn.play"), "icon-play", "launch-button", play));
+        return step(2, "wizard.2.title", "wizard.2.hint", TelemetryOption.notice(ctx), UiKit.withCopy(installNote));
     }
 
     static VBox step(int n, String titleKey, String hintKey, Node... content) {
@@ -117,7 +100,7 @@ final class FirstRunWizard {
         hint.setMaxWidth(420);
         hint.setMinHeight(javafx.scene.layout.Region.USE_PREF_SIZE);
         javafx.scene.layout.HBox head = new javafx.scene.layout.HBox(12, UiKit.label(I18n.tr(titleKey), "card-heading"),
-                UiKit.spacer(), UiKit.label(I18n.tr("wizard.step", n), "wizard-step"));
+                UiKit.spacer(), UiKit.label(WizardSteps.label(n), "wizard-step"));
         head.setAlignment(Pos.CENTER_LEFT);
         VBox box = new VBox(8, head, hint);
         box.getChildren().addAll(content);

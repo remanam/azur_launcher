@@ -57,6 +57,16 @@ final class UpdateDialog {
         show(UpdateNotice.dialog(gameBusy.get()));
     }
 
+    /** The chip button: restart at once; the dialog opens only to explain (game running, restart failed). */
+    void restartOrExplain(String newVersion) {
+        version = newVersion;
+        if (gameBusy.get()) {
+            show(UpdateNotice.Dialog.GAME_RUNNING);
+            return;
+        }
+        restartNow();
+    }
+
     void close() {
         scrim.setVisible(false);
         scrim.setManaged(false);

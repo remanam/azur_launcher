@@ -30,7 +30,7 @@ class RestarterTest {
         String classPath = "C:\\Users\\Иван Петров\\AppData\\Roaming\\Azur\\app\\azur-launcher.jar";
         Restarter.Env env = win("", Optional.of(WIN_JAVA_HOME + "\\bin\\java.exe"), List.of(), classPath);
         List<String> line = Restarter.appCommand(env, p -> p.endsWith("javaw.exe")).orElseThrow();
-        assertEquals(List.of(WIN_JAVA_HOME + "\\bin\\javaw.exe", "-cp", classPath, Restarter.MAIN_CLASS), line);
+        assertEquals(List.of(WIN_JAVA_HOME + "\\bin\\javaw.exe", "-jar", classPath), line);
         assertTrue(Restarter.appCommand(env, p -> false).orElseThrow().get(0).endsWith("\\bin\\java.exe"));
     }
 
@@ -67,5 +67,12 @@ class RestarterTest {
         assertTrue(Restarter.isTranslocated("/private/var/folders/x/T/AppTranslocation/AB-12/d/Azur Launcher.app/Contents/MacOS/Azur Launcher"));
         assertFalse(Restarter.isTranslocated("/Applications/Azur Launcher.app/Contents/MacOS/Azur Launcher"));
         assertFalse(Restarter.isTranslocated(""));
+    }
+
+    @Test
+    void multiEntryClassPathKeepsTheMainClass() {
+        Restarter.Env env = win("", Optional.empty(), List.of(), "a.jar;b.jar");
+        assertEquals(List.of(WIN_JAVA_HOME + "\\bin\\javaw.exe", "-cp", "a.jar;b.jar", Restarter.MAIN_CLASS),
+                Restarter.appCommand(env, p -> true).orElseThrow());
     }
 }

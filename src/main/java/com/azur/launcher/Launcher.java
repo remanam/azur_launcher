@@ -1,6 +1,8 @@
 package com.azur.launcher;
 
 import com.azur.launcher.config.AppDirs;
+import com.azur.launcher.update.RestartWait;
+import com.azur.launcher.update.Restarter;
 import com.azur.launcher.update.UpdateStore;
 
 import java.lang.reflect.InvocationTargetException;
@@ -29,7 +31,8 @@ public final class Launcher {
         UpdateStore store = UpdateStore.at(AppDirs.system().root().resolve("updates"));
         Optional<Path> chosen = Optional.empty();
         try {
-            chosen = store.select(AppVersion.APP);
+            RestartWait.awaitParent(System.getenv(Restarter.WAIT_ENV));
+            chosen = store.selectWithRetry(AppVersion.APP, 5, Thread::sleep);
         } catch (RuntimeException e) {
             System.err.println("Update store ignored: " + e);
         }

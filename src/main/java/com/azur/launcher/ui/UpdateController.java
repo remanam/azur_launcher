@@ -19,11 +19,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
-/** Runs the launcher self-update check at start and every few hours, and restarts into a staged update. */
+/** Runs the launcher self-update check at start and every {@link UpdateService#CHECK_PERIOD_MINUTES} minutes, and restarts into a staged update. */
 final class UpdateController {
 
-    private static final long FIRST_DELAY_SECONDS = 3;
-    private static final long PERIOD_HOURS = 4;
     private static final long HALT_AFTER_MILLIS = 2500;
 
     private final AppContext ctx;
@@ -86,7 +84,8 @@ final class UpdateController {
     }
 
     void start() {
-        timer.scheduleWithFixedDelay(this::checkNow, FIRST_DELAY_SECONDS, PERIOD_HOURS * 3600, TimeUnit.SECONDS);
+        timer.scheduleWithFixedDelay(this::checkNow, UpdateService.FIRST_CHECK_SECONDS,
+                UpdateService.CHECK_PERIOD_MINUTES * 60, TimeUnit.SECONDS);
     }
 
     private void checkNow() {

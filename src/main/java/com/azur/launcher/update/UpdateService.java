@@ -20,6 +20,11 @@ import java.util.function.Supplier;
  */
 public final class UpdateService {
 
+    /** How often the app asks for a newer launcher (the one place; the manifest is a few hundred bytes). */
+    public static final long CHECK_PERIOD_MINUTES = 5;
+    /** Delay of the first check after the start. */
+    public static final long FIRST_CHECK_SECONDS = 3;
+
     public enum Kind { UP_TO_DATE, READY, BUSY, WRAPPER_OLD, FAILED }
 
     /** {@code manifest} is null for BUSY and FAILED. */

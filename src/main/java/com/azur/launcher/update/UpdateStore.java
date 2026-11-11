@@ -80,6 +80,14 @@ public final class UpdateStore {
         }
     }
 
+    /**
+     * {@link #select} again a few times when the files are still locked (the old process of a restart may need a
+     * moment on Windows). The last failure is rethrown so the bootstrap falls back to the embedded jar.
+     */
+    public Optional<Path> selectWithRetry(String embeddedVersion, int attempts, RestartWait.Sleeper sleeper) {
+        return RestartWait.retrying(attempts, sleeper, () -> select(embeddedVersion));
+    }
+
     /** The app started: confirms the version so the next start keeps it. */
     public void confirmStarted(String runningVersion) {
         Properties attempt = read("attempt.properties");

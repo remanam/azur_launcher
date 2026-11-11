@@ -33,7 +33,6 @@ class UpdateNoticeTest {
         UpdateNotice notice = of(UpdateService.Kind.WRAPPER_OLD, true);
         assertEquals(UpdateNotice.Chip.SITE, notice.chip());
         assertTrue(notice.blocksPlay());
-        assertFalse(notice.opensDialogFor(""));
     }
 
     @Test
@@ -42,14 +41,6 @@ class UpdateNoticeTest {
             assertFalse(of(kind, false).visible());
         }
         assertFalse(UpdateNotice.NONE.blocksPlay());
-    }
-
-    @Test
-    void dialogOpensOncePerVersion() {
-        UpdateNotice notice = of(UpdateService.Kind.READY, false);
-        assertTrue(notice.opensDialogFor(""));
-        assertFalse(notice.opensDialogFor("1.0.5"));
-        assertTrue(notice.opensDialogFor("1.0.4"));
     }
 
     @Test

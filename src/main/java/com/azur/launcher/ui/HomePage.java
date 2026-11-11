@@ -75,7 +75,6 @@ final class HomePage {
     private final Button updateChip = UiKit.button("", null, "update-chip", () -> { });
     private UpdateNotice notice = UpdateNotice.NONE;
     private final UpdateDialog updateDialog;
-    private String dialogShownFor = "";
     private final FeedPanel feed;
     private final SelectableText errorLabel = UiKit.selectable("", null);
     private final SelectableText detailsLabel = UiKit.selectable("", "home-error-details");
@@ -114,7 +113,7 @@ final class HomePage {
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
-        wizard = new FirstRunWizard(ctx, this::install, this::playFromWizard);
+        wizard = new FirstRunWizard(ctx);
         wizardActive = HomeState.wizardNeeded(ctx.currentPlayer() != null);
 
         dot.getStyleClass().add("status-dot");
@@ -238,7 +237,7 @@ final class HomePage {
 
     /**
      * Launcher self-update (JavaFX thread): a chip in the header next to the bell, "Launcher X.Y.Z" with an arrow.
-     * RESTART opens the restart dialog (once by itself per version), SITE opens the website; a required update blocks Play.
+     * RESTART is a button «Version X is ready · Restart» (manual, never by itself; the dialog appears only when the game runs or the restart fails), SITE opens the website; a required update blocks Play.
      */
     void showUpdate(UpdateService.Status status) {
         notice = UpdateNotice.of(status);
@@ -250,20 +249,16 @@ final class HomePage {
         }
         if (notice.visible()) {
             boolean site = notice.chip() == UpdateNotice.Chip.SITE;
-            updateChipLabel.setText(I18n.tr("update.chip", notice.version()));
+            updateChipLabel.setText(I18n.tr(site ? "update.chip" : "update.chip_restart", notice.version()));
             updateChip.setTooltip(new Tooltip(I18n.tr(site ? "update.wrapper_old" : notice.required() ? "update.required"
                     : "update.available", notice.version())));
             updateChip.setOnAction(event -> {
                 if (site) {
                     ctx.host.showDocument(SITE_URL);
                 } else {
-                    updateDialog.open(notice.version());
+                    updateDialog.restartOrExplain(notice.version());
                 }
             });
-        }
-        if (notice.opensDialogFor(dialogShownFor)) {
-            dialogShownFor = notice.version();
-            updateDialog.open(notice.version());
         }
         render();
     }
@@ -398,17 +393,6 @@ final class HomePage {
         }
     }
 
-    private void playFromWizard() {
-        wizardActive = false;
-        render();
-        startGame();
-    }
-
-    /** The wizard's install step is the same Play flow. */
-    private void install() {
-        startGame();
-    }
-
     private void onPhase(PlayController.Phase phase) {
         boolean busy = phase == PlayController.Phase.PREPARING;
         if (busy && !updating) {
@@ -418,6 +402,9 @@ final class HomePage {
         } else if (!busy && updating) {
             updating = false;
             boolean success = phase == PlayController.Phase.RUNNING;
+            if (success) {
+                wizardActive = false;
+            }
             stopProgress(success);
             packState.invalidate();
             refreshState(true);
@@ -493,7 +480,7 @@ final class HomePage {
         if (phase == PlayController.Phase.RUNNING) {
             mainButton.getStyleClass().add("stopping");
         }
-        wizard.showInstall(text, updating, failed ? errorLabel.getText() : null);
+        wizard.showInstall(failed ? errorLabel.getText() : null);
         card.getChildren().setAll(wizardActive ? wizard.node() : info);
         renderPack();
         renderStatus();

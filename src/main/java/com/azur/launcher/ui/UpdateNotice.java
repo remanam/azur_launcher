@@ -38,11 +38,6 @@ record UpdateNotice(Chip chip, String version, boolean required) {
         return visible() && required;
     }
 
-    /** The dialog opens by itself once per version (the chip stays for later). */
-    boolean opensDialogFor(String shownVersion) {
-        return chip == Chip.RESTART && !version.equals(shownVersion);
-    }
-
     static Dialog dialog(boolean gameBusy) {
         return gameBusy ? Dialog.GAME_RUNNING : Dialog.ASK;
     }
