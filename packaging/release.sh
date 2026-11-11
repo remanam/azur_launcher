@@ -74,4 +74,6 @@ mkdir -p ../launcher_builds
 cp build/libs/azur-launcher-all.jar ../launcher_builds/azur-launcher-beta.jar
 cp -R "$STAGE/out/." dist-release/
 cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
+# the .dmg (macOS) goes next to the jar so that "publish_release.sh launcher" uploads it too; name is fixed, version is read from the file name
+for f in dist-release/*.dmg; do [ -f "$f" ] && cp "$f" ../launcher_builds/azur-launcher.dmg; done
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"
