@@ -1,4 +1,4 @@
-// Azur Launcher: JavaFX 21 app, GPL-3.0 (fork of MCLQE, see NOTICE).
+// Azur Launcher: JavaFX 21 app, GPL-3.0 (see LICENSE and NOTICE).
 // Tasks: test (unit tests), releaseJar (the one cross-platform jar).
 
 plugins {
