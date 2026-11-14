@@ -53,7 +53,7 @@ public final class HostPolicy {
     }
 
     /**
-     * Local-test exception (docs: CLAUDE.md): plain http is accepted ONLY for the loopback literals 127.0.0.1,
+     * Local-test exception: plain http is accepted ONLY for the loopback literals 127.0.0.1,
      * [::1] and localhost, so a pack server on the developer's own machine can be used. No other http host passes.
      */
     public static boolean isLoopbackHttp(String url) {

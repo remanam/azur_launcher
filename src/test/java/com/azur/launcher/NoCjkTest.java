@@ -24,7 +24,7 @@ class NoCjkTest {
     void projectFilesContainNoCjkCharacters() throws IOException {
         List<String> offenders = new ArrayList<>();
         List<Path> roots = List.of(Path.of("src"), Path.of("docs"), Path.of("tools"),
-                Path.of("pom.xml"), Path.of("README.md"), Path.of("NOTICE"), Path.of("CLAUDE.md"));
+                Path.of("pom.xml"), Path.of("README.md"), Path.of("NOTICE"));
         for (Path root : roots) {
             if (!Files.exists(root)) {
                 continue;
