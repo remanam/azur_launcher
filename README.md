@@ -1,6 +1,6 @@
 # Azur Launcher
 
-Minecraft launcher for the Azur Launcher modpack. Fork of Azur (GPL-3.0), see `NOTICE`.
+Minecraft launcher for the Azur Launcher modpack. Licence and third-party notices: `LICENSE`, `NOTICE`.
 
 Pack sync, pinned NeoForge install, a signed server list and a debug/release split are implemented; the details are in `docs/`.
 
