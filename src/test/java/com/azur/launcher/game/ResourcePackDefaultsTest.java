@@ -101,4 +101,18 @@ class ResourcePackDefaultsTest {
         OptionsDefaults.apply(dir, "ru");
         assertEquals(fixed, line());
     }
+
+    @Test
+    void ownerLegacyLineIsRepaired() throws IOException {
+        all();
+        String legacy = "resourcePacks:[\"" + F + "\",\"" + M + "\",\"vanilla\",\"generated/fragmentum_layer\",\"mod_resources\","
+                + "\"builtin/add_pack_finders_test\",\"azur_sky\",\"azur_mods_32x\",\"azur_menu\",\"azur_hotbar\",\"" + D
+                + "\",\"a_good_place:default_animations\",\"azur_hotbar_v2\"]";
+        Files.writeString(dir.resolve("options.txt"), legacy + "\nlang:ru_ru\n");
+        Files.writeString(dir.resolve(ResourcePackDefaults.MARKER), String.join("\n", ResourcePackDefaults.PACKS) + "\n");
+        OptionsDefaults.apply(dir, "ru");
+        String l = line();
+        assertTrue(l.indexOf("\"vanilla\"") < l.indexOf(F) && l.indexOf("\"mod_resources\"") < l.indexOf(F));
+        assertTrue(l.indexOf("\"mod_resources\"") < l.indexOf(D));
+    }
 }
