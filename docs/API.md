@@ -33,7 +33,7 @@ Header `Authorization: Bearer <player_token>`.
   "uuid": "0123456789abcdef0123456789abcdef",
   "roles": ["friend", "builder"],
   "whitelisted": true,
-  "server": {"name": "Azur Launcher", "address": "mc.example.ru", "port": 25565},
+  "server": {"name": "Example server", "address": "mc.example.ru", "port": 25565},
   "pack": {"url": "https://pack.example.ru", "version": "2026.10.29-1900"}
 }
 ```

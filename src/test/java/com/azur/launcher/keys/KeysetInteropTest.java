@@ -140,7 +140,7 @@ class KeysetInteropTest {
     /** servers.json, feed.json, pack manifest and launcher.json signed by the given working keys (file suffix). */
     private void signDocuments(String suffix, String serversKey, String packKey, String launcherKey) throws Exception {
         Files.writeString(work.resolve("s.json"), "{\"schema\":2,\"validUntil\":\"2099-01-01T00:00:00Z\",\"servers\":[{\"id\":\"isles\","
-                + "\"name\":\"Isles\",\"address\":\"example.test\",\"pack\":{\"url\":\"https://example.test/pack\",\"key\":\""
+                + "\"name\":\"Example\",\"address\":\"example.test\",\"pack\":{\"url\":\"https://example.test/pack\",\"key\":\""
                 + pub("pack") + "\"}}]}");
         run("sign", "--key", "keys/" + serversKey + ".key", "--in", "s.json", "--out", "servers" + suffix + ".json");
         Files.createDirectories(work.resolve("feed" + suffix));

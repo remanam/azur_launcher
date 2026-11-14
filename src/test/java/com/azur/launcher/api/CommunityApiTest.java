@@ -42,7 +42,7 @@ class CommunityApiTest {
         server.createContext("/v1/me", exchange -> {
             authHeader.set(exchange.getRequestHeaders().getFirst("Authorization"));
             reply(exchange, 200, "{\"nick\":\"Vasya\",\"uuid\":\"uuid-1\",\"roles\":[\"friend\",\"builder\"],"
-                    + "\"whitelisted\":true,\"server\":{\"name\":\"Isles\",\"address\":\"mc.example\",\"port\":25565},"
+                    + "\"whitelisted\":true,\"server\":{\"name\":\"Example\",\"address\":\"mc.example\",\"port\":25565},"
                     + "\"pack\":{\"url\":\"https://pack.example\",\"version\":\"2026.10.29-1900\"}}");
         });
         server.start();

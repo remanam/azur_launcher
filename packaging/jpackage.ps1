@@ -85,7 +85,7 @@ Copy-Item LICENSE "$in\LICENSE.txt"; Copy-Item NOTICE "$in\NOTICE.txt"
 # --- jpackage ---
 foreach ($t in $types) {
   Write-Host "jpackage $t ..."
-  $jpArgs = @("--type", $t, "--name", "Azur Launcher", "--app-version", $Version, "--vendor", "Azur Launcher",
+  $jpArgs = @("--type", $t, "--name", "Azur Launcher", "--app-version", $Version, "--vendor", $(if ($env:AZUR_VENDOR) { $env:AZUR_VENDOR } else { "Azur Launcher" }),
     "--copyright", "GPL-3.0", "--description", "Azur Launcher", "--input", $in, "--main-jar", "azur-launcher.jar",
     "--main-class", "com.azur.launcher.Launcher", "--java-options", '-Dazur.app.dir=$APPDIR', "--dest", $out)
   if ($t -ne "app-image") {

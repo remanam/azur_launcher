@@ -16,7 +16,7 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
   "schema": 2,
   "validUntil": "2026-12-01T00:00:00Z",
   "servers": [{
-    "id": "isles",                 "name": "Azur Launcher",
+    "id": "isles",                 "name": "Example server",
     "address": "play.example.org", "port": 25565,
     "mcVersion": "1.21.1",         "neoforge": "21.1.264",   "java": "21",
     "packChannel": "stable",       "motd": "Short description",

@@ -45,7 +45,7 @@ import java.util.List;
  */
 final class HomePage {
 
-    private static final String SITE_URL = "https://example.test";
+    private static final String SITE_URL = com.azur.launcher.config.Branding.siteUrl();
 
     private static final long PING_INTERVAL_MS = 15_000;
 
@@ -254,7 +254,9 @@ final class HomePage {
                     : "update.available", notice.version())));
             updateChip.setOnAction(event -> {
                 if (site) {
-                    ctx.host.showDocument(SITE_URL);
+                    if (!SITE_URL.isEmpty()) {
+                        ctx.host.showDocument(SITE_URL);
+                    }
                 } else {
                     updateDialog.restartOrExplain(notice.version());
                 }

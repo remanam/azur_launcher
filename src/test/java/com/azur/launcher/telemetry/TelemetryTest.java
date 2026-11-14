@@ -17,7 +17,7 @@ import org.junit.jupiter.api.Test;
 
 class TelemetryTest {
 
-    /** Same rules as site/server/analytics_launcher.go (telInstallRe, telVersionRe, enums). */
+    /** Same rules as the site analytics validator (telInstallRe, telVersionRe, enums). */
     private static final Pattern SITE_BODY = Pattern.compile(
             "\\{\"install_id\":\"[0-9a-f]{32}\",\"v\":\"[0-9]{1,3}(\\.[0-9]{1,3}){1,3}\",\"os\":\"(windows|macos|linux|other)\","
                     + "\"step\":\"(start|java|login|manifest|download|verify|install|launch|update)\",\"ok\":(true|false),"

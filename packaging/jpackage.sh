@@ -42,7 +42,7 @@ for TYPE in $TYPES; do
   [ "$TYPE" = app-image ] || LICENSE_OPT="--license-file LICENSE"
   # shellcheck disable=SC2086
   jpackage --type "$TYPE" --name "Azur Launcher" --app-version "$VERSION" \
-    --vendor "Azur Launcher" --copyright "GPL-3.0" --description "Azur Launcher" \
+    --vendor "${AZUR_VENDOR:-Azur Launcher}" --copyright "GPL-3.0" --description "Azur Launcher" \
     $LICENSE_OPT --input "$IN" --main-jar azur-launcher.jar --main-class com.azur.launcher.Launcher \
     --java-options '-Dazur.app.dir=$APPDIR' --dest "$OUT" $ICON
 done

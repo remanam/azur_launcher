@@ -63,7 +63,7 @@ final class TelemetryOption {
             java.net.URI u = java.net.URI.create(ctx.pack.getServersUrl());
             return "https://" + u.getHost() + "/privacy";
         } catch (RuntimeException e) {
-            return "https://example.test/privacy";
+            return com.azur.launcher.config.Branding.privacyUrl();
         }
     }
 }

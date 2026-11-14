@@ -47,7 +47,7 @@ class DeviceKeyTest {
     @Test
     void fingerprintHasTheSiteShape() {
         assertTrue(DeviceKey.generate().fingerprint().matches("[0-9a-f]{4}(-[0-9a-f]{4}){3}"));
-        // sha256(32 zero bytes) starts 66687aadf862bd77: the same digest as site fingerprint()
+        // sha256(32 zero bytes) starts 66687aadf862bd77: the same digest as the site fingerprint()
         assertEquals("6668-7aad-f862-bd77", DeviceKey.fingerprintOf(new byte[32]));
     }
 }

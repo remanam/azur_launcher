@@ -17,7 +17,7 @@ public final class PackSettings {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
     /** Release address of the signed servers.json, used when the setting is empty (dev runs keep it empty). */
-    public static final String DEFAULT_SERVERS_URL = "https://example.test/servers.json";
+    public static final String DEFAULT_SERVERS_URL = Branding.serversUrl();
 
     /** Address of the signed servers.json (https). Empty: the release default, or only the cache in a dev run. */
     private String serversUrl = "";
