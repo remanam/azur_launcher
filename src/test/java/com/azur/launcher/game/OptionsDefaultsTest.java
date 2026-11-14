@@ -20,7 +20,7 @@ class OptionsDefaultsTest {
     @Test
     void createsFileRussian() throws IOException {
         OptionsDefaults.apply(dir, "ru");
-        assertEquals("lang:ru_ru\nonboardAccessibility:false\nnarrator:0\n", read());
+        assertEquals("lang:ru_ru\nonboardAccessibility:false\nnarrator:0\ntutorialStep:none\n", read());
     }
 
     @Test
@@ -33,7 +33,7 @@ class OptionsDefaultsTest {
     void appendsOnlyMissingKeepsCrlf() throws IOException {
         Files.writeString(dir.resolve("options.txt"), "fov:0.5\r\nnarrator:1", java.nio.charset.StandardCharsets.UTF_8);
         OptionsDefaults.apply(dir, "ru");
-        assertEquals("fov:0.5\r\nnarrator:1\r\nlang:ru_ru\r\nonboardAccessibility:false\r\n", read());
+        assertEquals("fov:0.5\r\nnarrator:1\r\nlang:ru_ru\r\nonboardAccessibility:false\r\ntutorialStep:none\r\n", read());
     }
 
     @Test

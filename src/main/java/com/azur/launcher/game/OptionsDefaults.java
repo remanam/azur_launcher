@@ -27,6 +27,7 @@ public final class OptionsDefaults {
         wanted.put("lang", "ru".equals(launcherLanguage) ? "ru_ru" : "en_us");
         wanted.put("onboardAccessibility", "false");
         wanted.put("narrator", "0");
+        wanted.put("tutorialStep", "none"); // vanilla tutorial toasts (movement, inventory, crafting) are noise in our onboarding; only for NEW options.txt keys
         List<String> missing = new ArrayList<>();
         for (Map.Entry<String, String> e : wanted.entrySet()) {
             if (!hasKey(text, e.getKey())) {
