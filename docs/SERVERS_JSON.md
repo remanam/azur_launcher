@@ -29,7 +29,7 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
 - `port` 0 or absent = 25565; range 1..65535. Other fields are optional strings.
 - `neoforge` selects the installed game version for the server (its id must contain the build); `neoforgeSha256` (optional): SHA-256 of the NeoForge installer when the build differs from the embedded profile; without it only the embedded build is accepted.
 - `pack` (optional object): where the pack of this server is and which key signs its manifest. `url`: https (plain http only for 127.0.0.1 in local tests), no trailing path rules beyond a reverse-proxy prefix such as `/pack`; `key`: base64 of the 32 raw bytes (`azur-servers pubkey`). The pack download is open (no tokens). Without `pack` the launcher installs the game but no pack (error `nopack` on update); a wrong `key` makes the manifest check fail (`signature`). `azur-servers sign` rejects a malformed `pack`.
-- `mirror` (optional): base URL of our own mirror of `maven.neoforged.net` and `libraries.minecraft.net` (layout `<mirror>/<host>/<path>`, e.g. `<mirror>/maven.neoforged.net/releases/net/neoforged/...`). The launcher tries it first for the NeoForge installer and its libraries and falls back to the official host; hashes are checked either way. https only (plain http only for 127.0.0.1 in local tests).
+- `mirror` (optional): base URL of an optional mirror of `maven.neoforged.net` and `libraries.minecraft.net` (layout `<mirror>/<host>/<path>`, e.g. `<mirror>/maven.neoforged.net/releases/net/neoforged/...`). The launcher tries it first for the NeoForge installer and its libraries and falls back to the official host; hashes are checked either way. https only (plain http only for 127.0.0.1 in local tests).
 - Unknown fields are ignored. A different `schema` is refused.
 
 ## Launcher behaviour
@@ -42,11 +42,11 @@ The signer (`azur-servers sign`) writes the payload canonical: object keys sorte
    `servers_pubkey.txt` in the jar (base64 of the 32 raw bytes; `<data>/servers_pubkey.txt` overrides it in a dev run)
    and the entry's `pack.key`. Keep `pack.key` in the published list while launchers up to 1.0.6 exist.
 
-## Signing (owner)
-Same key file as `azur-dist` (`~/.azur-dist/signing.key`, base64 seed):
+## Signing
+Use the Ed25519 signing key of the pack publisher (base64 seed, kept outside the repository):
 ```
 azur-servers pubkey                                   # print the public key to embed
 azur-servers sign --in servers.json --out servers.signed.json --valid-days 30
 azur-servers verify --in servers.signed.json --pub <base64 key>
 ```
-Publish `servers.signed.json` at the URL players have in their settings. Source: `tools/updater/cmd/azur-servers`.
+Publish `servers.signed.json` at the URL players have in their settings. The signing tools are separate, server-side software and are not part of this repository.

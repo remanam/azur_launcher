@@ -2,7 +2,7 @@
 # Builds the installer packages of the RELEASE launcher with jpackage (JDK 21) from the staged input.
 # Normally started by packaging/release.sh, which stages build/dist/input (the fat jar; the pack client is inside it).
 # Usage: packaging/jpackage.sh <version> [type ...]      types: app-image dmg pkg deb rpm (default by OS)
-# Windows: packaging/jpackage.ps1.  Output: build/dist/out.  Packages are UNSIGNED (signing is a separate owner step).
+# Windows: packaging/jpackage.ps1.  Output: build/dist/out.  Packages are UNSIGNED (signing is a separate maintainer step).
 set -eu
 cd "$(dirname "$0")/.."
 

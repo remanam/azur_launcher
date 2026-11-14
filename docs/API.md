@@ -1,7 +1,6 @@
-# Community API contract (owner side)
+# Community API contract (service side)
 
-The launcher talks to our own service for registration, roles, whitelist status and the pack address. The **Minecraft
-sign-in stays with Microsoft**: this API never replaces it and never issues a Minecraft session.
+The launcher can talk to an optional community service (configurable site origin) for registration, roles, whitelist status and the pack address. This API never issues a Minecraft session.
 
 Client: [`CommunityApi`](../src/main/java/com/azur/launcher/api/CommunityApi.java).
 Token storage: `accounts/player.vault` (same AES-GCM vault as the accounts, [`PlayerTokenStore`](../src/main/java/com/azur/launcher/auth/PlayerTokenStore.java)).
@@ -15,8 +14,8 @@ Transport: https only; plain http is accepted only for `127.0.0.1`/`localhost` (
 {"code": "AB12-CD34", "uuid": "0123456789abcdef0123456789abcdef", "nick": "Vasya"}
 ```
 
-`uuid` comes from the verified Microsoft session — the only stable identity (nicks change). `code` is issued by the
-owner out of band and may be single-use or reusable, that is the API's decision.
+`uuid` is the account identity (nicks change). `code` is issued by the
+maintainer out of band and may be single-use or reusable, that is the API's decision.
 
 | Status | Body |
 |---|---|
@@ -58,7 +57,7 @@ Header `Authorization: Bearer <player_token>`, body `{}`.
 ## What the launcher does with the answer
 
 1. Stores `player_token` in the vault (never in `pack.json`, never in logs).
-2. `GET /v1/me` right after registration; the result is only logged (pack invites were removed 2026-10-30).
+2. `GET /v1/me` right after registration; the result is only logged.
 3. `whitelisted=false` is shown to the player as "not added yet", not as an error.
 4. `roles` are displayed only; no client-side permission depends on them.
 
@@ -68,4 +67,4 @@ Header `Authorization: Bearer <player_token>`, body `{}`.
   keep `online-mode=true` and its own whitelist by UUID; the API's `whitelisted` flag is for the player's convenience.
 - If the API is supposed to maintain the server whitelist, it does so server-side (RCON or the whitelist file), never
   through the launcher.
-- The pack download has no codes or tokens (removed 2026-10-30); `player_token` is only for this API.
+- The pack download has no codes or tokens; `player_token` is only for this API.

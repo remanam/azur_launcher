@@ -1,10 +1,10 @@
 <#
  Windows packaging of the RELEASE launcher. Builds the jar itself, then runs jpackage. NOT yet run on Windows by its author:
- first try -Type app-image (needs no WiX). Instructions: docs/plans/LAUNCHER_WINDOWS_BUILD.md.
+ first try -Type app-image (needs no WiX). 
  Usage (from anywhere):  powershell -ExecutionPolicy Bypass -File packaging\jpackage.ps1 [-Type msi|exe|app-image|all] [-Version 1.0.13]
  Production keys (PUBLIC, not secret): -ServersPubKeyFile servers.pub -RootKeysFile root_keys.txt, or the environment
  variables AZUR_SERVERS_PUBKEY_FILE / AZUR_ROOT_KEYS_FILE, or files servers.pub / root_keys.txt next to this script.
- Without them the build uses the TEST key: it will not accept the signed server list of the VPS. Installers are UNSIGNED.
+ Without them the build uses the TEST key: it will not accept a production signed server list. Installers are UNSIGNED.
 #>
 param(
   [ValidateSet("msi", "exe", "app-image", "all")][string]$Type = "all",
@@ -54,7 +54,7 @@ try {
     Swap $pubRes ($key + "`n")
     Write-Host "Embedding the production servers public key from $ServersPubKeyFile"
   } else {
-    Write-Host "WARNING: no servers public key: building with the TEST key (will not accept the VPS server list)." -ForegroundColor Yellow
+    Write-Host "WARNING: no servers public key: building with the TEST key (will not accept a production server list)." -ForegroundColor Yellow
   }
   if ($RootKeysFile) {
     if (-not (Test-Path $RootKeysFile)) { Fail "root keys file not found: $RootKeysFile" }

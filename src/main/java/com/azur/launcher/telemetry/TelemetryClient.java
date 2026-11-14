@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 /**
  * Anonymous telemetry (on by default, but only after the notice was shown; the {@code enabled} supplier covers both). {@link #report} never blocks and never throws: it drops the event when telemetry is off,
  * when the queue (32) is full or when the site does not answer. One daemon thread sends, one attempt per event. The only
- * identifier is the random install id; see docs/plans/ANALYTICS.md and the site's /privacy.
+ * identifier is the random install id; see the privacy page of the configured site.
  */
 public final class TelemetryClient {
 

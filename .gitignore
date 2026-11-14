@@ -1,18 +1,54 @@
-# Build output (Gradle)
+# Build output
 build/
 out/
-*.class
 target/
+.gradle/
+*.class
+dist-release/
+dist-debug/
+launcher_builds/
 
-# IDE and local data
+# Build artifacts (the wrapper jar is the only jar tracked)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+*.dmg
+*.exe
+*.msi
+*.deb
+*.AppImage
+*.app/
+
+# IDE
 .idea/
 *.iml
 .vscode/
+.classpath
+.project
+.settings/
+
+# Runtime / local data
 /Azur/
+run/
+instances/
+logs/
+*.log
+*.vault
+auth-settings.json
 
-# The wrapper jar is required to run ./gradlew; the repository rule "no jars" has to be overridden for it
-!gradle/wrapper/gradle-wrapper.jar
+# Secrets, keys, signing material
+.env
+.env.*
+*.key
+*.pem
+*.pfx
+*.p12
+*.jks
+*.keystore
+*.p8
+signing.*
+root_keys.local.txt
+*.local.*
 
-# Release artifacts (packaging/release.sh cleans only these)
-dist-release/
-dist-debug/
+# OS
+.DS_Store
+Thumbs.db

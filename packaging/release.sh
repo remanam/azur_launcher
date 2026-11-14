@@ -7,14 +7,9 @@ cd "$(dirname "$0")/.."
 VERSION=$(sed -n "s/^version = '\(.*\)'$/\1/p" build.gradle | head -1)
 STAGE=build/dist
 
-# Offline by default with the repo-wide Gradle home; GRADLE_ONLINE=1 (plus a proxy in GRADLE_OPTS) for new dependencies.
-if [ "${GRADLE_ONLINE:-0}" != "1" ]; then
-  GRADLE_USER_HOME="${GRADLE_USER_HOME:-$(cd .. && pwd)/.gradle-home}"
-  export GRADLE_USER_HOME
-  GRADLE_FLAGS="--offline ${GRADLE_FLAGS:-}"
-fi
+# GRADLE_FLAGS may carry extra Gradle options (for example --offline).
 
-# Production servers.json key: AZUR_SERVERS_PUBKEY_FILE=<file with the base64 public key> (see tools/deploy/keys/gen_keys.sh).
+# Production servers.json key: AZUR_SERVERS_PUBKEY_FILE=<file with the base64 public key>.
 # It replaces the embedded dev key only for this build; the tracked resource is restored on exit, so no key is hardcoded in git.
 PUBRES=src/main/resources/servers_pubkey.txt
 if [ -n "${AZUR_SERVERS_PUBKEY_FILE:-}" ]; then
@@ -26,7 +21,7 @@ if [ -n "${AZUR_SERVERS_PUBKEY_FILE:-}" ]; then
   echo "embedding production servers public key from $AZUR_SERVERS_PUBKEY_FILE"
 fi
 
-# Root keys of the keyset (docs/plans/KEY_ROTATION.md, docs/KEYSET.md): AZUR_ROOT_KEYS_FILE=<root_keys.txt, public keys
+# Root keys of the keyset (docs/KEYSET.md): AZUR_ROOT_KEYS_FILE=<root_keys.txt, public keys
 # only, one root per line: 'working <b64>' (A) and 'emergency <b64>' (B, C); old names primary/reserve and bare keys
 # (first = working) also pass>. At least 2 roots with one working and one emergency; 3 are recommended (warning).
 # A release without roots never leaves the single-key path and can never rotate keys, so it is refused unless
@@ -70,10 +65,5 @@ sh packaging/jpackage.sh "$VERSION" "$@"
 rm -rf dist-release
 mkdir -p dist-release
 cp build/libs/azur-launcher-all.jar dist-release/azur-launcher-beta.jar
-mkdir -p ../launcher_builds
-cp build/libs/azur-launcher-all.jar ../launcher_builds/azur-launcher-beta.jar
 cp -R "$STAGE/out/." dist-release/
-cp dist-release/azur-launcher-beta.jar ../launcher_builds/azur-launcher-beta.jar
-# the .dmg (macOS) goes next to the jar so that "publish_release.sh launcher" uploads it too; name is fixed, version is read from the file name
-for f in dist-release/*.dmg; do [ -f "$f" ] && cp "$f" ../launcher_builds/azur-launcher.dmg; done
 echo "Release artifacts: $(pwd)/dist-release (UNSIGNED installers; the jar runs on any OS with Java 21)"

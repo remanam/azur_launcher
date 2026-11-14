@@ -1,6 +1,6 @@
 # keyset.json: root-signed working keys (key rotation without reinstall)
 
-Owner procedure, incidents, rehearsal and migration: `docs/plans/KEY_ROTATION.md`. Code: Java `com.azur.launcher.keys`
+Code: Java `com.azur.launcher.keys`
 (`Keyset`, `KeysetService`, `KeyTrust`, `RootKeys`), Go `tools/updater/internal/keyset` + `azur-servers keygen|keyset`.
 Both sides implement the same rules; `KeysetInteropTest` runs the real Go tools against the Java verifiers.
 
@@ -79,4 +79,4 @@ fixed message (`UpdateManifest.signedMessage`). Versions only go up (`UpdateServ
 `keygen --role root_working|root_emergency|servers|pack|launcher`; `keyset new|add-key|renew|revoke|compromised|sign`
 (sign checks the result as a launcher with `--prev` AND as a fresh install); `keyset emergency --root-key B_or_C.key
 --revoke-root X.pub --add-root A2.pub --add-emergency B2.pub` (always a new epoch); `keyset verify`; `keyset rehearse`
-(owner's real keys, in memory, prints key -> ok/FAIL); `verify|verify-feed|verify-launcher|verify-pack --keyset --roots`.
+(real keys, in memory, prints key -> ok/FAIL); `verify|verify-feed|verify-launcher|verify-pack --keyset --roots`.
