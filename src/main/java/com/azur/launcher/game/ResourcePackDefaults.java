@@ -14,8 +14,11 @@ import java.util.regex.Pattern;
 /**
  * Enables the pack's resource packs in {@code options.txt} (soft mode). A marker file {@code azur_resourcepacks.txt}
  * remembers which of our packs were already offered: they are enabled once and never re-enabled after the player removes
- * them. Our packs go before {@code vanilla}, the player's other enabled packs stay as they are. A pack is offered only when
- * its zip is present in {@code resourcepacks/}.
+ * them. In {@code options.txt} a LATER entry overrides an earlier one (Minecraft FallbackResourceManager.getResource walks the
+ * list from the end; PackRepository.rebuildSelected keeps a listed {@code vanilla} where it is), so our packs go right after
+ * {@code vanilla}/{@code mod_resources} (above them), never before. Older launchers put them before {@code vanilla}, where
+ * vanilla overrode them: such entries are moved once (idempotent). The player's other packs stay as they are. A pack is
+ * offered only when its zip is present in {@code resourcepacks/}.
  */
 final class ResourcePackDefaults {
 
@@ -45,36 +48,59 @@ final class ResourcePackDefaults {
         return out;
     }
 
-    /** Returns {@code text} with the offered packs added to the {@code resourcePacks} line (created when absent). */
+    /** Returns {@code text} with the offered packs added (and misplaced ones repaired) in the {@code resourcePacks} line. */
     static String update(String text, List<String> offer) {
-        if (offer.isEmpty()) {
-            return text;
-        }
         String eol = text.contains("\r\n") ? "\r\n" : "\n";
         String[] lines = text.split("\r?\n", -1);
         for (int i = 0; i < lines.length; i++) {
             if (lines[i].startsWith(KEY)) {
                 List<String> list = parse(lines[i].substring(KEY.length()));
-                int at = list.indexOf("vanilla");
-                at = at < 0 ? list.size() : at;
+                repair(list);
                 for (String name : offer) {
                     String id = "file/" + name;
                     if (!list.contains(id)) {
-                        list.add(at++, id);
+                        list.add(insertAt(list, true), id);
                     }
                 }
                 lines[i] = KEY + format(list);
                 return String.join(eol, lines);
             }
         }
-        List<String> list = new ArrayList<>();
+        if (offer.isEmpty()) {
+            return text;
+        }
+        List<String> list = new ArrayList<>(FRESH_TAIL);
         offer.forEach(n -> list.add("file/" + n));
-        list.addAll(FRESH_TAIL);
         StringBuilder out = new StringBuilder(text);
         if (!text.isEmpty() && !text.endsWith("\n")) {
             out.append(eol);
         }
         return out.append(KEY).append(format(list)).append(eol).toString();
+    }
+
+    /** Index right after the last of vanilla/mod_resources/our packs; the list end when neither is present. */
+    private static int insertAt(List<String> list, boolean withOurs) {
+        int at = -1;
+        for (String base : FRESH_TAIL) {
+            at = Math.max(at, list.indexOf(base));
+        }
+        for (String name : withOurs ? PACKS : List.<String>of()) {
+            at = Math.max(at, list.indexOf("file/" + name));
+        }
+        return at < 0 ? list.size() : at + 1;
+    }
+
+    /** Moves our packs that stand before {@code vanilla} (overridden by it) to the correct place, order kept. */
+    private static void repair(List<String> list) {
+        int vanilla = list.indexOf("vanilla");
+        List<String> moved = new ArrayList<>();
+        for (int i = Math.max(vanilla, 0) - 1; i >= 0; i--) {
+            String id = list.get(i);
+            if (PACKS.stream().anyMatch(n -> ("file/" + n).equals(id))) {
+                moved.add(0, list.remove(i));
+            }
+        }
+        list.addAll(insertAt(list, false), moved);
     }
 
     static void saveMarker(Path gameDir, List<String> offered) throws IOException {

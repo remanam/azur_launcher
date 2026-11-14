@@ -34,7 +34,7 @@ public final class OptionsDefaults {
             }
         }
         List<String> offer = ResourcePackDefaults.toOffer(gameDir);
-        if (missing.isEmpty() && offer.isEmpty()) {
+        if (missing.isEmpty() && offer.isEmpty() && ResourcePackDefaults.update(text, offer).equals(text)) {
             return;
         }
         String eol = text.contains("\r\n") ? "\r\n" : "\n";

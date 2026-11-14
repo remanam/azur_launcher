@@ -43,7 +43,7 @@ class ResourcePackDefaultsTest {
     void freshInstallOrder() throws IOException {
         all();
         OptionsDefaults.apply(dir, "ru");
-        assertEquals("resourcePacks:[\"" + F + "\",\"" + M + "\",\"" + D + "\",\"vanilla\",\"mod_resources\"]", line());
+        assertEquals("resourcePacks:[\"vanilla\",\"mod_resources\",\"" + F + "\",\"" + M + "\",\"" + D + "\"]", line());
         assertTrue(Files.exists(dir.resolve(ResourcePackDefaults.MARKER)));
     }
 
@@ -55,11 +55,11 @@ class ResourcePackDefaultsTest {
     }
 
     @Test
-    void playerListKeptOursInsertedBeforeVanilla() throws IOException {
+    void playerListKeptOursInsertedAfterVanilla() throws IOException {
         all();
         Files.writeString(dir.resolve("options.txt"), "resourcePacks:[\"file/Mine.zip\",\"vanilla\",\"azur_sky\"]\n");
         OptionsDefaults.apply(dir, "ru");
-        assertEquals("resourcePacks:[\"file/Mine.zip\",\"" + F + "\",\"" + M + "\",\"" + D + "\",\"vanilla\",\"azur_sky\"]", line());
+        assertEquals("resourcePacks:[\"file/Mine.zip\",\"vanilla\",\"" + F + "\",\"" + M + "\",\"" + D + "\",\"azur_sky\"]", line());
     }
 
     @Test
@@ -78,7 +78,7 @@ class ResourcePackDefaultsTest {
         OptionsDefaults.apply(dir, "ru");
         install(ResourcePackDefaults.PACKS.get(2));
         OptionsDefaults.apply(dir, "ru");
-        assertEquals("resourcePacks:[\"" + F + "\",\"" + D + "\",\"vanilla\",\"mod_resources\"]", line());
+        assertEquals("resourcePacks:[\"vanilla\",\"mod_resources\",\"" + F + "\",\"" + D + "\"]", line());
     }
 
     @Test
@@ -86,6 +86,19 @@ class ResourcePackDefaultsTest {
         all();
         Files.writeString(dir.resolve("options.txt"), "fov:0.5\r\nresourcePacks:[\"vanilla\"]\r\n");
         OptionsDefaults.apply(dir, "ru");
-        assertTrue(Files.readString(dir.resolve("options.txt")).contains("\"vanilla\"]\r\n"));
+        assertTrue(Files.readString(dir.resolve("options.txt")).contains("\"vanilla\",\"" + F));
+    }
+
+    @Test
+    void legacyOrderBeforeVanillaIsRepairedOnce() throws IOException {
+        all();
+        String legacy = "resourcePacks:[\"" + F + "\",\"" + M + "\",\"vanilla\",\"generated/x\",\"mod_resources\",\"azur_sky\",\"" + D + "\"]";
+        Files.writeString(dir.resolve("options.txt"), legacy + "\nlang:ru_ru\nonboardAccessibility:false\nnarrator:0\n");
+        Files.writeString(dir.resolve(ResourcePackDefaults.MARKER), String.join("\n", ResourcePackDefaults.PACKS) + "\n");
+        OptionsDefaults.apply(dir, "ru");
+        String fixed = "resourcePacks:[\"vanilla\",\"generated/x\",\"mod_resources\",\"" + F + "\",\"" + M + "\",\"azur_sky\",\"" + D + "\"]";
+        assertEquals(fixed, line());
+        OptionsDefaults.apply(dir, "ru");
+        assertEquals(fixed, line());
     }
 }
