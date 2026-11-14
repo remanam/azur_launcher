@@ -38,7 +38,7 @@ class OptionsDefaultsTest {
 
     @Test
     void existingKeysUntouched() throws IOException {
-        String own = "lang:de_de\nnarrator:2\nonboardAccessibility:true\n";
+        String own = "lang:de_de\nnarrator:2\nonboardAccessibility:true\ntutorialStep:movement\n";
         Files.writeString(dir.resolve("options.txt"), own);
         OptionsDefaults.apply(dir, "ru");
         assertEquals(own, read());
