@@ -1,6 +1,6 @@
 # Azur Launcher
 
-Minecraft launcher for the Azur Launcher modpack. Licence and third-party notices: `LICENSE`, `NOTICE`.
+Minecraft launcher for playing with friends: it keeps the same modpack on everyone's computer and starts the game for the Azur Launcher server. Licence and third-party notices: `LICENSE`, `NOTICE`.
 
 Pack sync, pinned NeoForge install, a signed server list and a debug/release split are implemented; the details are in `docs/`.
 
