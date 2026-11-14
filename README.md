@@ -2,8 +2,7 @@
 
 Minecraft launcher for the Azur Launcher modpack. Fork of Azur (GPL-3.0), see `NOTICE`.
 
-Status: stage 1 of the plan in `CLAUDE.md` (no Chinese, RU/EN interface, platform app directories, unneeded code removed).
-Pack sync, pinned NeoForge install, signed server list and the release/debug split come in the next stages.
+Pack sync, pinned NeoForge install, a signed server list and a debug/release split are implemented; the details are in `docs/`.
 
 ## What it does now
 - Nickname-only account for our offline-mode server (Microsoft sign-in removed 2026-10-30).
