@@ -3,6 +3,7 @@ package com.azur.launcher.keys;
 import java.security.PublicKey;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -26,7 +27,7 @@ public record KeyTrust(Mode mode, Keyset keyset, PublicKey legacyKey, String rea
     public List<PublicKey> serverKeys(Instant now) {
         return switch (mode) {
             case KEYSET -> Ed25519.publicKeys(keyset.keys(Keyset.SERVERS, now));
-            case TRANSITION, LEGACY -> legacyKey == null ? List.of() : List.of(legacyKey);
+            case TRANSITION, LEGACY -> Objects.isNull(legacyKey) ? List.of() : List.of(legacyKey);
             case LOCKED -> List.of();
         };
     }

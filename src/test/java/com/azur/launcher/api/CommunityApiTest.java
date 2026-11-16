@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +26,7 @@ class CommunityApiTest {
 
     @AfterEach
     void stop() {
-        if (server != null) {
+        if (Objects.nonNull(server)) {
             server.stop(0);
         }
     }
@@ -86,8 +87,8 @@ class CommunityApiTest {
         assertEquals("", session.nick());
         assertTrue(session.roles().isEmpty());
         assertFalse(session.whitelisted());
-        assertTrue(session.server() == null);
-        assertTrue(session.pack() == null);
+        assertTrue(Objects.isNull(session.server()));
+        assertTrue(Objects.isNull(session.pack()));
     }
 
     @Test

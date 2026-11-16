@@ -17,6 +17,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -63,7 +64,7 @@ public final class Downloader {
                 last = e;
             }
         }
-        throw last == null ? new IOException("No URL") : last;
+        throw Objects.isNull(last) ? new IOException("No URL") : last;
     }
 
     /** Downloads from the first URL that works; earlier (mirror) URLs get one attempt, the last one all of them. */
@@ -77,7 +78,7 @@ public final class Downloader {
                 last = e;
             }
         }
-        throw last == null ? new IOException("No URL") : last;
+        throw Objects.isNull(last) ? new IOException("No URL") : last;
     }
 
     public HostPolicy policy() {
@@ -110,12 +111,12 @@ public final class Downloader {
                     backoff(attempt);
                 }
             } finally {
-                if (conn != null) {
+                if (Objects.nonNull(conn)) {
                     conn.disconnect();
                 }
             }
         }
-        throw last == null ? new IOException("Request failed: " + url)
+        throw Objects.isNull(last) ? new IOException("Request failed: " + url)
                 : HostUnreachableException.classify(new IOException("Request failed: " + url, last), url);
     }
 
@@ -208,7 +209,7 @@ public final class Downloader {
             boolean resume = code == HttpURLConnection.HTTP_PARTIAL && existing > 0;
             if (resume) {
                 String range = conn.getHeaderField("Content-Range");
-                if (range == null || !range.startsWith("bytes " + existing + "-")) {
+                if (Objects.isNull(range) || !range.startsWith("bytes " + existing + "-")) {
                     throw new CorruptException("Unexpected Content-Range: " + range);
                 }
             } else if (code != HttpURLConnection.HTTP_OK) {
@@ -268,7 +269,7 @@ public final class Downloader {
             if (code == 301 || code == 302 || code == 303 || code == 307 || code == 308) {
                 String location = conn.getHeaderField("Location");
                 conn.disconnect();
-                if (location == null) {
+                if (Objects.isNull(location)) {
                     throw new IOException("Redirect without Location from " + current);
                 }
                 current = URI.create(current).resolve(location).toString();

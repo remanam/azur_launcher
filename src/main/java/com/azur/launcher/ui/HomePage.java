@@ -37,6 +37,7 @@ import javafx.util.Duration;
 import java.time.Clock;
 import com.azur.launcher.sync.PackSyncService;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Home = the only player screen (forge v3 layout): header (bell, nickname, gear), notice banner, a card with the server plate,
@@ -109,19 +110,19 @@ final class HomePage {
         this.packState = packState;
         this.installProgress = play.installProgress();
         this.feed = new FeedPanel(ctx, new com.azur.launcher.feed.FeedState(ctx.dirs.root().resolve("feed_state.txt")),
-                () -> server == null ? "" : server.id(), this::render);
+                () -> Objects.isNull(server) ? "" : server.id(), this::render);
         this.status = new ServerStatusService(ctx.io, PING_INTERVAL_MS);
         mainButton = UiKit.button("", null, "launch-button", this::onMainButton);
         mainButton.setDefaultButton(true);
         wizard = new FirstRunWizard(ctx);
-        wizardActive = HomeState.wizardNeeded(ctx.currentPlayer() != null);
+        wizardActive = HomeState.wizardNeeded(Objects.nonNull(ctx.currentPlayer()));
 
         dot.getStyleClass().add("status-dot");
         serverBox.getStyleClass().add("server-chip");
         serverBox.setConverter(new javafx.util.StringConverter<>() {
             @Override
             public String toString(ServerEntry entry) {
-                return entry == null ? "" : entry.name();
+                return Objects.isNull(entry) ? "" : entry.name();
             }
 
             @Override
@@ -135,14 +136,14 @@ final class HomePage {
                 super.updateItem(entry, empty);
                 setText(null);
                 HBox chip = new HBox(8, UiKit.label(I18n.tr("home.server"), "chip-key"),
-                        UiKit.label(entry == null ? I18n.tr("home.default_server") : entry.name(), "chip-name"));
+                        UiKit.label(Objects.isNull(entry) ? I18n.tr("home.default_server") : entry.name(), "chip-name"));
                 chip.setAlignment(Pos.CENTER_LEFT);
                 setGraphic(chip);
             }
         });
         serverBox.setOnAction(e -> {
             ServerEntry chosen = serverBox.getValue();
-            if (!fillingBox && chosen != null && server != null && !chosen.id().equals(server.id())) {
+            if (!fillingBox && Objects.nonNull(chosen) && Objects.nonNull(server) && !chosen.id().equals(server.id())) {
                 ctx.config.setLastServerId(chosen.id());
                 ctx.saveConfig();
                 applyServer(chosen, null, null);
@@ -295,7 +296,7 @@ final class HomePage {
                 return;
             }
             ServerListService.Loaded cached = service.cached();
-            if (cached != null) {
+            if (Objects.nonNull(cached)) {
                 applyServer(pick(cached), cached.list().servers(), null);
             }
             try {
@@ -306,7 +307,7 @@ final class HomePage {
                 }
                 applyServer(pick(loaded), loaded.list().servers(), null);
             } catch (Exception e) {
-                if (cached != null) {
+                if (Objects.nonNull(cached)) {
                     applyServer(pick(cached), cached.list().servers(), e.getMessage());
                     return;
                 }
@@ -325,13 +326,13 @@ final class HomePage {
     private void applyServer(ServerEntry entry, List<ServerEntry> all, String problem) {
         Platform.runLater(() -> {
             server = entry;
-            if (all != null) {
+            if (Objects.nonNull(all)) {
                 showServerBox(all);
                 fillingBox = true;
                 serverBox.setValue(entry);
                 fillingBox = false;
             }
-            play.setServer(entry, entry == null ? problem : null);
+            play.setServer(entry, Objects.isNull(entry) ? problem : null);
             feed.refresh();
             refreshState(false);
         });
@@ -354,7 +355,7 @@ final class HomePage {
                 ctx.log("Home: state unavailable: " + e.getMessage());
             }
             PackState.Snapshot shot = snap;
-            String shownVersion = version == null ? "" : version;
+            String shownVersion = Objects.isNull(version) ? "" : version;
             Platform.runLater(() -> {
                 if (updating) {
                     return;
@@ -365,7 +366,7 @@ final class HomePage {
                 showBanner(shot.banner());
                 renderServer();
                 render();
-                if (server != null) {
+                if (Objects.nonNull(server)) {
                     status.request(server, result -> Platform.runLater(() -> showPing(result)));
                 }
             });
@@ -374,7 +375,7 @@ final class HomePage {
 
     private Instance instance() throws java.io.IOException {
         InstanceStore store = new InstanceStore(ctx.dirs);
-        return server == null ? store.loadDefault()
+        return Objects.isNull(server) ? store.loadDefault()
                 : store.ensure(ServerProfiles.derive(server, InstanceStore.bundledProfile()));
     }
 
@@ -388,7 +389,7 @@ final class HomePage {
     private void startGame() {
         failed = false;
         showError(null, null);
-        if (server == null) {
+        if (Objects.isNull(server)) {
             play.startDefault();
         } else {
             play.start(new LaunchRequest(server));
@@ -500,7 +501,7 @@ final class HomePage {
     }
 
     private void renderStatus() {
-        HomeState.Status status = HomeState.status(ctx.currentPlayer() != null, installed, updateAvailable);
+        HomeState.Status status = HomeState.status(Objects.nonNull(ctx.currentPlayer()), installed, updateAvailable);
         statusTitle.setText(I18n.tr(status.titleKey()));
         statusTitle.getStyleClass().removeAll("ok", "warn");
         statusTitle.getStyleClass().add(status.styleClass());
@@ -509,7 +510,7 @@ final class HomePage {
                 : status == HomeState.Status.LOGIN ? "icon-lock" : "icon-update");
         statusIcon.getStyleClass().removeAll("ok", "warn");
         statusIcon.getStyleClass().add(status.styleClass());
-        if (status == HomeState.Status.READY && server != null) {
+        if (status == HomeState.Status.READY && Objects.nonNull(server)) {
             statusHint.setText(I18n.tr("home.status_info", server.mcVersion(), server.neoforge(),
                     HomeState.gigabytes(ctx.config.getMaxMemoryMb())));
         } else {
@@ -526,27 +527,27 @@ final class HomePage {
 
     private void renderAccount() {
         AuthAccount account = ctx.currentPlayer();
-        if (account == null) {
+        if (Objects.isNull(account)) {
             wizardActive = true;
             wizard.showStep(1);
         } else if (wizardActive && wizard.step() == 1) {
             wizard.showStep(2);
         }
-        nickLabel.setText(account == null ? I18n.tr("home.no_nick") : account.getUsername());
-        nickSub.setText(I18n.tr(account == null ? "home.sign_in_hint" : "home.account"));
-        avatarHolder.getChildren().setAll(UiKit.label(account == null ? "?" : account.getUsername().substring(0, 1).toUpperCase(),
+        nickLabel.setText(Objects.isNull(account) ? I18n.tr("home.no_nick") : account.getUsername());
+        nickSub.setText(I18n.tr(Objects.isNull(account) ? "home.sign_in_hint" : "home.account"));
+        avatarHolder.getChildren().setAll(UiKit.label(Objects.isNull(account) ? "?" : account.getUsername().substring(0, 1).toUpperCase(),
                 "nick-avatar-text"));
         render();
     }
 
     private void renderServer() {
-        aboutText.setText(server == null ? "" : server.motd() == null ? "" : server.motd());
+        aboutText.setText(Objects.isNull(server) ? "" : Objects.isNull(server.motd()) ? "" : server.motd());
         boolean hasAbout = !aboutText.getText().isBlank();
         aboutHead.setVisible(hasAbout);
         aboutHead.setManaged(hasAbout);
         aboutText.setVisible(hasAbout);
         aboutText.setManaged(hasAbout);
-        statusLabel.setText(server == null ? "" : I18n.tr("servers.checking"));
+        statusLabel.setText(Objects.isNull(server) ? "" : I18n.tr("servers.checking"));
     }
 
     private void showPing(ServerPing.Result result) {
@@ -579,12 +580,12 @@ final class HomePage {
     }
 
     private void showError(String sentence, String detail) {
-        boolean has = sentence != null;
+        boolean has = Objects.nonNull(sentence);
         errorBox.setVisible(has);
         errorBox.setManaged(has);
         errorLabel.show(has ? sentence : "");
         detailsLabel.show(detail);
-        details.setVisible(detail != null && !detail.isEmpty());
+        details.setVisible(Objects.nonNull(detail) && !detail.isEmpty());
         details.setManaged(details.isVisible());
         details.setExpanded(false);
     }

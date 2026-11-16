@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -48,15 +49,15 @@ public class DownloadManager {
 
     public DownloadManager(int threads, Consumer<String> logger, ProgressListener progress, Downloader downloader) {
         this.threads = Math.min(MAX_THREADS, Math.max(1, threads));
-        this.logger = logger == null ? msg -> {
+        this.logger = Objects.isNull(logger) ? msg -> {
         } : logger;
-        this.progress = progress == null ? ProgressListener.NOOP : progress;
+        this.progress = Objects.isNull(progress) ? ProgressListener.NOOP : progress;
         this.downloader = downloader;
     }
 
     /** @return true when every task succeeded */
     public boolean downloadAll(List<Task> allTasks) {
-        if (allTasks == null || allTasks.isEmpty()) {
+        if (Objects.isNull(allTasks) || allTasks.isEmpty()) {
             return true;
         }
         Map<Path, Task> unique = new LinkedHashMap<>();
@@ -64,7 +65,7 @@ public class DownloadManager {
             unique.putIfAbsent(task.target.toAbsolutePath().normalize(), task);
         }
         List<Task> tasks = new ArrayList<>(unique.values());
-        Downloader engine = downloader != null ? downloader : HttpUtils.downloader();
+        Downloader engine = Objects.nonNull(downloader) ? downloader : HttpUtils.downloader();
 
         ExecutorService pool = Executors.newFixedThreadPool(Math.min(threads, tasks.size()));
         AtomicInteger done = new AtomicInteger();

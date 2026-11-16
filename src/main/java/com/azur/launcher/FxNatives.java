@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
@@ -57,7 +58,7 @@ final class FxNatives {
                     if (!entry.getName().startsWith(prefix)) {
                         continue;
                     }
-                    if (target == null) {
+                    if (Objects.isNull(target)) {
                         target = AppDirs.system().cacheDir().resolve("fxnatives")
                                 .resolve(platform + "-" + jar.toFile().length());
                         Files.createDirectories(target);
@@ -69,7 +70,7 @@ final class FxNatives {
                         System.err.println("JavaFX native " + entry.getName() + " was not extracted: " + e);
                     }
                 }
-                if (target != null) {
+                if (Objects.nonNull(target)) {
                     String old = System.getProperty("java.library.path", "");
                     System.setProperty("java.library.path", target + (old.isEmpty() ? "" : java.io.File.pathSeparator + old));
                 } else if (hasNatives) {

@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.i18n.I18n;
 
@@ -44,7 +45,7 @@ final class FirstRunWizard {
     }
 
     private VBox accountStep() {
-        if (ctx.accountController == null) {
+        if (Objects.isNull(ctx.accountController)) {
             return nickStep();
         }
         SiteLoginPanel panel = ctx.sitePanel();

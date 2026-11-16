@@ -13,6 +13,7 @@ import javafx.application.Platform;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,7 @@ final class UpdateController {
     /** Null when no manifest address or key is available (dev run without a servers URL). */
     static UpdateController create(AppContext ctx, UpdateStore store, BooleanSupplier gameBusy) {
         String serversUrl = ctx.pack.getServersUrl();
-        if (serversUrl == null || serversUrl.isBlank()) {
+        if (Objects.isNull(serversUrl) || serversUrl.isBlank()) {
             return null;
         }
         try {

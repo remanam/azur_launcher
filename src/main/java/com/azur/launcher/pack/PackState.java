@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /** What the client installed into one instance: pack version and the files it owns (path to sha256). */
 public final class PackState {
@@ -49,7 +50,7 @@ public final class PackState {
             Path f = file(home, instance);
             if (Files.isRegularFile(f)) {
                 PackState read = GSON.fromJson(Files.readString(f), PackState.class);
-                if (read != null) {
+                if (Objects.nonNull(read)) {
                     state = read;
                 }
             }
@@ -57,13 +58,13 @@ public final class PackState {
             // an unreadable state means "nothing installed yet": the next sync reinstalls what is missing
         }
         state.instance = instance.toString();
-        if (state.owned == null) {
+        if (Objects.isNull(state.owned)) {
             state.owned = new HashMap<>();
         }
-        if (state.skipOptional == null) {
+        if (Objects.isNull(state.skipOptional)) {
             state.skipOptional = new ArrayList<>();
         }
-        if (state.packVersion == null) {
+        if (Objects.isNull(state.packVersion)) {
             state.packVersion = "";
         }
         return state;

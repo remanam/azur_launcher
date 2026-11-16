@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Server list and pack sync settings: {@code <data>/pack.json}. Kept apart from {@link LauncherConfig} so the
@@ -25,7 +26,7 @@ public final class PackSettings {
     private String apiBase = "";
 
     public String getServersUrl() {
-        if (serversUrl != null && !serversUrl.isBlank()) {
+        if (Objects.nonNull(serversUrl) && !serversUrl.isBlank()) {
             return serversUrl;
         }
         boolean dev = !System.getProperty(com.azur.launcher.config.AppDirs.HOME_PROPERTY, "").isBlank();
@@ -37,7 +38,7 @@ public final class PackSettings {
     }
 
     public String getApiBase() {
-        return apiBase == null ? "" : apiBase;
+        return Objects.isNull(apiBase) ? "" : apiBase;
     }
 
     public void setApiBase(String apiBase) {
@@ -47,7 +48,7 @@ public final class PackSettings {
     public static PackSettings load(Path file) {
         try {
             PackSettings loaded = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), PackSettings.class);
-            return loaded == null ? new PackSettings() : loaded;
+            return Objects.isNull(loaded) ? new PackSettings() : loaded;
         } catch (IOException | RuntimeException e) {
             return new PackSettings();
         }

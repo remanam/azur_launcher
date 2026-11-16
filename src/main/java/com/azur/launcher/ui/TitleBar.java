@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.control.Button;
@@ -96,7 +97,7 @@ public class TitleBar extends HBox {
     }
 
     private void requestClose() {
-        if (onClose != null) {
+        if (Objects.nonNull(onClose)) {
             onClose.run();
         }
     }

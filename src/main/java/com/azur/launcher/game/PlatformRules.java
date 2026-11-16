@@ -4,6 +4,7 @@ import com.azur.launcher.model.Rule;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 public final class PlatformRules {
@@ -18,7 +19,7 @@ public final class PlatformRules {
     }
 
     public static void setFeatures(Map<String, Boolean> features) {
-        PlatformRules.features = features == null ? Map.of() : features;
+        PlatformRules.features = Objects.isNull(features) ? Map.of() : features;
     }
 
     public static void setFeature(String name, boolean enabled) {
@@ -59,7 +60,7 @@ public final class PlatformRules {
     }
 
     public static boolean isAllowed(List<Rule> rules) {
-        if (rules == null || rules.isEmpty()) {
+        if (Objects.isNull(rules) || rules.isEmpty()) {
             return true;
         }
         boolean allowed = false;
@@ -73,14 +74,14 @@ public final class PlatformRules {
 
     private static boolean matches(Rule rule) {
         Rule.Os os = rule.getOs();
-        if (os != null) {
-            if (os.getName() != null && !os.getName().isEmpty() && !os.getName().equalsIgnoreCase(OS_NAME)) {
+        if (Objects.nonNull(os)) {
+            if (Objects.nonNull(os.getName()) && !os.getName().isEmpty() && !os.getName().equalsIgnoreCase(OS_NAME)) {
                 return false;
             }
-            if (os.getArch() != null && !os.getArch().isEmpty() && !os.getArch().equalsIgnoreCase(OS_ARCH)) {
+            if (Objects.nonNull(os.getArch()) && !os.getArch().isEmpty() && !os.getArch().equalsIgnoreCase(OS_ARCH)) {
                 return false;
             }
-            if (os.getVersion() != null && !os.getVersion().isEmpty()) {
+            if (Objects.nonNull(os.getVersion()) && !os.getVersion().isEmpty()) {
                 try {
                     if (!Pattern.compile(os.getVersion()).matcher(OS_VERSION).find()) {
                         return false;
@@ -91,7 +92,7 @@ public final class PlatformRules {
             }
         }
         List<String> required = rule.getFeatures();
-        if (required != null) {
+        if (Objects.nonNull(required)) {
             for (String feature : required) {
                 if (!isFeatureEnabled(feature)) {
                     return false;
@@ -102,11 +103,11 @@ public final class PlatformRules {
     }
 
     public static String nativesClassifier(Map<String, String> natives) {
-        if (natives == null || natives.isEmpty()) {
+        if (Objects.isNull(natives) || natives.isEmpty()) {
             return null;
         }
         String classifier = natives.get(OS_NAME);
-        if (classifier == null) {
+        if (Objects.isNull(classifier)) {
             return null;
         }
         if (classifier.contains("${arch}")) {

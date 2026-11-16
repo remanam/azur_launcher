@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -46,7 +47,7 @@ public final class ProfileLoader {
         } catch (JsonParseException e) {
             throw new ProfileException("Cannot parse " + origin + ": " + e.getMessage(), e);
         }
-        if (profile == null) {
+        if (Objects.isNull(profile)) {
             throw new ProfileException("Empty profile: " + origin);
         }
         List<String> problems = validate(profile);
@@ -71,7 +72,7 @@ public final class ProfileLoader {
             bad.add("neoforge must look like 21.1.264");
         } else if (matches(MINECRAFT, p.minecraft())) {
             String prefix = NeoForgeCatalog.versionPrefix(p.minecraft());
-            if (prefix == null || !p.neoforge().startsWith(prefix + ".")) {
+            if (Objects.isNull(prefix) || !p.neoforge().startsWith(prefix + ".")) {
                 bad.add("neoforge " + p.neoforge() + " does not belong to Minecraft " + p.minecraft());
             }
         }
@@ -87,14 +88,14 @@ public final class ProfileLoader {
         if (!matches(CHANNEL, p.packChannel())) {
             bad.add("packChannel must match " + CHANNEL);
         }
-        if (p.mirrorBase() != null && !p.mirrorBase().isBlank() && !isHttps(p.mirrorBase())) {
+        if (Objects.nonNull(p.mirrorBase()) && !p.mirrorBase().isBlank() && !isHttps(p.mirrorBase())) {
             bad.add("mirrorBase must be an https URL (or loopback http) or empty");
         }
-        if (p.jvmArgs() == null) {
+        if (Objects.isNull(p.jvmArgs())) {
             bad.add("jvmArgs is required (may be empty)");
         } else {
             for (String arg : p.jvmArgs()) {
-                if (arg == null || arg.isBlank() || !arg.startsWith("-") || arg.chars().anyMatch(Character::isISOControl)) {
+                if (Objects.isNull(arg) || arg.isBlank() || !arg.startsWith("-") || arg.chars().anyMatch(Character::isISOControl)) {
                     bad.add("bad jvm argument: " + arg);
                 } else if (FORBIDDEN_PREFIXES.stream().anyMatch(arg::startsWith)) {
                     bad.add("jvm argument is controlled by the launcher: " + arg);
@@ -105,13 +106,13 @@ public final class ProfileLoader {
     }
 
     private static boolean matches(Pattern pattern, String value) {
-        return value != null && pattern.matcher(value).matches();
+        return Objects.nonNull(value) && pattern.matcher(value).matches();
     }
 
     private static boolean isHttps(String url) {
         try {
             URI uri = URI.create(url.trim());
-            return ("https".equalsIgnoreCase(uri.getScheme()) && uri.getHost() != null)
+            return ("https".equalsIgnoreCase(uri.getScheme()) && Objects.nonNull(uri.getHost()))
                     || com.azur.launcher.net.HostPolicy.isLoopbackHttp(url.trim());
         } catch (IllegalArgumentException e) {
             return false;

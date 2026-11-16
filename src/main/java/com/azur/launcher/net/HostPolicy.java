@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -39,7 +40,7 @@ public final class HostPolicy {
      * Used for the own mirror, the address of the signed server list and anything else we publish ourselves.
      */
     public static HostPolicy withHosts(Set<String> ownHosts) {
-        if (ownHosts == null || ownHosts.isEmpty()) {
+        if (Objects.isNull(ownHosts) || ownHosts.isEmpty()) {
             return official();
         }
         Set<String> all = new HashSet<>(OFFICIAL);
@@ -65,7 +66,7 @@ public final class HostPolicy {
     }
 
     private static boolean isLoopbackHttp(URI uri) {
-        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String host = Objects.isNull(uri.getHost()) ? "" : uri.getHost().toLowerCase(Locale.ROOT);
         return "http".equalsIgnoreCase(uri.getScheme())
                 && (host.equals("127.0.0.1") || host.equals("[::1]") || host.equals("localhost"));
     }
@@ -92,9 +93,9 @@ public final class HostPolicy {
         } catch (IllegalArgumentException e) {
             throw new BlockedHostException("Malformed URL: " + url);
         }
-        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String host = Objects.isNull(uri.getHost()) ? "" : uri.getHost().toLowerCase(Locale.ROOT);
         if (!looseForTests && isLoopbackHttp(uri)) {
-            if (uri.getRawUserInfo() != null) {
+            if (Objects.nonNull(uri.getRawUserInfo())) {
                 throw new BlockedHostException("Credentials in URL: " + url);
             }
             return;
@@ -103,7 +104,7 @@ public final class HostPolicy {
             if (!"https".equalsIgnoreCase(uri.getScheme())) {
                 throw new BlockedHostException("Only https is allowed: " + url);
             }
-            if (uri.getRawUserInfo() != null || (uri.getPort() != -1 && uri.getPort() != 443)) {
+            if (Objects.nonNull(uri.getRawUserInfo()) || (uri.getPort() != -1 && uri.getPort() != 443)) {
                 throw new BlockedHostException("Credentials or custom port in URL: " + url);
             }
         }

@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -42,7 +43,7 @@ final class InstallerLibraries {
         try (ZipFile zip = new ZipFile(installerJar.toFile())) {
             for (String name : new String[] {"install_profile.json", "version.json"}) {
                 ZipEntry entry = zip.getEntry(name);
-                if (entry == null) {
+                if (Objects.isNull(entry)) {
                     continue;
                 }
                 try (Reader in = new InputStreamReader(zip.getInputStream(entry), StandardCharsets.UTF_8)) {
@@ -54,17 +55,17 @@ final class InstallerLibraries {
     }
 
     static void collect(JsonElement root, Map<String, Item> out) {
-        if (root == null || !root.isJsonObject()) {
+        if (Objects.isNull(root) || !root.isJsonObject()) {
             return;
         }
         JsonArray libs = root.getAsJsonObject().getAsJsonArray("libraries");
-        if (libs == null) {
+        if (Objects.isNull(libs)) {
             return;
         }
         for (JsonElement lib : libs) {
             JsonObject downloads = lib.isJsonObject() ? lib.getAsJsonObject().getAsJsonObject("downloads") : null;
-            JsonObject artifact = downloads == null ? null : downloads.getAsJsonObject("artifact");
-            if (artifact == null) {
+            JsonObject artifact = Objects.isNull(downloads) ? null : downloads.getAsJsonObject("artifact");
+            if (Objects.isNull(artifact)) {
                 continue;
             }
             String path = text(artifact, "path");

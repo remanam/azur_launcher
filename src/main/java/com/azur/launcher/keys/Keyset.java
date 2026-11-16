@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -118,7 +119,7 @@ public final class Keyset {
     }
 
     private boolean revokes(byte[] raw) {
-        return raw != null && (revoked.contains(Ed25519.keyId(raw)) || revoked.contains(Base64.getEncoder().encodeToString(raw)));
+        return Objects.nonNull(raw) && (revoked.contains(Ed25519.keyId(raw)) || revoked.contains(Base64.getEncoder().encodeToString(raw)));
     }
 
     private boolean newerThan(Keyset other) {
@@ -140,7 +141,7 @@ public final class Keyset {
         for (JsonObject a : anchorsOf(env)) {
             Parsed ap = parse(a);
             Keyset ak = ap.keyset(false, false);
-            if (prev != null && !ak.newerThan(prev)) {
+            if (Objects.nonNull(prev) && !ak.newerThan(prev)) {
                 continue;
             }
             Keyset verified;
@@ -163,7 +164,7 @@ public final class Keyset {
             throws KeysetException {
         Keyset doc = p.keyset(false, false);
         Boolean byEmergency = findSigner(p, doc, roots, prev, now);
-        if (byEmergency == null) {
+        if (Objects.isNull(byEmergency)) {
             throw new KeysetException(KeysetException.Reason.BAD_SIGNATURE, "no valid root signature");
         }
         for (byte[] r : roots.all()) {
@@ -176,7 +177,7 @@ public final class Keyset {
         }
         long prevEpoch = 0;
         String prevRoot = "";
-        if (prev != null) {
+        if (Objects.nonNull(prev)) {
             prevEpoch = prev.epoch;
             prevRoot = prev.rootSection(roots);
             if (prev.newerThan(doc)) {
@@ -226,7 +227,7 @@ public final class Keyset {
 
     private static List<byte[]> candidates(List<byte[]> embedded, String delegatedRole, Keyset prev, Instant now) {
         List<byte[]> out = new ArrayList<>(embedded);
-        if (prev != null) {
+        if (Objects.nonNull(prev)) {
             out.addAll(prev.listed(delegatedRole, now));
         }
         return out;
@@ -234,7 +235,7 @@ public final class Keyset {
 
     private static boolean signedByAny(Parsed p, Keyset doc, List<byte[]> keys, Keyset prev) {
         for (byte[] k : keys) {
-            if ((prev == null || !prev.revokes(k)) && !doc.revokes(k) && signedBy(p, k)) {
+            if ((Objects.isNull(prev) || !prev.revokes(k)) && !doc.revokes(k) && signedBy(p, k)) {
                 return true;
             }
         }
@@ -251,7 +252,7 @@ public final class Keyset {
     }
 
     private static boolean signedBy(Parsed p, byte[] key) {
-        if (key == null) {
+        if (Objects.isNull(key)) {
             return false;
         }
         for (byte[] sig : p.sigs) {
@@ -314,12 +315,12 @@ public final class Keyset {
     }
 
     private static JsonObject envelopeOf(byte[] raw) throws KeysetException {
-        if (raw == null || raw.length > MAX_BYTES) {
+        if (Objects.isNull(raw) || raw.length > MAX_BYTES) {
             throw bad("not a keyset envelope");
         }
         try {
             JsonObject env = GSON.fromJson(new String(raw, StandardCharsets.UTF_8), JsonObject.class);
-            if (env == null) {
+            if (Objects.isNull(env)) {
                 throw bad("not a keyset envelope");
             }
             return env;

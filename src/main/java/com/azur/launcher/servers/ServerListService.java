@@ -10,6 +10,7 @@ import java.security.GeneralSecurityException;
 import java.security.PublicKey;
 import java.time.Clock;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -58,11 +59,11 @@ public final class ServerListService {
 
     /** The embedded key, or the key in {@code override} (a file with the base64 key) when that file exists. */
     public static PublicKey loadKey(Path override) throws IOException, GeneralSecurityException {
-        if (override != null && Files.isRegularFile(override)) {
+        if (Objects.nonNull(override) && Files.isRegularFile(override)) {
             return ServerListVerifier.publicKey(Files.readString(override, StandardCharsets.UTF_8));
         }
         try (InputStream in = ServerListService.class.getResourceAsStream(PUBLIC_KEY_RESOURCE)) {
-            if (in == null) {
+            if (Objects.isNull(in)) {
                 throw new IOException("Embedded public key is missing");
             }
             return ServerListVerifier.publicKey(new String(in.readAllBytes(), StandardCharsets.UTF_8));
@@ -81,7 +82,7 @@ public final class ServerListService {
     /** Network first, then the cache. Throws (with a short reason) when neither gives a verifiable list. */
     public Loaded load() throws IOException {
         String networkReason = "no URL configured";
-        if (url != null && !url.isBlank()) {
+        if (Objects.nonNull(url) && !url.isBlank()) {
             long start = clock.millis();
             log.accept("Server list: fetching " + url);
             try {
@@ -127,7 +128,7 @@ public final class ServerListService {
                 case BAD_FORMAT -> "invalid list (" + sle.getMessage() + ")";
             };
         }
-        for (Throwable t = e; t != null; t = t.getCause()) {
+        for (Throwable t = e; Objects.nonNull(t); t = t.getCause()) {
             if (t instanceof java.net.SocketTimeoutException) {
                 return "timeout";
             }
@@ -141,7 +142,7 @@ public final class ServerListService {
                 return "host not allowed by policy";
             }
         }
-        String m = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+        String m = Objects.isNull(e.getMessage()) ? e.getClass().getSimpleName() : e.getMessage();
         return m.startsWith("HTTP ") ? m.replaceAll(" -> .*", "") : m;
     }
 

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +55,7 @@ class AppDirsTest {
             System.setProperty(AppDirs.HOME_PROPERTY, "/tmp/azur-override");
             assertEquals(Path.of("/tmp/azur-override").toAbsolutePath().normalize(), AppDirs.system().root());
         } finally {
-            if (old == null) {
+            if (Objects.isNull(old)) {
                 System.clearProperty(AppDirs.HOME_PROPERTY);
             } else {
                 System.setProperty(AppDirs.HOME_PROPERTY, old);

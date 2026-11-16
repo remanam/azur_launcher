@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import com.azur.launcher.auth.AuthAccount;
 import com.azur.launcher.auth.OfflineAccount;
 import com.azur.launcher.i18n.I18n;
@@ -61,7 +62,7 @@ final class PlayerSection {
     }
 
     private static boolean isActive(AuthAccount selected, AuthAccount account) {
-        return selected != null && selected.getUuid().equalsIgnoreCase(account.getUuid());
+        return Objects.nonNull(selected) && selected.getUuid().equalsIgnoreCase(account.getUuid());
     }
 
     private HBox row(AuthAccount account, boolean active) {

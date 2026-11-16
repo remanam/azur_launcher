@@ -11,6 +11,7 @@ import java.security.PublicKey;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -48,7 +49,7 @@ public final class KeysetService {
         this.file = file;
         this.roots = roots;
         this.legacyKey = legacyKey;
-        this.url = url == null ? "" : url;
+        this.url = Objects.isNull(url) ? "" : url;
         this.fetcher = fetcher;
         this.clock = clock;
         this.log = log;
@@ -74,12 +75,12 @@ public final class KeysetService {
         if (!roots.present()) {
             return new KeyTrust(KeyTrust.Mode.LEGACY, null, legacyKey, "no root keys in this build");
         }
-        if (accepted != null && !accepted.expired(now)) {
+        if (Objects.nonNull(accepted) && !accepted.expired(now)) {
             return new KeyTrust(KeyTrust.Mode.KEYSET, accepted, legacyKey, "");
         }
         if (seen) {
             return new KeyTrust(KeyTrust.Mode.LOCKED, accepted, legacyKey,
-                    accepted == null ? "cached keyset unusable" : "keyset expired " + accepted.expiresAt());
+                    Objects.isNull(accepted) ? "cached keyset unusable" : "keyset expired " + accepted.expiresAt());
         }
         if (LauncherVersions.newer(LEGACY_CUTOVER, appVersion)) {
             return new KeyTrust(KeyTrust.Mode.TRANSITION, null, legacyKey, "no keyset yet");
@@ -90,7 +91,7 @@ public final class KeysetService {
     /** Refreshes when the last attempt is older than {@code maxAge} (or never happened). Blocking; background threads. */
     public KeyTrust refreshIfStale(Duration maxAge) {
         synchronized (this) {
-            if (lastRefresh != null && clock.instant().isBefore(lastRefresh.plus(maxAge))) {
+            if (Objects.nonNull(lastRefresh) && clock.instant().isBefore(lastRefresh.plus(maxAge))) {
                 return trust();
             }
         }
@@ -115,7 +116,7 @@ public final class KeysetService {
         synchronized (this) {
             try {
                 Keyset fresh = Keyset.open(bytes, roots, accepted, clock.instant());
-                boolean changed = accepted == null || fresh.epoch() != accepted.epoch() || fresh.version() != accepted.version();
+                boolean changed = Objects.isNull(accepted) || fresh.epoch() != accepted.epoch() || fresh.version() != accepted.version();
                 accepted = fresh;
                 seen = true;
                 if (changed) {

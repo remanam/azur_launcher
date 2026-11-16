@@ -3,6 +3,7 @@ package com.azur.launcher.game;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /** Parses a JVM thread dump and names the mod the game start is stuck in. */
 public record HangDiagnosis(String thread, String mod, boolean waitingNetwork, List<String> frames) {
@@ -28,7 +29,7 @@ public record HangDiagnosis(String thread, String mod, boolean waitingNetwork, L
     public static HangDiagnosis parse(List<String> dump) {
         for (String wanted : THREADS) {
             HangDiagnosis d = forThread(dump, wanted);
-            if (d != null) {
+            if (Objects.nonNull(d)) {
                 return d;
             }
         }
@@ -82,7 +83,7 @@ public record HangDiagnosis(String thread, String mod, boolean waitingNetwork, L
     /** Short user text, language "ru" or anything else for English. */
     public String message(String lang) {
         boolean ru = "ru".equals(lang);
-        String who = mod == null ? (ru ? "не определён" : "unknown") : mod;
+        String who = Objects.isNull(mod) ? (ru ? "не определён" : "unknown") : mod;
         String wait = waitingNetwork ? (ru ? " (ждёт ответа сети)" : " (waiting for a network reply)") : "";
         String hint = ru ? "Проверьте интернет/файрвол или отключите мод."
                 : "Check your internet/firewall or disable the mod.";

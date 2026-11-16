@@ -1,6 +1,7 @@
 package com.azur.launcher.game;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 public final class GamePaths {
 
@@ -83,6 +84,6 @@ public final class GamePaths {
      * {@code versions/<id>}, so the pinned pack never mixes with another install.
      */
     public Path contentRoot(String versionId) {
-        return versionId == null || versionId.isBlank() ? root : versionDir(versionId);
+        return Objects.isNull(versionId) || versionId.isBlank() ? root : versionDir(versionId);
     }
 }

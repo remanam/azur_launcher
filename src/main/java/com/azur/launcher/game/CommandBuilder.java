@@ -7,6 +7,7 @@ import com.azur.launcher.model.VersionMeta;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public final class CommandBuilder {
 
@@ -29,7 +30,7 @@ public final class CommandBuilder {
         command.add("-Dminecraft.launcher.version=" + LaunchProfile.LAUNCHER_VERSION);
         command.addAll(NETWORK_TIMEOUT_ARGS);
 
-        List<String> jvmArgs = expand(meta.getArguments() == null ? null : meta.getArguments().getJvm(), placeholders);
+        List<String> jvmArgs = expand(Objects.isNull(meta.getArguments()) ? null : meta.getArguments().getJvm(), placeholders);
         if (jvmArgs.isEmpty()) {
             jvmArgs.add("-Djava.library.path=" + profile.getNativesDir());
             jvmArgs.add("-cp");
@@ -40,13 +41,13 @@ public final class CommandBuilder {
         command.addAll(profile.getExtraJvmArgs());
 
         String mainClass = meta.getMainClass();
-        if (mainClass == null || mainClass.isBlank()) {
+        if (Objects.isNull(mainClass) || mainClass.isBlank()) {
             throw new IllegalStateException("Version JSON has no mainClass");
         }
         command.add(mainClass);
 
-        List<String> gameArgs = expand(meta.getArguments() == null ? null : meta.getArguments().getGame(), placeholders);
-        if (gameArgs.isEmpty() && meta.getMinecraftArguments() != null && !meta.getMinecraftArguments().isBlank()) {
+        List<String> gameArgs = expand(Objects.isNull(meta.getArguments()) ? null : meta.getArguments().getGame(), placeholders);
+        if (gameArgs.isEmpty() && Objects.nonNull(meta.getMinecraftArguments()) && !meta.getMinecraftArguments().isBlank()) {
             for (String token : splitPlain(meta.getMinecraftArguments())) {
                 gameArgs.add(replacePlaceholders(token, placeholders));
             }
@@ -58,7 +59,7 @@ public final class CommandBuilder {
 
     private static List<String> expand(List<Arguments.Entry> entries, Map<String, String> placeholders) {
         List<String> result = new ArrayList<>();
-        if (entries == null) {
+        if (Objects.isNull(entries)) {
             return result;
         }
         for (Arguments.Entry entry : entries) {
@@ -66,7 +67,7 @@ public final class CommandBuilder {
                 continue;
             }
             JsonElement value = entry.getValue();
-            if (value == null || value.isJsonNull()) {
+            if (Objects.isNull(value) || value.isJsonNull()) {
                 continue;
             }
             if (value.isJsonPrimitive()) {
@@ -83,19 +84,19 @@ public final class CommandBuilder {
     }
 
     private static void addIfNotBlank(List<String> list, String value) {
-        if (value != null && !value.isEmpty()) {
+        if (Objects.nonNull(value) && !value.isEmpty()) {
             list.add(value);
         }
     }
 
     public static String replacePlaceholders(String input, Map<String, String> placeholders) {
-        if (input == null) {
+        if (Objects.isNull(input)) {
             return "";
         }
         String out = input;
         for (Map.Entry<String, String> entry : placeholders.entrySet()) {
             if (out.contains(entry.getKey())) {
-                out = out.replace(entry.getKey(), entry.getValue() == null ? "" : entry.getValue());
+                out = out.replace(entry.getKey(), Objects.isNull(entry.getValue()) ? "" : entry.getValue());
             }
         }
         return out;
@@ -103,7 +104,7 @@ public final class CommandBuilder {
 
     public static List<String> splitPlain(String input) {
         List<String> tokens = new ArrayList<>();
-        if (input == null || input.isBlank()) {
+        if (Objects.isNull(input) || input.isBlank()) {
             return tokens;
         }
         StringBuilder current = new StringBuilder();

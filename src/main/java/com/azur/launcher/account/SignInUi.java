@@ -1,5 +1,7 @@
 package com.azur.launcher.account;
 
+import java.util.Objects;
+
 /**
  * Pure rules of the password sign-in form (no JavaFX): what the «Войти» button shows and how a failure is drawn, so the form
  * stays on ONE screen while a request runs and the window code only paints these values.
@@ -27,7 +29,7 @@ public final class SignInUi {
         if (submitted && state.phase() == AccountFlowState.Phase.STARTING) {
             return Button.LOADING;
         }
-        return state.errorKey() != null ? Button.ERROR : Button.IDLE;
+        return Objects.nonNull(state.errorKey()) ? Button.ERROR : Button.IDLE;
     }
 
     public static boolean fieldsLocked(Button button) {
@@ -36,7 +38,7 @@ public final class SignInUi {
 
     /** Null for no message. Unknown keys are drawn as a plain error without a field. */
     public static Notice notice(String errorKey) {
-        if (errorKey == null) {
+        if (Objects.isNull(errorKey)) {
             return null;
         }
         return switch (errorKey) {

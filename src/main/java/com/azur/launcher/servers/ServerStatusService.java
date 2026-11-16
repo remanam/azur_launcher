@@ -3,6 +3,7 @@ package com.azur.launcher.servers;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.function.Consumer;
@@ -46,9 +47,9 @@ public final class ServerStatusService {
     public synchronized void request(ServerEntry entry, Consumer<ServerPing.Result> callback) {
         long now = millis.getAsLong();
         Long last = lastPing.get(entry.id());
-        if (last != null && now - last < minIntervalMs) {
+        if (Objects.nonNull(last) && now - last < minIntervalMs) {
             ServerPing.Result cached = lastResult.get(entry.id());
-            if (cached != null) {
+            if (Objects.nonNull(cached)) {
                 callback.accept(cached);
             }
             return;

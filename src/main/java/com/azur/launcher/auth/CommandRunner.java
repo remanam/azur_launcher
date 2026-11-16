@@ -3,6 +3,7 @@ package com.azur.launcher.auth;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /** Runs a short OS tool; the secret goes through stdin, never through arguments. */
@@ -16,7 +17,7 @@ interface CommandRunner {
     CommandRunner SYSTEM = (command, stdin) -> {
         Process p = new ProcessBuilder(command).redirectErrorStream(true).start();
         try {
-            if (stdin != null) {
+            if (Objects.nonNull(stdin)) {
                 p.getOutputStream().write(stdin.getBytes(StandardCharsets.UTF_8));
             }
             p.getOutputStream().close();

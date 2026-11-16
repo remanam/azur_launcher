@@ -7,6 +7,7 @@ import com.azur.launcher.net.DownloadManager;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class LibraryManager {
@@ -16,13 +17,13 @@ public class LibraryManager {
 
     public LibraryManager(GamePaths paths, Consumer<String> logger) {
         this.paths = paths;
-        this.logger = logger == null ? m -> {
+        this.logger = Objects.isNull(logger) ? m -> {
         } : logger;
     }
 
     public List<Library> filterLibraries(List<Library> libraries) {
         List<Library> result = new ArrayList<>();
-        if (libraries == null) {
+        if (Objects.isNull(libraries)) {
             return result;
         }
         for (Library lib : libraries) {
@@ -36,12 +37,12 @@ public class LibraryManager {
     public List<DownloadManager.Task> buildDownloadTasks(List<Library> libraries) {
         List<DownloadManager.Task> tasks = new ArrayList<>();
         for (Library lib : filterLibraries(libraries)) {
-            DownloadInfo artifact = lib.getDownloads() == null ? null : lib.getDownloads().getArtifact();
+            DownloadInfo artifact = Objects.isNull(lib.getDownloads()) ? null : lib.getDownloads().getArtifact();
 
-            if (artifact != null && artifact.getUrl() != null) {
+            if (Objects.nonNull(artifact) && Objects.nonNull(artifact.getUrl())) {
                 tasks.add(new DownloadManager.Task(artifact.getUrl(),
                         resolveArtifactPath(lib), artifact.getSha1(), artifact.getSize()));
-            } else if (lib.getUrl() != null && !lib.getUrl().isBlank()) {
+            } else if (Objects.nonNull(lib.getUrl()) && !lib.getUrl().isBlank()) {
                 String base = lib.getUrl().endsWith("/") ? lib.getUrl() : lib.getUrl() + "/";
                 String url = base + lib.getDirectoryPath() + "/" + lib.getArtifactFileName();
                 Path target = libPath(lib.getDirectoryPath() + "/" + lib.getArtifactFileName());
@@ -49,11 +50,11 @@ public class LibraryManager {
             }
 
             String classifier = PlatformRules.nativesClassifier(lib.getNatives());
-            if (classifier != null) {
-                DownloadInfo nativeInfo = (lib.getDownloads() == null || lib.getDownloads().getClassifiers() == null)
+            if (Objects.nonNull(classifier)) {
+                DownloadInfo nativeInfo = (Objects.isNull(lib.getDownloads()) || Objects.isNull(lib.getDownloads().getClassifiers()))
                         ? null
                         : lib.getDownloads().getClassifiers().get(classifier);
-                if (nativeInfo != null && nativeInfo.getUrl() != null) {
+                if (Objects.nonNull(nativeInfo) && Objects.nonNull(nativeInfo.getUrl())) {
                     tasks.add(new DownloadManager.Task(nativeInfo.getUrl(),
                             resolveClassifierPath(lib, classifier),
                             nativeInfo.getSha1(), nativeInfo.getSize()));
@@ -66,8 +67,8 @@ public class LibraryManager {
     public List<Path> buildClasspath(List<Library> libraries) {
         List<Path> classpath = new ArrayList<>();
         for (Library lib : filterLibraries(libraries)) {
-            DownloadInfo artifact = lib.getDownloads() == null ? null : lib.getDownloads().getArtifact();
-            if (artifact == null && (lib.getUrl() == null || lib.getUrl().isBlank())) {
+            DownloadInfo artifact = Objects.isNull(lib.getDownloads()) ? null : lib.getDownloads().getArtifact();
+            if (Objects.isNull(artifact) && (Objects.isNull(lib.getUrl()) || lib.getUrl().isBlank())) {
                 continue;
             }
             classpath.add(resolveArtifactPath(lib));
@@ -79,28 +80,28 @@ public class LibraryManager {
         List<NativeEntry> entries = new ArrayList<>();
         for (Library lib : filterLibraries(libraries)) {
             String classifier = PlatformRules.nativesClassifier(lib.getNatives());
-            if (classifier == null) {
+            if (Objects.isNull(classifier)) {
                 continue;
             }
-            List<String> exclude = lib.getExtract() == null ? null : lib.getExtract().getExclude();
+            List<String> exclude = Objects.isNull(lib.getExtract()) ? null : lib.getExtract().getExclude();
             entries.add(new NativeEntry(resolveClassifierPath(lib, classifier), exclude));
         }
         return entries;
     }
 
     public Path resolveArtifactPath(Library lib) {
-        DownloadInfo artifact = lib.getDownloads() == null ? null : lib.getDownloads().getArtifact();
-        if (artifact != null && artifact.getPath() != null && !artifact.getPath().isBlank()) {
+        DownloadInfo artifact = Objects.isNull(lib.getDownloads()) ? null : lib.getDownloads().getArtifact();
+        if (Objects.nonNull(artifact) && Objects.nonNull(artifact.getPath()) && !artifact.getPath().isBlank()) {
             return libPath(artifact.getPath());
         }
         return libPath(lib.getDirectoryPath() + "/" + lib.getArtifactFileName());
     }
 
     public Path resolveClassifierPath(Library lib, String classifier) {
-        DownloadInfo info = (lib.getDownloads() == null || lib.getDownloads().getClassifiers() == null)
+        DownloadInfo info = (Objects.isNull(lib.getDownloads()) || Objects.isNull(lib.getDownloads().getClassifiers()))
                 ? null
                 : lib.getDownloads().getClassifiers().get(classifier);
-        if (info != null && info.getPath() != null && !info.getPath().isBlank()) {
+        if (Objects.nonNull(info) && Objects.nonNull(info.getPath()) && !info.getPath().isBlank()) {
             return libPath(info.getPath());
         }
         String fileName = lib.getArtifactId() + "-" + lib.getVersion() + "-" + classifier + ".jar";

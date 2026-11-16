@@ -8,6 +8,7 @@ import com.google.gson.annotations.SerializedName;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Opens the signed manifest envelope {@code {payload, sig, key_id}}. The signed bytes are exactly the base64-decoded
@@ -48,7 +49,7 @@ public final class SignatureVerifier {
         }
         try {
             PackManifest manifest = GSON.fromJson(new String(raw, StandardCharsets.UTF_8), PackManifest.class);
-            if (manifest == null) {
+            if (Objects.isNull(manifest)) {
                 throw wrong("the manifest is empty");
             }
             manifest.validate();

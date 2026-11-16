@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Which notices apply here and now (pure, tested), and which one is the most important. */
@@ -23,7 +24,7 @@ public final class FeedFilter {
 
     /** "windows", "mac", "linux" or "other" from {@code os.name}. */
     public static String osOf(String osName) {
-        String name = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+        String name = Objects.isNull(osName) ? "" : osName.toLowerCase(Locale.ROOT);
         if (name.contains("win")) {
             return "windows";
         }

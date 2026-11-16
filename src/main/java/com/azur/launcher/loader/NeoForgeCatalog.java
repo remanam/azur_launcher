@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,7 +27,7 @@ public final class NeoForgeCatalog {
     /** NeoForge builds for a Minecraft version, newest first. */
     public static List<String> versions(String mcVersion) throws IOException {
         String prefix = versionPrefix(mcVersion);
-        if (prefix == null) {
+        if (Objects.isNull(prefix)) {
             throw new IOException("NeoForge does not support Minecraft " + mcVersion);
         }
         return filter(HttpUtils.getString(METADATA_URL), prefix);
@@ -46,7 +47,7 @@ public final class NeoForgeCatalog {
         } catch (java.util.concurrent.TimeoutException e) {
             throw new IOException("timeout after " + FETCH_TIMEOUT_SECONDS + " s", e);
         } catch (java.util.concurrent.ExecutionException e) {
-            throw new IOException(e.getCause() == null ? e.getMessage() : e.getCause().getMessage(), e);
+            throw new IOException(Objects.isNull(e.getCause()) ? e.getMessage() : e.getCause().getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("interrupted", e);
@@ -88,7 +89,7 @@ public final class NeoForgeCatalog {
 
     /** {@code 1.21.1 -> 21.1}, {@code 1.21 -> 21.0}; null before 1.20.2 (NeoForge starts there). */
     public static String versionPrefix(String mcVersion) {
-        if (mcVersion == null || !mcVersion.startsWith("1.")) {
+        if (Objects.isNull(mcVersion) || !mcVersion.startsWith("1.")) {
             return null;
         }
         String[] parts = mcVersion.split("\\.");

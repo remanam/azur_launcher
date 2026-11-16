@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -41,10 +42,10 @@ public final class GamePreparer {
 
     public Prepared prepare(String versionId, VersionMeta meta, boolean verifyExisting) throws IOException {
         List<DownloadManager.Task> tasks = new ArrayList<>();
-        String jarId = (meta.getJar() != null && !meta.getJar().isBlank()) ? meta.getJar() : versionId;
+        String jarId = (Objects.nonNull(meta.getJar()) && !meta.getJar().isBlank()) ? meta.getJar() : versionId;
         Path clientJar = paths.clientJar(jarId);
         DownloadInfo client = meta.getClientDownload();
-        if (client != null && client.getUrl() != null && !client.getUrl().isBlank()) {
+        if (Objects.nonNull(client) && Objects.nonNull(client.getUrl()) && !client.getUrl().isBlank()) {
             tasks.add(new DownloadManager.Task(client.getUrl(), clientJar, client.getSha1(), client.getSize()));
         } else if (!Files.isRegularFile(clientJar)) {
             throw new IOException(I18n.tr("launch.no_client", clientJar));
@@ -55,14 +56,14 @@ public final class GamePreparer {
 
         AssetManager assetManager = new AssetManager(paths, logger);
         String assetIndexName = meta.getAssets();
-        if (meta.getAssetIndex() != null) {
+        if (Objects.nonNull(meta.getAssetIndex())) {
             assetManager.ensureIndex(meta.getAssetIndex());
             AssetObjects assetIndex = assetManager.readIndex(meta.getAssetIndex());
             tasks.addAll(assetManager.buildDownloadTasks(assetIndex, verifyExisting));
-            if (assetIndexName == null || assetIndexName.isBlank()) {
+            if (Objects.isNull(assetIndexName) || assetIndexName.isBlank()) {
                 assetIndexName = meta.getAssetIndex().getId();
             }
-        } else if (assetIndexName == null) {
+        } else if (Objects.isNull(assetIndexName)) {
             assetIndexName = "legacy";
         }
 

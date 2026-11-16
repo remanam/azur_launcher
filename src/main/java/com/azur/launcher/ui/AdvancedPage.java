@@ -16,6 +16,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * «Дополнительно» (the gear): player nickname, language, memory, Java, data folder, log, repair and, at the very bottom,
@@ -46,7 +47,7 @@ final class AdvancedPage {
         VBox options = new VBox(0, languageRow(), memoryRow(), javaRow(), folderRow(), logRow(), telemetryRow());
         VBox player = UiKit.card(UiKit.label(I18n.tr("advanced.player"), "card-title"), new PlayerSection(ctx).node());
         VBox page = new VBox(18, header);
-        if (ctx.accountController != null) {
+        if (Objects.nonNull(ctx.accountController)) {
             VBox account = UiKit.card(UiKit.label(I18n.tr("account.title"), "card-title"), ctx.sitePanel().node());
             page.getChildren().add(account);
             ctx.bindAccount(state -> {
@@ -56,7 +57,7 @@ final class AdvancedPage {
             });
         }
         page.getChildren().addAll(player, UiKit.card(options), repairCard(play));
-        if (updates != null) {
+        if (Objects.nonNull(updates)) {
             UpdatePanel panel = new UpdatePanel(
                     () -> updates.panelState(play.phase() != PlayController.Phase.IDLE),
                     updates::checkAsync, restart);

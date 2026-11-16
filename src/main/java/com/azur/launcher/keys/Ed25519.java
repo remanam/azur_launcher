@@ -9,6 +9,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 
 /** JDK Ed25519 over raw 32-byte public keys (the form our Go tools print): decode, key id, verify against a list. */
 public final class Ed25519 {
@@ -29,7 +30,7 @@ public final class Ed25519 {
     }
 
     public static PublicKey publicKey(byte[] raw) throws GeneralSecurityException {
-        if (raw == null || raw.length != 32) {
+        if (Objects.isNull(raw) || raw.length != 32) {
             throw new GeneralSecurityException("Ed25519 public key must be 32 bytes");
         }
         byte[] der = new byte[SPKI_PREFIX.length + 32];

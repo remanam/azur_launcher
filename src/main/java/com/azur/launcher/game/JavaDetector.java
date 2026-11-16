@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -47,7 +48,7 @@ public final class JavaDetector {
             this.javaExecutable = javaExecutable;
             this.version = version;
             this.majorVersion = majorVersion;
-            this.arch = arch == null ? "" : arch;
+            this.arch = Objects.isNull(arch) ? "" : arch;
         }
 
         public Path getHome() {
@@ -80,7 +81,7 @@ public final class JavaDetector {
     public static List<JavaInfo> detectAll() {
         Map<String, JavaInfo> unique = new LinkedHashMap<>();
         String thisHome = System.getProperty("java.home");
-        if (thisHome != null && !thisHome.isBlank()) {
+        if (Objects.nonNull(thisHome) && !thisHome.isBlank()) {
             addHome(unique, Path.of(thisHome));
         }
         addEnvHome(unique, "JAVA_HOME");
@@ -124,7 +125,7 @@ public final class JavaDetector {
             Thread.currentThread().interrupt();
             return null;
         } finally {
-            if (process != null && process.isAlive()) {
+            if (Objects.nonNull(process) && process.isAlive()) {
                 process.destroyForcibly();
             }
         }
@@ -132,7 +133,7 @@ public final class JavaDetector {
 
     /** First output line when it is an existing directory, otherwise null. */
     static Path parseJavaHomeOutput(String out) {
-        if (out == null || out.isBlank()) {
+        if (Objects.isNull(out) || out.isBlank()) {
             return null;
         }
         String line = out.lines().findFirst().orElse("").trim();
@@ -145,7 +146,7 @@ public final class JavaDetector {
 
     private static void addEnvHome(Map<String, JavaInfo> unique, String name) {
         String value = System.getenv(name);
-        if (value != null && !value.isBlank()) {
+        if (Objects.nonNull(value) && !value.isBlank()) {
             addHome(unique, Path.of(value.trim().replace("\"", "")));
         }
     }
@@ -156,7 +157,7 @@ public final class JavaDetector {
         String home = System.getProperty("user.home", "");
         if (isWindows()) {
             for (String pf : new String[]{System.getenv("ProgramFiles"), System.getenv("ProgramFiles(x86)")}) {
-                if (pf == null || pf.isBlank()) {
+                if (Objects.isNull(pf) || pf.isBlank()) {
                     continue;
                 }
                 for (String vendor : new String[]{"Java", "Eclipse Adoptium", "Microsoft", "Zulu", "BellSoft",
@@ -165,12 +166,12 @@ public final class JavaDetector {
                 }
             }
             String local = System.getenv("LOCALAPPDATA");
-            if (local != null && !local.isBlank()) {
+            if (Objects.nonNull(local) && !local.isBlank()) {
                 roots.add(Path.of(local, "Programs", "Eclipse Adoptium"));
                 roots.add(Path.of(local, "Programs", "Microsoft"));
             }
             String appData = System.getenv("APPDATA");
-            if (appData != null && !appData.isBlank()) {
+            if (Objects.nonNull(appData) && !appData.isBlank()) {
                 roots.add(Path.of(appData, ".minecraft", "runtime"));
             }
         } else if (isMac()) {
@@ -206,7 +207,7 @@ public final class JavaDetector {
     }
 
     private static void scanHomeDir(Map<String, JavaInfo> unique, Path root, int depth) {
-        if (root == null || !Files.isDirectory(root)) {
+        if (Objects.isNull(root) || !Files.isDirectory(root)) {
             return;
         }
         Path home = macHome(root);
@@ -233,7 +234,7 @@ public final class JavaDetector {
     }
 
     private static void addHome(Map<String, JavaInfo> unique, Path home) {
-        if (home == null) {
+        if (Objects.isNull(home)) {
             return;
         }
         putUnique(unique, probe(home));
@@ -244,7 +245,7 @@ public final class JavaDetector {
     }
 
     private static void putUnique(Map<String, JavaInfo> unique, JavaInfo info) {
-        if (info == null) {
+        if (Objects.isNull(info)) {
             return;
         }
         Path exe = info.getJavaExecutable().toAbsolutePath().normalize();
@@ -263,7 +264,7 @@ public final class JavaDetector {
         JavaInfo best = null;
         for (JavaInfo info : candidates) {
             if (info.getMajorVersion() == requiredMajor && isArchCompatible(info)
-                    && (best == null || compareVersion(info.getVersion(), best.getVersion()) > 0)) {
+                    && (Objects.isNull(best) || compareVersion(info.getVersion(), best.getVersion()) > 0)) {
                 best = info;
             }
         }
@@ -273,7 +274,7 @@ public final class JavaDetector {
     /** Exact match, otherwise the closest higher major (a lower one cannot run the game). */
     public static JavaInfo pickFallback(List<JavaInfo> candidates, int requiredMajor) {
         JavaInfo exact = pickBest(candidates, requiredMajor);
-        if (exact != null) {
+        if (Objects.nonNull(exact)) {
             return exact;
         }
         JavaInfo higher = null;
@@ -284,7 +285,7 @@ public final class JavaDetector {
             }
             if (major < requiredMajor) {
                 continue;
-            } else if (higher == null || major < higher.getMajorVersion()) {
+            } else if (Objects.isNull(higher) || major < higher.getMajorVersion()) {
                 higher = info;
             }
         }
@@ -293,7 +294,7 @@ public final class JavaDetector {
 
     /** A 32-bit runtime cannot run the game on a 64-bit host. */
     public static boolean isArchCompatible(JavaInfo info) {
-        if (info == null) {
+        if (Objects.isNull(info)) {
             return false;
         }
         String osArch = System.getProperty("os.arch", "").toLowerCase(Locale.ROOT);
@@ -319,7 +320,7 @@ public final class JavaDetector {
     }
 
     private static String[] splitVersion(String version) {
-        return version == null || version.isBlank() ? new String[0] : version.trim().split("[^0-9]+");
+        return Objects.isNull(version) || version.isBlank() ? new String[0] : version.trim().split("[^0-9]+");
     }
 
     private static int toInt(String value) {
@@ -334,7 +335,7 @@ public final class JavaDetector {
 
     /** Probes a runtime by its home directory; null when it is not a usable Java. */
     public static JavaInfo probe(Path home) {
-        if (home == null) {
+        if (Objects.isNull(home)) {
             return null;
         }
         Path exe = javaExecutableOf(home);
@@ -343,28 +344,28 @@ public final class JavaDetector {
 
     /** Probes a {@code java} executable; null when the version cannot be determined. */
     public static JavaInfo probeExecutable(Path javaExecutable) {
-        if (javaExecutable == null || !Files.isRegularFile(javaExecutable)) {
+        if (Objects.isNull(javaExecutable) || !Files.isRegularFile(javaExecutable)) {
             return null;
         }
         Path home = javaExecutable.getParent();
-        if (home != null && home.getFileName() != null && "bin".equalsIgnoreCase(home.getFileName().toString())) {
+        if (Objects.nonNull(home) && Objects.nonNull(home.getFileName()) && "bin".equalsIgnoreCase(home.getFileName().toString())) {
             home = home.getParent();
         }
         String release = readRelease(home);
         String version = matchGroup(RELEASE_VERSION_PATTERN, release);
-        if (version == null) {
+        if (Objects.isNull(version)) {
             version = queryVersion(javaExecutable);
         }
-        if (version == null) {
+        if (Objects.isNull(version)) {
             return null;
         }
         String arch = matchGroup(RELEASE_ARCH_PATTERN, release);
-        return new JavaInfo(home == null ? javaExecutable.getParent() : home, javaExecutable, version,
-                parseMajorVersion(version), arch == null ? "" : arch);
+        return new JavaInfo(Objects.isNull(home) ? javaExecutable.getParent() : home, javaExecutable, version,
+                parseMajorVersion(version), Objects.isNull(arch) ? "" : arch);
     }
 
     private static String readRelease(Path home) {
-        if (home == null || !Files.isRegularFile(home.resolve("release"))) {
+        if (Objects.isNull(home) || !Files.isRegularFile(home.resolve("release"))) {
             return "";
         }
         try {
@@ -390,7 +391,7 @@ public final class JavaDetector {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
                 String line;
-                while ((line = reader.readLine()) != null) {
+                while (Objects.nonNull((line = reader.readLine()))) {
                     sb.append(line).append('\n');
                 }
             }
@@ -405,7 +406,7 @@ public final class JavaDetector {
             Thread.currentThread().interrupt();
             return null;
         } finally {
-            if (process != null && process.isAlive()) {
+            if (Objects.nonNull(process) && process.isAlive()) {
                 process.destroyForcibly();
             }
         }
@@ -413,7 +414,7 @@ public final class JavaDetector {
 
     /** {@code 1.8.0_402 -> 8}, {@code 21.0.4 -> 21}, unparsable -> -1. */
     public static int parseMajorVersion(String version) {
-        if (version == null || version.isBlank()) {
+        if (Objects.isNull(version) || version.isBlank()) {
             return -1;
         }
         String v = version.trim();
@@ -435,7 +436,7 @@ public final class JavaDetector {
     private static List<Path> findOnPath() {
         List<Path> found = new ArrayList<>();
         String pathEnv = System.getenv("PATH");
-        if (pathEnv == null || isMac()) {
+        if (Objects.isNull(pathEnv) || isMac()) {
             // macOS keeps a /usr/bin/java stub that pops up an installer dialog when run, so it is not probed.
             return found;
         }

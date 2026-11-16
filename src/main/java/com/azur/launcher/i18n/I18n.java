@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -40,16 +41,16 @@ public final class I18n {
 
     /** Pure language resolution, exposed for tests. The system locale is deliberately ignored. */
     public static String resolve(String setting) {
-        String wanted = setting == null ? "" : setting.trim().toLowerCase(Locale.ROOT);
+        String wanted = Objects.isNull(setting) ? "" : setting.trim().toLowerCase(Locale.ROOT);
         return SUPPORTED.contains(wanted) ? wanted : DEFAULT_LANGUAGE;
     }
 
     public static String tr(String key) {
         String value = current.getProperty(key);
-        if (value == null) {
+        if (Objects.isNull(value)) {
             value = load(DEFAULT_LANGUAGE).getProperty(key);
         }
-        return value == null ? key : value;
+        return Objects.isNull(value) ? key : value;
     }
 
     /** Looks up {@code key} and replaces {@code {0}}, {@code {1}}... with the arguments. */
@@ -70,7 +71,7 @@ public final class I18n {
         return BUNDLES.computeIfAbsent(language, lang -> {
             Properties props = new Properties();
             try (InputStream in = I18n.class.getResourceAsStream("/messages_" + lang + ".properties")) {
-                if (in != null) {
+                if (Objects.nonNull(in)) {
                     props.load(new InputStreamReader(in, StandardCharsets.UTF_8));
                 }
             } catch (IOException e) {

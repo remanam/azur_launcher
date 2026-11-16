@@ -1,6 +1,7 @@
 package com.azur.launcher.game;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** A version folder found under {@code <gameDir>/versions}. */
 public record LocalVersion(
@@ -14,7 +15,7 @@ public record LocalVersion(
     public enum Status { READY, DAMAGED, MISSING_JAR }
 
     public boolean inheriting() {
-        return inheritsFrom != null && !inheritsFrom.isBlank();
+        return Objects.nonNull(inheritsFrom) && !inheritsFrom.isBlank();
     }
 
     /** Loader versions (NeoForge) inherit the client jar from the vanilla version. */

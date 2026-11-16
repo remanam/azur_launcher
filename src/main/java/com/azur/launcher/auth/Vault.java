@@ -13,6 +13,7 @@ import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -72,7 +73,7 @@ final class Vault {
             byte[] body = new byte[in.remaining()];
             in.get(body);
             byte[] key = kind == KIND_KEYCHAIN ? keychainKey(false) : derivedKey();
-            if (key == null) {
+            if (Objects.isNull(key)) {
                 return Optional.empty();
             }
             return Optional.of(crypt(Cipher.DECRYPT_MODE, key, nonce, header(kind), body));
@@ -84,7 +85,7 @@ final class Vault {
     void write(byte[] plain) throws IOException {
         byte kind = KIND_KEYCHAIN;
         byte[] key = keychainKey(true);
-        if (key == null) {
+        if (Objects.isNull(key)) {
             kind = KIND_DERIVED;
             key = derivedKey();
         }
@@ -115,7 +116,7 @@ final class Vault {
 
     /** The random master key from the keychain; created on first use when {@code create} is set. */
     private byte[] keychainKey(boolean create) {
-        if (keychain == null) {
+        if (Objects.isNull(keychain)) {
             return null;
         }
         Optional<String> stored = keychain.get(KEY_NAME);

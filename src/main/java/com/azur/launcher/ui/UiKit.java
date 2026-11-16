@@ -21,6 +21,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Window;
 
 import java.net.URL;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /** Small factory methods for the CSS-styled building blocks used by every page. */
@@ -125,7 +126,7 @@ final class UiKit {
 
     static Button button(String text, String icon, String styleClass, Runnable action) {
         Button button = new Button(text);
-        if (icon != null) {
+        if (Objects.nonNull(icon)) {
             button.setGraphic(Icons.of(icon, 14));
         }
         button.getStyleClass().add(styleClass);
@@ -183,7 +184,7 @@ final class UiKit {
         fade.setVisible(false);
         Runnable update = () -> {
             Node content = scroll.getContent();
-            boolean more = content != null && content.getLayoutBounds().getHeight() > scroll.getViewportBounds().getHeight() + 1
+            boolean more = Objects.nonNull(content) && content.getLayoutBounds().getHeight() > scroll.getViewportBounds().getHeight() + 1
                     && scroll.getVvalue() < scroll.getVmax() - 0.01;
             fade.setVisible(more);
         };
@@ -191,7 +192,7 @@ final class UiKit {
         scroll.viewportBoundsProperty().addListener((o, a, b) -> update.run());
         scroll.contentProperty().addListener((o, a, b) -> update.run());
         scroll.sceneProperty().addListener((o, old, scene) -> {
-            if (scene != null) {
+            if (Objects.nonNull(scene)) {
                 scene.focusOwnerProperty().addListener((obs, was, now) -> scrollTo(scroll, now));
             }
         });
@@ -201,10 +202,10 @@ final class UiKit {
 
     private static void scrollTo(ScrollPane scroll, Node focused) {
         Node content = scroll.getContent();
-        if (focused == null || content == null) {
+        if (Objects.isNull(focused) || Objects.isNull(content)) {
             return;
         }
-        for (Node n = focused; n != null; n = n.getParent()) {
+        for (Node n = focused; Objects.nonNull(n); n = n.getParent()) {
             if (n == content) {
                 javafx.geometry.Bounds b = content.sceneToLocal(focused.localToScene(focused.getBoundsInLocal()));
                 double extra = content.getLayoutBounds().getHeight() - scroll.getViewportBounds().getHeight();
@@ -223,7 +224,7 @@ final class UiKit {
     }
 
     static StackPane avatar(String text, String boxClass, String textClass) {
-        String initial = text == null || text.isBlank() ? "?" : text.substring(0, 1).toUpperCase();
+        String initial = Objects.isNull(text) || text.isBlank() ? "?" : text.substring(0, 1).toUpperCase();
         StackPane avatar = new StackPane(label(initial, textClass));
         avatar.getStyleClass().add(boxClass);
         return avatar;
@@ -234,7 +235,7 @@ final class UiKit {
         pane.setMinWidth(480);
         pane.setMaxWidth(600);
         URL stylesheet = UiKit.class.getResource("/app.css");
-        if (stylesheet != null) {
+        if (Objects.nonNull(stylesheet)) {
             pane.getStylesheets().add(stylesheet.toExternalForm());
         }
         if (dark) {

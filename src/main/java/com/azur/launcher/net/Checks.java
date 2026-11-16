@@ -1,5 +1,7 @@
 package com.azur.launcher.net;
 
+import java.util.Objects;
+
 /** Expected properties of a download; null/blank/non-positive values mean "not checked". */
 public record Checks(String sha1, String sha256, long size) {
 
@@ -10,6 +12,6 @@ public record Checks(String sha1, String sha256, long size) {
     }
 
     boolean has(String value) {
-        return value != null && !value.isBlank();
+        return Objects.nonNull(value) && !value.isBlank();
     }
 }

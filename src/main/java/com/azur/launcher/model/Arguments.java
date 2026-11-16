@@ -9,6 +9,7 @@ import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Objects;
 
 public class Arguments {
 
@@ -25,8 +26,8 @@ public class Arguments {
 
     /** Loader JSON arguments are appended to the parent's (vanilla's), never replace them. */
     public static Arguments merge(Arguments parent, Arguments child) {
-        if (parent == null || child == null) {
-            return child != null ? child : parent;
+        if (Objects.isNull(parent) || Objects.isNull(child)) {
+            return Objects.nonNull(child) ? child : parent;
         }
         Arguments merged = new Arguments();
         merged.game = concat(parent.game, child.game);
@@ -36,10 +37,10 @@ public class Arguments {
 
     private static List<Entry> concat(List<Entry> first, List<Entry> second) {
         List<Entry> all = new java.util.ArrayList<>();
-        if (first != null) {
+        if (Objects.nonNull(first)) {
             all.addAll(first);
         }
-        if (second != null) {
+        if (Objects.nonNull(second)) {
             all.addAll(second);
         }
         return all;
@@ -63,14 +64,14 @@ public class Arguments {
         @Override
         public Entry deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context) {
             Entry entry = new Entry();
-            if (json == null || json.isJsonNull()) {
+            if (Objects.isNull(json) || json.isJsonNull()) {
                 return entry;
             }
             if (json.isJsonObject()) {
                 JsonObject object = json.getAsJsonObject();
                 entry.value = object.get("value");
                 JsonElement rules = object.get("rules");
-                if (rules != null && rules.isJsonArray()) {
+                if (Objects.nonNull(rules) && rules.isJsonArray()) {
                     entry.rules = context.deserialize(rules, new TypeToken<List<Rule>>() { }.getType());
                 }
             } else {

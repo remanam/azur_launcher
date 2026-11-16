@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
 
@@ -55,7 +56,7 @@ public final class JavaRuntimeDownloader {
             }
             JsonObject entry = e.getValue().getAsJsonArray().get(0).getAsJsonObject();
             JsonObject version = entry.has("version") ? entry.getAsJsonObject("version") : null;
-            if (version != null && version.has("name")
+            if (Objects.nonNull(version) && version.has("name")
                     && JavaDetector.parseMajorVersion(version.get("name").getAsString()) == major) {
                 return Optional.of(e.getKey());
             }

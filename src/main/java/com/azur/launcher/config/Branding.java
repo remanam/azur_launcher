@@ -2,6 +2,7 @@ package com.azur.launcher.config;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 import java.util.Properties;
 
 /**
@@ -18,7 +19,7 @@ public final class Branding {
     private static Properties load() {
         Properties p = new Properties();
         try (InputStream in = Branding.class.getResourceAsStream("/branding.properties")) {
-            if (in != null) {
+            if (Objects.nonNull(in)) {
                 p.load(new java.io.InputStreamReader(in, java.nio.charset.StandardCharsets.UTF_8));
             }
         } catch (IOException ignored) {
@@ -30,7 +31,7 @@ public final class Branding {
     /** Value of {@code key}, or {@code fallback} when absent or blank. */
     public static String get(String key, String fallback) {
         String v = PROPS.getProperty(key);
-        return v == null || v.isBlank() ? fallback : v.trim();
+        return Objects.isNull(v) || v.isBlank() ? fallback : v.trim();
     }
 
     /** Release address of the signed servers.json; empty: only the cache and the user setting. */

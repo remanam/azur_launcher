@@ -3,6 +3,7 @@ package com.azur.launcher.profile;
 import com.azur.launcher.servers.ServerEntry;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Derives the pinned profile of a server from its signed list entry. Versions come from the entry; what the
@@ -33,7 +34,7 @@ public final class ServerProfiles {
                 entry.mcVersion().isBlank() ? base.minecraft() : entry.mcVersion(), neoforge, sha, java,
                 List.copyOf(base.jvmArgs()), base.ramMinMb(), base.ramMaxMb(),
                 entry.packChannel().isBlank() ? base.packChannel() : entry.packChannel(),
-                entry.mirror() == null || entry.mirror().isBlank() ? base.mirrorBase() : entry.mirror());
+                Objects.isNull(entry.mirror()) || entry.mirror().isBlank() ? base.mirrorBase() : entry.mirror());
         List<String> problems = ProfileLoader.validate(profile);
         if (!problems.isEmpty()) {
             throw new ProfileException("Server " + entry.id() + ": " + String.join("; ", problems));

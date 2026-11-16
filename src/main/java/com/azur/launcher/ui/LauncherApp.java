@@ -23,6 +23,7 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 
 import java.net.URL;
+import java.util.Objects;
 
 /** Main window: title bar and one of two pages: Play (home) and «Дополнительно» (the gear). */
 public class LauncherApp extends Application {
@@ -58,7 +59,7 @@ public class LauncherApp extends Application {
         sceneRoot.setPadding(new Insets(10));
         Scene scene = new Scene(sceneRoot, 1040, 720, Color.TRANSPARENT);
         URL stylesheet = getClass().getResource("/app.css");
-        if (stylesheet != null) {
+        if (Objects.nonNull(stylesheet)) {
             scene.getStylesheets().add(stylesheet.toExternalForm());
         }
         stage.initStyle(StageStyle.TRANSPARENT);
@@ -70,16 +71,16 @@ public class LauncherApp extends Application {
         stage.setOnCloseRequest(event -> ctx.saveConfig());
         UpdateStore updateStore = UpdateStore.at(dirs.root().resolve("updates"));
         updates = UpdateController.create(ctx, updateStore,
-                () -> play != null && play.phase() != PlayController.Phase.IDLE);
-        feeds = FeedController.create(ctx, () -> play != null && play.phase() != PlayController.Phase.IDLE);
+                () -> Objects.nonNull(play) && play.phase() != PlayController.Phase.IDLE);
+        feeds = FeedController.create(ctx, () -> Objects.nonNull(play) && play.phase() != PlayController.Phase.IDLE);
         build();
         stage.show();
         updateStore.confirmStarted(AppVersion.APP);
         ctx.telemetry.report("start", true, "", 0);
-        if (updates != null) {
+        if (Objects.nonNull(updates)) {
             updates.start();
         }
-        if (feeds != null) {
+        if (Objects.nonNull(feeds)) {
             feeds.start();
         }
         ctx.log("Azur Launcher started, data folder: " + dirs.root());
@@ -104,14 +105,14 @@ public class LauncherApp extends Application {
         area.getStyleClass().add("content-area");
         play = new PlayController(ctx);
         java.util.function.Supplier<UpdateNotice.Restart> restart =
-                () -> updates == null ? UpdateNotice.Restart.FAILED : updates.restart(this::shutdown);
+                () -> Objects.isNull(updates) ? UpdateNotice.Restart.FAILED : updates.restart(this::shutdown);
         homePage = new HomePage(ctx, play, PackState.live(ctx), () -> navigate(Page.ADVANCED), restart, this::shutdown);
         area.getChildren().addAll(homePage.node(),
                 new AdvancedPage(ctx, this::build, play, () -> navigate(Page.HOME), updates, restart).node());
-        if (updates != null) {
+        if (Objects.nonNull(updates)) {
             updates.onStatus(homePage::showUpdate);
         }
-        if (feeds != null) {
+        if (Objects.nonNull(feeds)) {
             feeds.onFeed(homePage::showFeed);
         }
         showPage(area, current);
@@ -130,17 +131,17 @@ public class LauncherApp extends Application {
     private void navigate(Page page) {
         StackPane area = (StackPane) ((BorderPane) sceneRoot.getChildren().get(0)).getCenter();
         showPage(area, page);
-        if (page == Page.HOME && homePage != null) {
+        if (page == Page.HOME && Objects.nonNull(homePage)) {
             homePage.onShown();
         }
     }
 
     private void shutdown() {
         ctx.saveConfig();
-        if (updates != null) {
+        if (Objects.nonNull(updates)) {
             updates.stop();
         }
-        if (feeds != null) {
+        if (Objects.nonNull(feeds)) {
             feeds.stop();
         }
         ctx.shutdown();

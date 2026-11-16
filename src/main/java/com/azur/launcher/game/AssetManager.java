@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public class AssetManager {
@@ -26,12 +27,12 @@ public class AssetManager {
 
     public AssetManager(GamePaths paths, Consumer<String> logger) {
         this.paths = paths;
-        this.logger = logger == null ? m -> {
+        this.logger = Objects.isNull(logger) ? m -> {
         } : logger;
     }
 
     public void ensureIndex(AssetIndex index) throws IOException {
-        if (index == null || index.getUrl() == null) {
+        if (Objects.isNull(index) || Objects.isNull(index.getUrl())) {
             throw new IOException("Version JSON has no assetIndex");
         }
         Path file = paths.assetIndexFile(index.getId());
@@ -42,7 +43,7 @@ public class AssetManager {
     public AssetObjects readIndex(AssetIndex index) throws IOException {
         Path file = paths.assetIndexFile(index.getId());
         AssetObjects objects = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), AssetObjects.class);
-        if (objects == null || objects.getObjects() == null) {
+        if (Objects.isNull(objects) || Objects.isNull(objects.getObjects())) {
             throw new IOException("Cannot parse asset index: " + file);
         }
         return objects;
@@ -59,7 +60,7 @@ public class AssetManager {
         for (Map.Entry<String, AssetObjects.ObjectEntry> entry : index.getObjects().entrySet()) {
             AssetObjects.ObjectEntry obj = entry.getValue();
             String hash = obj.getHash();
-            if (hash == null || hash.length() < 2) {
+            if (Objects.isNull(hash) || hash.length() < 2) {
                 continue;
             }
             Path target = paths.assetObject(hash);

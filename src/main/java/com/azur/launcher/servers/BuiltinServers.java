@@ -4,6 +4,7 @@ import com.azur.launcher.config.Branding;
 import com.azur.launcher.pack.PackSource;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The default server baked into the jar, defined by the optional build-time {@code branding.properties}
@@ -43,6 +44,6 @@ public final class BuiltinServers {
     }
 
     public static List<ServerEntry> all() {
-        return DEFAULT == null ? List.of() : List.of(DEFAULT);
+        return Objects.isNull(DEFAULT) ? List.of() : List.of(DEFAULT);
     }
 }

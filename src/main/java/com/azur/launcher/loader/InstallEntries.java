@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /** Pure builder of the single install list: Vanilla releases and NeoForge builds, newest Minecraft first. */
@@ -20,17 +21,17 @@ public final class InstallEntries {
     public record Entry(String mc, String neoforge, boolean pinned) {
 
         public boolean isVanilla() {
-            return neoforge == null;
+            return Objects.isNull(neoforge);
         }
     }
 
     public static boolean isValidNeoForge(String version) {
-        return version != null && NEOFORGE.matcher(version).matches() && mcFor(version) != null;
+        return Objects.nonNull(version) && NEOFORGE.matcher(version).matches() && Objects.nonNull(mcFor(version));
     }
 
     /** {@code 21.1.264 -> 1.21.1}, {@code 21.0.5 -> 1.21}; null for builds before 20.2 or a bad format. */
     public static String mcFor(String neoForgeVersion) {
-        if (neoForgeVersion == null || !NEOFORGE.matcher(neoForgeVersion).matches()) {
+        if (Objects.isNull(neoForgeVersion) || !NEOFORGE.matcher(neoForgeVersion).matches()) {
             return null;
         }
         String[] p = neoForgeVersion.split("[.\\-]");
@@ -50,14 +51,14 @@ public final class InstallEntries {
     public static List<Entry> build(List<String> vanillaReleases, List<String> neoForgeVersions, String pinnedMc,
                                     String pinnedNeoForge) {
         List<Entry> out = new ArrayList<>();
-        if (pinnedMc != null && pinnedNeoForge != null) {
+        if (Objects.nonNull(pinnedMc) && Objects.nonNull(pinnedNeoForge)) {
             out.add(new Entry(pinnedMc, pinnedNeoForge, true));
         }
         List<String> mcOrder = new ArrayList<>(vanillaReleases);
         List<String> builds = new ArrayList<>();
         for (String v : neoForgeVersions) {
             String mc = mcFor(v);
-            if (mc != null) {
+            if (Objects.nonNull(mc)) {
                 builds.add(v);
                 if (!mcOrder.contains(mc)) {
                     mcOrder.add(mc);
@@ -85,7 +86,7 @@ public final class InstallEntries {
 
     /** Case-insensitive match of every word of the query against "vanilla|neoforge mc build". */
     public static boolean matches(Entry entry, String query) {
-        if (query == null || query.isBlank()) {
+        if (Objects.isNull(query) || query.isBlank()) {
             return true;
         }
         String hay = ((entry.isVanilla() ? "vanilla " : "neoforge " + entry.neoforge() + " ") + entry.mc())

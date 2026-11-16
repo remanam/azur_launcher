@@ -14,6 +14,7 @@ import javafx.util.Duration;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Dev tool, not a test: starts the real launcher (use {@code -Dazur.home=<empty temp dir>}) and for several window sizes
@@ -77,18 +78,18 @@ public final class LayoutProbe extends Application {
         if (!node.isVisible() || !node.isManaged() && !(node instanceof Button)) {
             return;
         }
-        if (node instanceof Button b && b.isVisible() && b.getScene() != null) {
+        if (node instanceof Button b && b.isVisible() && Objects.nonNull(b.getScene())) {
             Bounds s = b.localToScene(b.getBoundsInLocal());
             boolean inWindow = s.getMinX() >= win.getMinX() && s.getMaxX() <= win.getMaxX()
                     && s.getMinY() >= win.getMinY() && s.getMaxY() <= win.getMaxY();
             Parent p = b.getParent();
             boolean clipped = false;
-            while (p != null) {
-                if (p.getClip() != null || p instanceof javafx.scene.control.ScrollPane) {
+            while (Objects.nonNull(p)) {
+                if (Objects.nonNull(p.getClip()) || p instanceof javafx.scene.control.ScrollPane) {
                     break;
                 }
                 Bounds pb = p.localToScene(p.getLayoutBounds());
-                if (p.getParent() != null && (s.getMaxY() > pb.getMaxY() + 1 || s.getMaxX() > pb.getMaxX() + 1)
+                if (Objects.nonNull(p.getParent()) && (s.getMaxY() > pb.getMaxY() + 1 || s.getMaxX() > pb.getMaxX() + 1)
                         && p.getStyleClass().contains("forge-card")) {
                     clipped = true;
                 }

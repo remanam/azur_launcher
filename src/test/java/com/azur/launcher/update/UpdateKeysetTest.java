@@ -14,6 +14,7 @@ import java.nio.file.Path;
 import java.security.KeyPair;
 import java.time.Clock;
 import java.time.ZoneOffset;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -42,7 +43,7 @@ class UpdateKeysetTest {
     private byte[] manifest(String version, KeyPair keysetSigner) throws Exception {
         UpdateManifest m = UpdateTestSupport.manifest(version, jar, "1.0.0", false);
         String legacy = new String(UpdateTestSupport.signed(m, servers), StandardCharsets.UTF_8);
-        if (keysetSigner == null) {
+        if (Objects.isNull(keysetSigner)) {
             return legacy.getBytes(StandardCharsets.UTF_8);
         }
         String sig = KeysetTestSupport.sign(keysetSigner.getPrivate(), m.signedMessage().getBytes(StandardCharsets.UTF_8));

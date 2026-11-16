@@ -7,6 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /** The list of NeoForge builds: fetched with a fallback to the last good copy on disk (bounded). */
 public final class NeoForgeList {
@@ -24,7 +25,7 @@ public final class NeoForgeList {
     public record Result(List<String> versions, String error) {
 
         public boolean fresh() {
-            return error == null;
+            return Objects.isNull(error);
         }
     }
 
@@ -43,7 +44,7 @@ public final class NeoForgeList {
             save(fresh);
             return new Result(fresh, null);
         } catch (IOException | RuntimeException e) {
-            String reason = e.getMessage() == null || e.getMessage().isBlank() ? e.getClass().getSimpleName()
+            String reason = Objects.isNull(e.getMessage()) || e.getMessage().isBlank() ? e.getClass().getSimpleName()
                     : e.getMessage().strip();
             return new Result(cached(), reason.length() > 120 ? reason.substring(0, 120) : reason);
         }

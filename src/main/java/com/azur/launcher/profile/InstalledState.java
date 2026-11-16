@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 
 /** What the launcher actually installed for an instance ({@code installed.json}); compared with the pin. */
 public record InstalledState(String minecraft, String neoforge, String installerSha256) {
@@ -18,7 +19,7 @@ public record InstalledState(String minecraft, String neoforge, String installer
     public static InstalledState read(Path file) {
         try {
             InstalledState state = GSON.fromJson(Files.readString(file, StandardCharsets.UTF_8), InstalledState.class);
-            return state == null ? new InstalledState(null, null, null) : state;
+            return Objects.isNull(state) ? new InstalledState(null, null, null) : state;
         } catch (IOException | RuntimeException e) {
             return new InstalledState(null, null, null);
         }

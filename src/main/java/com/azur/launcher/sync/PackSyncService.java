@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -138,6 +139,6 @@ public final class PackSyncService {
     }
 
     private static String nz(String s) {
-        return s == null ? "" : s;
+        return Objects.isNull(s) ? "" : s;
     }
 }

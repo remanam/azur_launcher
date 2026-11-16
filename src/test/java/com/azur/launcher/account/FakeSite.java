@@ -2,6 +2,7 @@ package com.azur.launcher.account;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /** In-memory stand-in for the site API: scripted answers, records every call. */
@@ -27,7 +28,7 @@ final class FakeSite implements SiteApi {
         lastLogin = login;
         lastLoginPassword = new String(password);
         lastPubkey = pubkey;
-        if (loginError != null) {
+        if (Objects.nonNull(loginError)) {
             throw loginError;
         }
         return new Polled(true, "dev-pw", "refresh-pw", "Art");
@@ -44,7 +45,7 @@ final class FakeSite implements SiteApi {
     @Override
     public Polled poll(String code) throws SiteException {
         calls.add("poll");
-        if (pollError != null) {
+        if (Objects.nonNull(pollError)) {
             throw pollError;
         }
         if (pendingPolls-- > 0) {
@@ -56,7 +57,7 @@ final class FakeSite implements SiteApi {
     @Override
     public Ticket ticket(String deviceId, String refresh, String server) throws SiteException {
         calls.add("ticket:" + refresh);
-        if (ticketError != null) {
+        if (Objects.nonNull(ticketError)) {
             throw ticketError;
         }
         return new Ticket("ticket-" + (++ticketNo), "Art", "refresh-" + (++refreshNo));
@@ -67,7 +68,7 @@ final class FakeSite implements SiteApi {
         calls.add("rotate");
         lastRotateKey = newKey;
         lastRotateProof = proof;
-        if (rotateError != null) {
+        if (Objects.nonNull(rotateError)) {
             throw rotateError;
         }
         return "refresh-rotated";

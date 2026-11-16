@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -22,7 +23,7 @@ public final class Mirrors {
     public static List<String> candidates(String url, String mirrorBase) {
         List<String> list = new ArrayList<>(2);
         String mirrored = mirrorUrl(url, mirrorBase);
-        if (mirrored != null) {
+        if (Objects.nonNull(mirrored)) {
             list.add(mirrored);
         }
         list.add(url);
@@ -31,12 +32,12 @@ public final class Mirrors {
 
     /** The mirror URL of an official URL, or null when there is no base or the host is not mirrored. */
     public static String mirrorUrl(String url, String mirrorBase) {
-        if (mirrorBase == null || mirrorBase.isBlank() || url == null) {
+        if (Objects.isNull(mirrorBase) || mirrorBase.isBlank() || Objects.isNull(url)) {
             return null;
         }
         try {
             URI uri = URI.create(url);
-            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+            String host = Objects.isNull(uri.getHost()) ? "" : uri.getHost().toLowerCase(Locale.ROOT);
             if (!MIRRORED_HOSTS.contains(host)) {
                 return null;
             }

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** Reads and writes {@code config.json} in the launcher root. */
 public final class ConfigManager {
@@ -33,12 +34,12 @@ public final class ConfigManager {
         } catch (Exception ignored) {
             // a corrupt file falls back to defaults
         }
-        return cfg == null ? new LauncherConfig() : cfg;
+        return Objects.isNull(cfg) ? new LauncherConfig() : cfg;
     }
 
     public void save(LauncherConfig config) throws IOException {
         Path parent = configFile.getParent();
-        if (parent != null) {
+        if (Objects.nonNull(parent)) {
             Files.createDirectories(parent);
         }
         Files.writeString(configFile, GSON.toJson(config), StandardCharsets.UTF_8);

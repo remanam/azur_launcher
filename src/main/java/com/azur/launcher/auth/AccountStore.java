@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public final class AccountStore {
 
@@ -29,7 +30,7 @@ public final class AccountStore {
         }
 
         public void setOffline(List<OfflineAccount> offline) {
-            this.offline = offline == null ? new ArrayList<>() : offline;
+            this.offline = Objects.isNull(offline) ? new ArrayList<>() : offline;
         }
 
         public String getSelectedUuid() {
@@ -37,7 +38,7 @@ public final class AccountStore {
         }
 
         public void setSelectedUuid(String selectedUuid) {
-            this.selectedUuid = selectedUuid == null ? "" : selectedUuid;
+            this.selectedUuid = Objects.isNull(selectedUuid) ? "" : selectedUuid;
         }
     }
 
@@ -61,18 +62,18 @@ public final class AccountStore {
     public synchronized void load() {
         Data loaded = vault.read().map(b -> parse(new String(b, StandardCharsets.UTF_8))).orElse(null);
         boolean migrate = false;
-        if (loaded == null && !vault.exists() && Files.isRegularFile(legacyFile)) {
+        if (Objects.isNull(loaded) && !vault.exists() && Files.isRegularFile(legacyFile)) {
             try {
                 loaded = parse(Files.readString(legacyFile, StandardCharsets.UTF_8));
-                migrate = loaded != null;
+                migrate = Objects.nonNull(loaded);
             } catch (IOException ignored) {
                 // unreadable legacy file: start empty
             }
         }
-        data = loaded == null ? new Data() : loaded;
+        data = Objects.isNull(loaded) ? new Data() : loaded;
         data.setOffline(data.getOffline());
-        data.getOffline().removeIf(a -> a == null || !a.launchPermitted());
-        if (data.getSelectedUuid() == null) {
+        data.getOffline().removeIf(a -> Objects.isNull(a) || !a.launchPermitted());
+        if (Objects.isNull(data.getSelectedUuid())) {
             data.setSelectedUuid("");
         }
         if (migrate) {
@@ -108,7 +109,7 @@ public final class AccountStore {
     public synchronized AuthAccount selected() {
         String selected = data.getSelectedUuid();
         for (OfflineAccount account : data.getOffline()) {
-            if (selected != null && selected.equalsIgnoreCase(account.getUuid())) {
+            if (Objects.nonNull(selected) && selected.equalsIgnoreCase(account.getUuid())) {
                 return account;
             }
         }
@@ -141,7 +142,7 @@ public final class AccountStore {
     }
 
     public synchronized void remove(String uuid) {
-        if (uuid == null || uuid.isBlank()) {
+        if (Objects.isNull(uuid) || uuid.isBlank()) {
             return;
         }
         data.getOffline().removeIf(a -> uuid.equalsIgnoreCase(a.getUuid()));

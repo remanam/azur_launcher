@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Rule {
 
@@ -22,20 +23,20 @@ public class Rule {
     }
 
     public List<String> getFeatures() {
-        if (features == null || features.isJsonNull()) {
+        if (Objects.isNull(features) || features.isJsonNull()) {
             return null;
         }
         List<String> result = new ArrayList<>();
         if (features.isJsonArray()) {
             for (JsonElement element : features.getAsJsonArray()) {
-                if (element != null && element.isJsonPrimitive()) {
+                if (Objects.nonNull(element) && element.isJsonPrimitive()) {
                     result.add(element.getAsString());
                 }
             }
         } else if (features.isJsonObject()) {
             for (Map.Entry<String, JsonElement> entry : features.getAsJsonObject().entrySet()) {
                 JsonElement value = entry.getValue();
-                if (value == null || !value.isJsonPrimitive()) {
+                if (Objects.isNull(value) || !value.isJsonPrimitive()) {
                     continue;
                 }
                 boolean enabled = value.getAsJsonPrimitive().isBoolean()

@@ -1,6 +1,7 @@
 package com.azur.launcher.config;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** Persisted launcher settings (JSON via Gson; unknown fields from older files are ignored). */
 public class LauncherConfig {
@@ -126,7 +127,7 @@ public class LauncherConfig {
 
     /** Old files have no flag: an installation with a finished wizard has seen the notice, a fresh one has not. */
     public boolean migrateTelemetryNotice(boolean wizardFinished) {
-        if (telemetryNoticeShown != null) {
+        if (Objects.nonNull(telemetryNoticeShown)) {
             return false;
         }
         telemetryNoticeShown = wizardFinished;
@@ -139,15 +140,15 @@ public class LauncherConfig {
     }
 
     public String getTelemetryId() {
-        if (telemetryEnabled && (telemetryId == null || telemetryId.isEmpty())) {
+        if (telemetryEnabled && (Objects.isNull(telemetryId) || telemetryId.isEmpty())) {
             telemetryId = java.util.UUID.randomUUID().toString().replace("-", "");
         }
-        return telemetryId == null ? "" : telemetryId;
+        return Objects.isNull(telemetryId) ? "" : telemetryId;
     }
 
     /** On: creates the install id when missing. Off: forgets it and returns the old id so the caller can ask the site to erase its rows. */
     public String setTelemetryEnabled(boolean value) {
-        String old = telemetryId == null ? "" : telemetryId;
+        String old = Objects.isNull(telemetryId) ? "" : telemetryId;
         telemetryEnabled = value;
         if (!value) {
             telemetryId = "";
@@ -190,11 +191,11 @@ public class LauncherConfig {
     }
 
     public String getLastServerId() {
-        return lastServerId == null ? "" : lastServerId;
+        return Objects.isNull(lastServerId) ? "" : lastServerId;
     }
 
     public void setLastServerId(String id) {
-        this.lastServerId = id == null ? "" : id;
+        this.lastServerId = Objects.isNull(id) ? "" : id;
     }
 
     public boolean isDarkMode() {
@@ -207,7 +208,7 @@ public class LauncherConfig {
 
     /** {@code ru} (default) or {@code en}; legacy {@code auto} counts as {@code ru}. */
     public String getLanguage() {
-        return language == null || language.isBlank() ? "ru" : language;
+        return Objects.isNull(language) || language.isBlank() ? "ru" : language;
     }
 
     public void setLanguage(String language) {
@@ -215,6 +216,6 @@ public class LauncherConfig {
     }
 
     public Path gameDirOrNull() {
-        return (gameDir == null || gameDir.isBlank()) ? null : Path.of(gameDir);
+        return (Objects.isNull(gameDir) || gameDir.isBlank()) ? null : Path.of(gameDir);
     }
 }

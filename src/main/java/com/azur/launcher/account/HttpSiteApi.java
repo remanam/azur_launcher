@@ -14,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 
 /** JSON over https to the site origin only (the central {@link HostPolicy} decides; loopback http for local tests). No redirects. */
 public final class HttpSiteApi implements SiteApi {
@@ -124,7 +125,7 @@ public final class HttpSiteApi implements SiteApi {
     private static JsonObject parse(String text) {
         try {
             var element = GSON.fromJson(text, com.google.gson.JsonElement.class);
-            return element != null && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
+            return Objects.nonNull(element) && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
         } catch (RuntimeException e) {
             return new JsonObject();
         }

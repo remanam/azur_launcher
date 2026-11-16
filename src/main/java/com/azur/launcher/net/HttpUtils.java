@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -35,7 +36,7 @@ public final class HttpUtils {
      */
     public static void useMirror(String mirrorBase) {
         allowHosts(mirrorBase);
-        if (mirrorBase != null && !mirrorBase.isBlank()) {
+        if (Objects.nonNull(mirrorBase) && !mirrorBase.isBlank()) {
             mirror = mirrorBase.trim();
         }
     }
@@ -63,12 +64,12 @@ public final class HttpUtils {
     public static void allowHosts(String... baseUrls) {
         boolean changed = false;
         for (String base : baseUrls) {
-            if (base == null || base.isBlank()) {
+            if (Objects.isNull(base) || base.isBlank()) {
                 continue;
             }
             try {
                 URI uri = URI.create(base.trim());
-                if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null) {
+                if (!"https".equalsIgnoreCase(uri.getScheme()) || Objects.isNull(uri.getHost())) {
                     continue;
                 }
                 changed |= ownHosts.add(uri.getHost().toLowerCase(Locale.ROOT));
@@ -101,7 +102,7 @@ public final class HttpUtils {
 
     /** Upgrades {@code http://} to {@code https://} (loopback excepted, see {@link HostPolicy}); the policy then decides. */
     public static String secure(String url) {
-        if (url != null && url.regionMatches(true, 0, "http://", 0, 7) && !HostPolicy.isLoopbackHttp(url)) {
+        if (Objects.nonNull(url) && url.regionMatches(true, 0, "http://", 0, 7) && !HostPolicy.isLoopbackHttp(url)) {
             return "https://" + url.substring(7);
         }
         return url;

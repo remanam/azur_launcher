@@ -1,5 +1,7 @@
 package com.azur.launcher.account;
 
+import java.util.Objects;
+
 /** A failed site call. {@link #network()} = no answer at all; otherwise the site's own error code and HTTP status. */
 public final class SiteException extends Exception {
 
@@ -9,7 +11,7 @@ public final class SiteException extends Exception {
     public SiteException(int status, String code) {
         super("site " + status + " " + code);
         this.status = status;
-        this.code = code == null ? "" : code;
+        this.code = Objects.isNull(code) ? "" : code;
     }
 
     public SiteException(String message, Throwable cause) {

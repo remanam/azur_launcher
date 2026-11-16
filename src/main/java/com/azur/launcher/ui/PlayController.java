@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -64,7 +65,7 @@ final class PlayController implements GameStarter {
     /** Play for the server of the request ({@code null} server: the embedded default instance); stops a running game. */
     @Override
     public void start(LaunchRequest request) {
-        startFor(request == null ? null : request.server());
+        startFor(Objects.isNull(request) ? null : request.server());
     }
 
     void setServer(ServerEntry value) {
@@ -109,15 +110,15 @@ final class PlayController implements GameStarter {
             ctx.setStatus(I18n.tr("play.cancelling"));
             return;
         }
-        AuthAccount account = ctx.site == null || ctx.site.session().isEmpty()
+        AuthAccount account = Objects.isNull(ctx.site) || ctx.site.session().isEmpty()
                 ? ctx.anonymousAccount() : siteAccount(ctx.site.session().get());
-        if (account == null) {
+        if (Objects.isNull(account)) {
             error(I18n.tr("home.sign_in_needed"));
             return;
         }
-        if (server == null) {
+        if (Objects.isNull(server)) {
             error(serverLoading ? I18n.tr("play.list_loading")
-                    : I18n.tr("play.no_server") + (serverProblem == null ? "" : "\n\n" + I18n.tr("play.no_server_reason", serverProblem)));
+                    : I18n.tr("play.no_server") + (Objects.isNull(serverProblem) ? "" : "\n\n" + I18n.tr("play.no_server_reason", serverProblem)));
             return;
         }
         cancelled = false;
@@ -136,7 +137,7 @@ final class PlayController implements GameStarter {
 
     /** Ticket + key files for the game; a refused device stops the launch with one polite sentence, a lost network does not. */
     private List<String> loginArgs(Instance instance) throws IOException {
-        if (ctx.site == null) {
+        if (Objects.isNull(ctx.site)) {
             return List.of();
         }
         try {
@@ -168,7 +169,7 @@ final class PlayController implements GameStarter {
                 }
                 ctx.log("Play step: " + step);
                 ctx.setStatus(I18n.tr("play.step." + step.name().toLowerCase()));
-            }, (step, ms, failure) -> ctx.telemetry.report(telemetryStep(step), failure == null, failure == null ? "" : ErrorCode.classify(failure), ms));
+            }, (step, ms, failure) -> ctx.telemetry.report(telemetryStep(step), Objects.isNull(failure), Objects.isNull(failure) ? "" : ErrorCode.classify(failure), ms));
         } catch (java.util.concurrent.CancellationException e) {
             ctx.log("Play cancelled by the player");
             fail(I18n.tr("play.cancelled"), false);
@@ -303,7 +304,7 @@ final class PlayController implements GameStarter {
 
     private Instance instanceFor(ServerEntry server) throws IOException {
         InstanceStore store = new InstanceStore(ctx.dirs);
-        if (server == null) {
+        if (Objects.isNull(server)) {
             return store.loadDefault();
         }
         return store.ensure(ServerProfiles.derive(server, InstanceStore.bundledProfile()));
@@ -317,7 +318,7 @@ final class PlayController implements GameStarter {
     private boolean askTerminate(String message, List<String> keyLines, Path dump, GameLauncher launcher) {
         java.util.concurrent.CompletableFuture<Boolean> answer = new java.util.concurrent.CompletableFuture<>();
         Platform.runLater(() -> {
-            Path logs = dump != null ? dump.getParent() : ctx.dirs.logsDir();
+            Path logs = Objects.nonNull(dump) ? dump.getParent() : ctx.dirs.logsDir();
             answer.complete(UiKit.hangDialog(ctx.stage, message, String.join("\n", keyLines),
                     () -> ctx.openInSystem(logs), ctx.config.isDarkMode()));
         });
@@ -331,14 +332,14 @@ final class PlayController implements GameStarter {
     private void onExit(int code, GameLauncher launcher) {
         setPhase(Phase.IDLE);
         Path dir = lastGameDir;
-        if (dir != null) {
+        if (Objects.nonNull(dir)) {
             ctx.io.submit(() -> LoginHandoff.cleanup(dir));
         }
         ctx.setStatus(I18n.tr("home.exited", code));
         if (code != 0) {
             Path logFile = launcher.gameLogFile();
             UiKit.gameExitDialog(ctx.stage, code, String.join("\n", launcher.lastLines()),
-                    () -> ctx.openInSystem(logFile == null ? ctx.dirs.logsDir() : logFile.getParent()),
+                    () -> ctx.openInSystem(Objects.isNull(logFile) ? ctx.dirs.logsDir() : logFile.getParent()),
                     ctx.config.isDarkMode());
         }
     }

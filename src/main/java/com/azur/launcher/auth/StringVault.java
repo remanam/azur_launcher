@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * One secret string in the encrypted vault format of the accounts ({@link Vault}: AES-GCM, key in the OS keychain or
@@ -29,7 +30,7 @@ public final class StringVault {
 
     /** Stores the secret trimmed; an empty value deletes the file. */
     public void write(String value) throws IOException {
-        String secret = value == null ? "" : value.trim();
+        String secret = Objects.isNull(value) ? "" : value.trim();
         if (secret.isEmpty()) {
             Files.deleteIfExists(vault.file());
             return;

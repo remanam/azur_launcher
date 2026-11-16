@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
+import java.util.Objects;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -17,7 +18,7 @@ public final class NativeExtractor {
     }
 
     public static int extract(Path zipFile, Path destDir, List<String> excludes) throws IOException {
-        if (zipFile == null || !Files.isRegularFile(zipFile)) {
+        if (Objects.isNull(zipFile) || !Files.isRegularFile(zipFile)) {
             return 0;
         }
         Files.createDirectories(destDir);
@@ -26,7 +27,7 @@ public final class NativeExtractor {
 
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
             ZipEntry entry;
-            while ((entry = zis.getNextEntry()) != null) {
+            while (Objects.nonNull((entry = zis.getNextEntry()))) {
                 if (entry.isDirectory()) {
                     continue;
                 }
@@ -39,7 +40,7 @@ public final class NativeExtractor {
                 }
                 Path out = SafePaths.resolve(dest, name);
                 Path parent = out.getParent();
-                if (parent != null) {
+                if (Objects.nonNull(parent)) {
                     Files.createDirectories(parent);
                 }
                 try (OutputStream os = Files.newOutputStream(out,
@@ -54,11 +55,11 @@ public final class NativeExtractor {
     }
 
     private static boolean isExcluded(String name, List<String> excludes) {
-        if (excludes == null || excludes.isEmpty()) {
+        if (Objects.isNull(excludes) || excludes.isEmpty()) {
             return false;
         }
         for (String exclude : excludes) {
-            if (exclude != null && !exclude.isEmpty() && name.startsWith(exclude)) {
+            if (Objects.nonNull(exclude) && !exclude.isEmpty() && name.startsWith(exclude)) {
                 return true;
             }
         }
