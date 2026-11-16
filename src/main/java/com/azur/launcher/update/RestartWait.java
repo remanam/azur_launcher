@@ -1,5 +1,6 @@
 package com.azur.launcher.update;
 
+import java.util.Objects;
 import java.util.function.LongPredicate;
 
 /**
@@ -23,7 +24,7 @@ public final class RestartWait {
 
     /** Pid from the env value, or -1 when absent or not a number. */
     static long parsePid(String value) {
-        if (value == null || value.isBlank()) {
+        if (Objects.isNull(value) || value.isBlank()) {
             return -1;
         }
         try {

@@ -24,6 +24,7 @@ import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.List;
@@ -44,7 +45,7 @@ class PackClientInteropTest {
 
     @BeforeAll
     static void buildGo() {
-        assumeTrue(GoPackFixture.binary(build) != null, "Go toolchain not available: interop tests skipped");
+        assumeTrue(Objects.nonNull(GoPackFixture.binary(build)), "Go toolchain not available: interop tests skipped");
     }
 
     private Path pack(String version, String core, String extra) throws IOException {

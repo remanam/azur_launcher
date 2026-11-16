@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -82,7 +83,7 @@ public record RootKeys(List<byte[]> working, List<byte[]> emergency) {
     /** The roots of this jar. A missing resource is {@link #NONE}. */
     public static RootKeys embedded() throws IOException {
         try (InputStream in = RootKeys.class.getResourceAsStream(RESOURCE)) {
-            return in == null ? NONE : parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+            return Objects.isNull(in) ? NONE : parse(new String(in.readAllBytes(), StandardCharsets.UTF_8));
         }
     }
 }

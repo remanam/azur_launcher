@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** The persisted download proxy (host and port only; user and password live in memory, see {@link ProxyConfig}). */
 public final class ProxySettings {
@@ -25,9 +26,9 @@ public final class ProxySettings {
 
     private void load(Path source) {
         try {
-            if (source != null && Files.isRegularFile(source)) {
+            if (Objects.nonNull(source) && Files.isRegularFile(source)) {
                 ProxySettings loaded = GSON.fromJson(Files.readString(source, StandardCharsets.UTF_8), ProxySettings.class);
-                if (loaded != null) {
+                if (Objects.nonNull(loaded)) {
                     proxyHost = nz(loaded.proxyHost);
                     proxyPort = loaded.proxyPort;
                 }
@@ -56,6 +57,6 @@ public final class ProxySettings {
     }
 
     private static String nz(String s) {
-        return s == null ? "" : s;
+        return Objects.isNull(s) ? "" : s;
     }
 }

@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
@@ -91,7 +92,7 @@ public final class UpdateStore {
     /** The app started: confirms the version so the next start keeps it. */
     public void confirmStarted(String runningVersion) {
         Properties attempt = read("attempt.properties");
-        if (attempt != null && runningVersion.equals(attempt.getProperty("version"))) {
+        if (Objects.nonNull(attempt) && runningVersion.equals(attempt.getProperty("version"))) {
             write("ok.properties", props("version", runningVersion));
             delete("attempt.properties");
         }
@@ -101,15 +102,15 @@ public final class UpdateStore {
     public void rollbackNow() {
         Properties attempt = read("attempt.properties");
         Properties current = read("current.properties");
-        String version = attempt != null ? attempt.getProperty("version")
-                : current != null ? current.getProperty("version") : null;
+        String version = Objects.nonNull(attempt) ? attempt.getProperty("version")
+                : Objects.nonNull(current) ? current.getProperty("version") : null;
         rollback(version);
     }
 
     /** Version of the verified pending update, or null. */
     public String pendingVersion() {
         Properties pending = read("pending.properties");
-        return pending != null && Files.isRegularFile(pendingJar()) ? pending.getProperty("version") : null;
+        return Objects.nonNull(pending) && Files.isRegularFile(pendingJar()) ? pending.getProperty("version") : null;
     }
 
     public boolean isRejected(String version) {
@@ -126,12 +127,12 @@ public final class UpdateStore {
 
     private void settleAttempt() throws IOException {
         Properties attempt = read("attempt.properties");
-        if (attempt == null) {
+        if (Objects.isNull(attempt)) {
             return;
         }
         Properties ok = read("ok.properties");
         String version = attempt.getProperty("version");
-        if (ok != null && version.equals(ok.getProperty("version"))) {
+        if (Objects.nonNull(ok) && version.equals(ok.getProperty("version"))) {
             delete("attempt.properties");
             return;
         }
@@ -143,17 +144,17 @@ public final class UpdateStore {
 
     private void applyPending(String embeddedVersion) throws IOException {
         Properties pending = read("pending.properties");
-        if (pending == null || !Files.isRegularFile(pendingJar())) {
+        if (Objects.isNull(pending) || !Files.isRegularFile(pendingJar())) {
             return;
         }
         String version = pending.getProperty("version");
         String sha = pending.getProperty("sha256", "");
         Properties current = read("current.properties");
-        String floor = current == null ? embeddedVersion : newest(embeddedVersion, current.getProperty("version"));
+        String floor = Objects.isNull(current) ? embeddedVersion : newest(embeddedVersion, current.getProperty("version"));
         boolean usable = LauncherVersions.newer(version, floor) && !isRejected(version)
                 && sha.equals(Hashes.sha256(pendingJar()));
         if (usable) {
-            if (Files.isRegularFile(currentJar()) && current != null) {
+            if (Files.isRegularFile(currentJar()) && Objects.nonNull(current)) {
                 Files.move(currentJar(), dir.resolve("current.jar.prev"), StandardCopyOption.REPLACE_EXISTING);
                 Files.move(dir.resolve("current.properties"), dir.resolve("current.properties.prev"),
                         StandardCopyOption.REPLACE_EXISTING);
@@ -170,7 +171,7 @@ public final class UpdateStore {
 
     private Optional<Path> intactCurrent(String embeddedVersion) throws IOException {
         Properties current = read("current.properties");
-        if (current == null || !Files.isRegularFile(currentJar())) {
+        if (Objects.isNull(current) || !Files.isRegularFile(currentJar())) {
             return Optional.empty();
         }
         boolean newer = LauncherVersions.newer(current.getProperty("version", "0"), embeddedVersion);
@@ -184,7 +185,7 @@ public final class UpdateStore {
     }
 
     private void rollback(String badVersion) {
-        if (badVersion != null) {
+        if (Objects.nonNull(badVersion)) {
             Set<String> all = rejected();
             all.add(badVersion);
             try {
@@ -223,7 +224,7 @@ public final class UpdateStore {
     }
 
     private static String newest(String a, String b) {
-        return LauncherVersions.newer(b == null ? "0" : b, a) ? b : a;
+        return LauncherVersions.newer(Objects.isNull(b) ? "0" : b, a) ? b : a;
     }
 
     private Properties read(String name) {
@@ -234,7 +235,7 @@ public final class UpdateStore {
         try (InputStream in = Files.newInputStream(file)) {
             Properties p = new Properties();
             p.load(in);
-            return p.getProperty("version") == null ? null : p;
+            return Objects.isNull(p.getProperty("version")) ? null : p;
         } catch (IOException | IllegalArgumentException e) {
             return null;
         }

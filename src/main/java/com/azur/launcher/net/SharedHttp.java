@@ -5,6 +5,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -22,7 +23,7 @@ public final class SharedHttp {
 
     /** The shared client: proxy of {@link ProxyConfig}, no redirects (the callers follow them by policy), 15 s connect. */
     public static synchronized HttpClient client() {
-        if (client == null) {
+        if (Objects.isNull(client)) {
             client = ProxyConfig.configure(HttpClient.newBuilder()
                     .followRedirects(HttpClient.Redirect.NEVER)
                     .connectTimeout(Duration.ofSeconds(15))).build();
@@ -35,7 +36,7 @@ public final class SharedHttp {
     static synchronized void invalidate() {
         HttpClient old = client;
         client = null;
-        if (old != null) {
+        if (Objects.nonNull(old)) {
             old.close();
         }
     }

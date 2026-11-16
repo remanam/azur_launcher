@@ -8,6 +8,7 @@ import java.net.NoRouteToHostException;
 import java.net.SocketTimeoutException;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Objects;
 import javax.net.ssl.SSLException;
 
 /** A host did not answer at all (timeout, refused, unknown, TLS cut): the message is for the player. */
@@ -26,7 +27,7 @@ public final class HostUnreachableException extends IOException {
 
     /** Wraps {@code failure} when its cause chain is a connection-level failure, else returns it unchanged. */
     static IOException classify(IOException failure, String url) {
-        for (Throwable t = failure; t != null; t = t.getCause()) {
+        for (Throwable t = failure; Objects.nonNull(t); t = t.getCause()) {
             if (t instanceof HostUnreachableException) {
                 return (IOException) t;
             }
@@ -41,7 +42,7 @@ public final class HostUnreachableException extends IOException {
     static String hostOf(String url) {
         try {
             String host = URI.create(url).getHost();
-            return host == null ? url : host;
+            return Objects.isNull(host) ? url : host;
         } catch (IllegalArgumentException e) {
             return url;
         }

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PublicKey;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -66,8 +67,8 @@ public final class FeedService {
             return false;
         }
         try {
-            Response response = transport.get(url, current == null ? "" : etag);
-            if (response.status() == 304 && current != null) {
+            Response response = transport.get(url, Objects.isNull(current) ? "" : etag);
+            if (response.status() == 304 && Objects.nonNull(current)) {
                 return false;
             }
             if (response.status() != 200) {
@@ -75,9 +76,9 @@ public final class FeedService {
                 return false;
             }
             FeedDocument fresh = FeedDocument.open(response.body(), keys.get());
-            boolean changed = current == null || !current.generated().equals(fresh.generated());
+            boolean changed = Objects.isNull(current) || !current.generated().equals(fresh.generated());
             current = fresh;
-            etag = response.etag() == null ? "" : response.etag();
+            etag = Objects.isNull(response.etag()) ? "" : response.etag();
             store(response.body());
             return changed;
         } catch (UpdateException e) {

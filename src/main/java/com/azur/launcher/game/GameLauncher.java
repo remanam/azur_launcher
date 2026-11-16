@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -63,9 +64,9 @@ public class GameLauncher {
 
     public GameLauncher(GamePaths paths, Consumer<String> logger, DownloadManager.ProgressListener progressListener) {
         this.paths = paths;
-        this.internalLogger = logger == null ? m -> {
+        this.internalLogger = Objects.isNull(logger) ? m -> {
         } : logger;
-        this.progressListener = progressListener == null ? DownloadManager.ProgressListener.NOOP : progressListener;
+        this.progressListener = Objects.isNull(progressListener) ? DownloadManager.ProgressListener.NOOP : progressListener;
     }
 
     /** Uses {@code instance} instead of the default one from {@link AppDirs}. */
@@ -94,13 +95,13 @@ public class GameLauncher {
 
     public boolean isRunning() {
         Process p = process;
-        return p != null && p.isAlive();
+        return Objects.nonNull(p) && p.isAlive();
     }
 
     /** The last lines the game printed (stdout and stderr). */
     public List<String> lastLines() {
         Path f = gameLogFile;
-        return f == null ? List.of() : LogFiles.tail(f, TAIL_LINES, 64 * 1024);
+        return Objects.isNull(f) ? List.of() : LogFiles.tail(f, TAIL_LINES, 64 * 1024);
     }
 
     /** {@code <instance>/minecraft/logs/launcher-game.log}, the whole output of the last run; null before the first launch. */
@@ -124,7 +125,7 @@ public class GameLauncher {
             log("The game is already running, ignoring the launch request");
             return;
         }
-        if (account == null || !account.launchPermitted()) {
+        if (Objects.isNull(account) || !account.launchPermitted()) {
             throw new IllegalStateException(I18n.tr("auth.launch_blocked"));
         }
         preparing = true;
@@ -154,7 +155,7 @@ public class GameLauncher {
 
             LaunchProfile profile = new LaunchProfile();
             profile.setVersionId(versionId);
-            profile.setVersionType(meta.getType() == null ? "release" : meta.getType());
+            profile.setVersionType(Objects.isNull(meta.getType()) ? "release" : meta.getType());
             profile.setJavaExecutable(javaExecutable);
             profile.setGameDir(contentRoot);
             profile.setAssetsDir(paths.assetsDir());
@@ -166,7 +167,7 @@ public class GameLauncher {
             profile.setMaxMemoryMb(pin.ramMaxMb());
             profile.setMinMemoryMb(pin.ramMinMb());
             List<String> jvmArgs = new java.util.ArrayList<>(pin.jvmArgs());
-            if (loginArgs != null) {
+            if (Objects.nonNull(loginArgs)) {
                 jvmArgs.addAll(loginArgs.call());
             }
             profile.setExtraJvmArgs(jvmArgs);
@@ -228,7 +229,7 @@ public class GameLauncher {
 
     private void startWatchdog(Process p, LauncherConfig config, Path contentRoot) {
         HangHandler handler = hangHandler;
-        if (handler == null || (config.getHangSeconds() <= 0 && config.getStartupLimitSeconds() <= 0)) {
+        if (Objects.isNull(handler) || (config.getHangSeconds() <= 0 && config.getStartupLimitSeconds() <= 0)) {
             return;
         }
         LaunchWatchdog dog = new LaunchWatchdog(config.getHangSeconds(), config.getStartupLimitSeconds(),
@@ -296,7 +297,7 @@ public class GameLauncher {
         List<String> dump = List.of();
         dump = HangDiagnosis.lastDump(LogFiles.tail(gameLogFile, 100_000, 8 * 1024 * 1024));
         HangDiagnosis diagnosis = HangDiagnosis.parse(dump);
-        String message = diagnosis != null ? diagnosis.message(I18n.language())
+        String message = Objects.nonNull(diagnosis) ? diagnosis.message(I18n.language())
                 : I18n.tr("hang.unknown");
         Path dumpFile = null;
         if (!dump.isEmpty()) {
@@ -319,7 +320,7 @@ public class GameLauncher {
     /** Stops the game: polite destroy, forced after five seconds. */
     public synchronized void stop() {
         Process p = process;
-        if (p == null || !p.isAlive()) {
+        if (Objects.isNull(p) || !p.isAlive()) {
             return;
         }
         p.destroy();
@@ -352,7 +353,7 @@ public class GameLauncher {
             if (sb.length() > 0) {
                 sb.append(' ');
             }
-            if (maskNext && arg != null && !arg.startsWith("--")) {
+            if (maskNext && Objects.nonNull(arg) && !arg.startsWith("--")) {
                 sb.append("***");
                 maskNext = false;
                 continue;
@@ -378,11 +379,11 @@ public class GameLauncher {
         }
 
         JavaDetector.JavaInfo manual = null;
-        if (config.getJavaPath() != null && !config.getJavaPath().isBlank()) {
+        if (Objects.nonNull(config.getJavaPath()) && !config.getJavaPath().isBlank()) {
             Path configured = Path.of(config.getJavaPath());
             if (Files.isRegularFile(configured)) {
                 manual = JavaDetector.probeExecutable(configured);
-                if (manual == null) {
+                if (Objects.isNull(manual)) {
                     log("Configured Java cannot be identified, using it as is: " + configured);
                     return configured;
                 }
@@ -396,15 +397,15 @@ public class GameLauncher {
         }
 
         JavaDetector.JavaInfo best = JavaDetector.pickBest(candidates, required);
-        if (best != null) {
+        if (Objects.nonNull(best)) {
             return best.getJavaExecutable();
         }
         JavaDetector.JavaInfo fallback = JavaDetector.pickFallback(candidates, required);
-        if (fallback != null) {
+        if (Objects.nonNull(fallback)) {
             log("No Java " + required + " found, using Java " + fallback.getVersion());
             return fallback.getJavaExecutable();
         }
-        if (manual != null) {
+        if (Objects.nonNull(manual)) {
             return manual.getJavaExecutable();
         }
         try {
@@ -418,12 +419,12 @@ public class GameLauncher {
 
     /** The single instance of this install; tests and the UI may inject another through the constructor. */
     private Instance resolveInstance() throws IOException {
-        return fixedInstance != null ? fixedInstance : new InstanceStore(AppDirs.system()).loadDefault();
+        return Objects.nonNull(fixedInstance) ? fixedInstance : new InstanceStore(AppDirs.system()).loadDefault();
     }
 
     private Path versionJsonOrNull(String versionId) {
         try {
-            return versionId == null || versionId.isBlank() ? null : paths.versionJson(versionId.trim());
+            return Objects.isNull(versionId) || versionId.isBlank() ? null : paths.versionJson(versionId.trim());
         } catch (RuntimeException e) {
             return null;
         }

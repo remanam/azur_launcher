@@ -12,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +42,7 @@ final class FeedController {
     /** Null without a servers URL (dev run) or without the key. The feed host is the host of the servers URL. */
     static FeedController create(AppContext ctx, BooleanSupplier gameBusy) {
         String serversUrl = ctx.pack.getServersUrl();
-        if (serversUrl == null || serversUrl.isBlank()) {
+        if (Objects.isNull(serversUrl) || serversUrl.isBlank()) {
             return null;
         }
         try {

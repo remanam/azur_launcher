@@ -2,6 +2,7 @@ package com.azur.launcher.model;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class Library {
 
@@ -41,7 +42,7 @@ public class Library {
     }
 
     private String[] coords() {
-        return name == null ? new String[0] : name.split(":");
+        return Objects.isNull(name) ? new String[0] : name.split(":");
     }
 
     public String getGroupId() {
@@ -75,7 +76,7 @@ public class Library {
     }
 
     public boolean hasNatives() {
-        return natives != null && !natives.isEmpty();
+        return Objects.nonNull(natives) && !natives.isEmpty();
     }
 
     public static class Downloads {

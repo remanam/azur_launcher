@@ -5,6 +5,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class LaunchProfile {
 
@@ -35,25 +36,25 @@ public class LaunchProfile {
 
     public Map<String, String> toPlaceholders() {
         Map<String, String> ph = new LinkedHashMap<>();
-        ph.put("${auth_player_name}", account == null ? "Player" : account.username());
+        ph.put("${auth_player_name}", Objects.isNull(account) ? "Player" : account.username());
         ph.put("${version_name}", versionId);
         ph.put("${version_type}", versionType);
         ph.put("${game_directory}", str(gameDir));
         ph.put("${assets_root}", str(assetsDir));
         ph.put("${assets_index_name}", assetIndexName);
-        ph.put("${auth_uuid}", account == null ? "" : account.uuid());
-        ph.put("${auth_access_token}", account == null ? "0" : account.accessToken());
-        ph.put("${auth_session}", account == null ? "0" : account.accessToken());
-        ph.put("${user_type}", account == null ? "legacy" : account.userType());
+        ph.put("${auth_uuid}", Objects.isNull(account) ? "" : account.uuid());
+        ph.put("${auth_access_token}", Objects.isNull(account) ? "0" : account.accessToken());
+        ph.put("${auth_session}", Objects.isNull(account) ? "0" : account.accessToken());
+        ph.put("${user_type}", Objects.isNull(account) ? "legacy" : account.userType());
         ph.put("${natives_directory}", str(nativesDir));
         ph.put("${library_directory}", str(librariesDir));
         ph.put("${classpath}", classpath);
         ph.put("${classpath_separator}", File.pathSeparator);
         ph.put("${launcher_name}", LAUNCHER_NAME);
         ph.put("${launcher_version}", LAUNCHER_VERSION);
-        ph.put("${clientid}", account == null ? "" : blankToEmpty(account.clientId()));
-        ph.put("${auth_xuid}", account == null ? "" : blankToEmpty(account.xuid()));
-        ph.put("${user_properties}", account == null ? "{}" : blankToDefault(account.userProperties(), "{}"));
+        ph.put("${clientid}", Objects.isNull(account) ? "" : blankToEmpty(account.clientId()));
+        ph.put("${auth_xuid}", Objects.isNull(account) ? "" : blankToEmpty(account.xuid()));
+        ph.put("${user_properties}", Objects.isNull(account) ? "{}" : blankToDefault(account.userProperties(), "{}"));
         ph.put("${resolution_width}", String.valueOf(windowWidth));
         ph.put("${resolution_height}", String.valueOf(windowHeight));
         ph.put("${quickPlayPath}", "");
@@ -64,15 +65,15 @@ public class LaunchProfile {
     }
 
     private static String str(Path path) {
-        return path == null ? "" : path.toString();
+        return Objects.isNull(path) ? "" : path.toString();
     }
 
     private static String blankToEmpty(String value) {
-        return value == null ? "" : value;
+        return Objects.isNull(value) ? "" : value;
     }
 
     private static String blankToDefault(String value, String fallback) {
-        return (value == null || value.isBlank()) ? fallback : value;
+        return (Objects.isNull(value) || value.isBlank()) ? fallback : value;
     }
 
     // ------------------------------------------------------------------ getters / setters

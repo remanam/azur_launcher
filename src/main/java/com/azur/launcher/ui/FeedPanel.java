@@ -16,6 +16,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
@@ -98,7 +99,7 @@ final class FeedPanel {
 
     void refresh() {
         FeedFilter.Context context = new FeedFilter.Context(Instant.now(), com.azur.launcher.AppVersion.APP,
-                FeedFilter.osOf(System.getProperty("os.name")), serverId.get() == null ? "" : serverId.get());
+                FeedFilter.osOf(System.getProperty("os.name")), Objects.isNull(serverId.get()) ? "" : serverId.get());
         view = FeedView.of(doc, context, state);
         render();
         onChange.run();
@@ -127,9 +128,9 @@ final class FeedPanel {
         bell.setVisible(!view.active().isEmpty());
         bell.setManaged(bell.isVisible());
         FeedNotice banner = view.banner().orElse(null);
-        bannerBox.setVisible(banner != null);
-        bannerBox.setManaged(banner != null);
-        if (banner != null) {
+        bannerBox.setVisible(Objects.nonNull(banner));
+        bannerBox.setManaged(Objects.nonNull(banner));
+        if (Objects.nonNull(banner)) {
             bannerTitle.setText(banner.title().in(lang));
             bannerText.setText(banner.text().in(lang));
             bannerBox.getStyleClass().removeIf(c -> c.startsWith("feed-sev-") || c.equals("feed-banner"));
@@ -150,9 +151,9 @@ final class FeedPanel {
         history.setVisible(historyOpen);
         history.setManaged(historyOpen);
         FeedNews news = view.latestNews().orElse(null);
-        newsRow.setVisible(news != null);
-        newsRow.setManaged(news != null);
-        if (news != null) {
+        newsRow.setVisible(Objects.nonNull(news));
+        newsRow.setManaged(Objects.nonNull(news));
+        if (Objects.nonNull(news)) {
             newsLine.setText(I18n.tr("feed.news", news.date(), news.title().in(lang)));
             linkButton(newsLink, news.link(), I18n.tr("feed.read"));
         }

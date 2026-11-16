@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /** Compares what is installed with the pinned profile; installs and repairs. */
@@ -126,7 +127,7 @@ public final class PinService {
     private static String inheritsFrom(Path versionJson) {
         try {
             VersionMeta meta = GSON.fromJson(Files.readString(versionJson, StandardCharsets.UTF_8), VersionMeta.class);
-            return meta == null ? null : meta.getInheritsFrom();
+            return Objects.isNull(meta) ? null : meta.getInheritsFrom();
         } catch (IOException | RuntimeException e) {
             return null;
         }

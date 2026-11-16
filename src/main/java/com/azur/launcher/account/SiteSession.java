@@ -1,5 +1,7 @@
 package com.azur.launcher.account;
 
+import java.util.Objects;
+
 /**
  * What the launcher keeps after the site approved this device. One JSON in the encrypted vault; never logged.
  *
@@ -36,6 +38,6 @@ public record SiteSession(String deviceId, String refresh, String nick, String s
     }
 
     private static boolean notBlank(String s) {
-        return s != null && !s.isBlank();
+        return Objects.nonNull(s) && !s.isBlank();
     }
 }

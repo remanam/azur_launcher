@@ -16,6 +16,7 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -115,14 +116,14 @@ public final class ServerListVerifier {
         }
         return new ServerEntry(raw.id(), raw.name(), raw.address(), port, nz(raw.mcVersion()), nz(raw.neoforge()),
                 nz(raw.neoforgeSha256()).toLowerCase(Locale.ROOT), nz(raw.java()), nz(raw.packChannel()),
-                raw.pack() == null ? PackSource.NONE : raw.pack(), nz(raw.motd()), nz(raw.mirror()).trim());
+                Objects.isNull(raw.pack()) ? PackSource.NONE : raw.pack(), nz(raw.motd()), nz(raw.mirror()).trim());
     }
 
     private static boolean blank(String s) {
-        return s == null || s.isBlank();
+        return Objects.isNull(s) || s.isBlank();
     }
 
     private static String nz(String s) {
-        return s == null ? "" : s;
+        return Objects.isNull(s) ? "" : s;
     }
 }

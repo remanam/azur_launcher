@@ -1,5 +1,7 @@
 package com.azur.launcher.game;
 
+import java.util.Objects;
+
 /**
  * Pure hang-detection logic for the game start: no log growth for {@code hangSeconds} or no "loaded" marker within
  * {@code startupLimitSeconds} means a hang. Times are milliseconds on any monotonic clock.
@@ -25,7 +27,7 @@ public final class LaunchWatchdog {
     }
 
     public static boolean isReadyLine(String line) {
-        return line != null && line.contains(READY_MARKER);
+        return Objects.nonNull(line) && line.contains(READY_MARKER);
     }
 
     public void markReady() {

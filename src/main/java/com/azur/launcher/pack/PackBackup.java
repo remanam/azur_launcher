@@ -12,6 +12,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /**
@@ -97,14 +98,14 @@ public final class PackBackup {
             throw new PackException(PackException.APPLY, "the backup is damaged", e);
         }
         try {
-            restore(game, latest, j.added() == null ? List.of() : j.added(),
-                    j.backed() == null ? List.of() : j.backed());
+            restore(game, latest, Objects.isNull(j.added()) ? List.of() : j.added(),
+                    Objects.isNull(j.backed()) ? List.of() : j.backed());
         } catch (IOException e) {
             throw busy(e);
         }
         PackState state = PackState.load(home, game);
-        state.packVersion = j.packBefore() == null ? "" : j.packBefore();
-        state.owned = j.ownedBefore() == null ? new HashMap<>() : new HashMap<>(j.ownedBefore());
+        state.packVersion = Objects.isNull(j.packBefore()) ? "" : j.packBefore();
+        state.owned = Objects.isNull(j.ownedBefore()) ? new HashMap<>() : new HashMap<>(j.ownedBefore());
         state.save(home, game);
         deleteTree(latest);
         return state.packVersion;
@@ -116,17 +117,17 @@ public final class PackBackup {
             try {
                 Files.deleteIfExists(PackPaths.safeJoin(game, rel));
             } catch (IOException e) {
-                first = first == null ? e : first;
+                first = Objects.isNull(first) ? e : first;
             }
         }
         for (String rel : backed) {
             try {
                 move(dir.resolve("files").resolve(rel), PackPaths.safeJoin(game, rel));
             } catch (IOException e) {
-                first = first == null ? e : first;
+                first = Objects.isNull(first) ? e : first;
             }
         }
-        if (first != null) {
+        if (Objects.nonNull(first)) {
             throw first;
         }
     }

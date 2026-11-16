@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PublicKey;
 import java.time.Clock;
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -81,7 +82,7 @@ public final class UpdateService {
             if (t.mode() == KeyTrust.Mode.KEYSET) {
                 return UpdateManifest.openWithKeys(raw, t.launcherKeys(clock.instant()));
             }
-            if (t.legacyLauncherSignature() && t.legacyKey() != null) {
+            if (t.legacyLauncherSignature() && Objects.nonNull(t.legacyKey())) {
                 return UpdateManifest.open(raw, t.legacyKey());
             }
             throw new UpdateException("launcher update needs a valid keyset (" + t.mode() + ": " + t.reason() + ")");
@@ -115,7 +116,7 @@ public final class UpdateService {
 
     /** True when restarting into the staged update is allowed (no game running). */
     public boolean mayRestart() {
-        return !gameBusy.getAsBoolean() && store.pendingVersion() != null;
+        return !gameBusy.getAsBoolean() && Objects.nonNull(store.pendingVersion());
     }
 
     private void fetch(UpdateManifest manifest) throws IOException, UpdateException {

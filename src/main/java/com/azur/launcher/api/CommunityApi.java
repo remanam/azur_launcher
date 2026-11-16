@@ -16,6 +16,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * Our own community service: registration by code, roles and whitelist status. This API only grants
@@ -78,9 +79,9 @@ public final class CommunityApi {
     /** Registers the player with a code from the owner and returns the issued token. */
     public Session register(String code, String uuid, String nick) throws IOException {
         JsonObject body = new JsonObject();
-        body.addProperty("code", code == null ? "" : code.trim());
-        body.addProperty("uuid", uuid == null ? "" : uuid.trim());
-        body.addProperty("nick", nick == null ? "" : nick.trim());
+        body.addProperty("code", Objects.isNull(code) ? "" : code.trim());
+        body.addProperty("uuid", Objects.isNull(uuid) ? "" : uuid.trim());
+        body.addProperty("nick", Objects.isNull(nick) ? "" : nick.trim());
         JsonObject response = send("/v1/register", null, body);
         return new Session(required(response, "player_token"), nick, uuid, roles(response), true, null, null);
     }
@@ -102,10 +103,10 @@ public final class CommunityApi {
                 .timeout(Duration.ofSeconds(20))
                 .header("Accept", "application/json")
                 .header("User-Agent", "AzurLauncher");
-        if (token != null && !token.isBlank()) {
+        if (Objects.nonNull(token) && !token.isBlank()) {
             request.header("Authorization", "Bearer " + token);
         }
-        if (body == null) {
+        if (Objects.isNull(body)) {
             request.GET();
         } else {
             request.header("Content-Type", "application/json; charset=utf-8")
@@ -128,7 +129,7 @@ public final class CommunityApi {
     }
 
     private static String normalise(String baseUrl) {
-        if (baseUrl == null || baseUrl.isBlank()) {
+        if (Objects.isNull(baseUrl) || baseUrl.isBlank()) {
             throw new IllegalArgumentException("Community API address is empty");
         }
         String value = baseUrl.trim();
@@ -141,7 +142,7 @@ public final class CommunityApi {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Community API address is not a URL: " + baseUrl, e);
         }
-        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String host = Objects.isNull(uri.getHost()) ? "" : uri.getHost().toLowerCase(Locale.ROOT);
         boolean loopback = host.equals("127.0.0.1") || host.equals("localhost") || host.equals("::1");
         boolean https = "https".equalsIgnoreCase(uri.getScheme());
         if (!https && !(loopback && "http".equalsIgnoreCase(uri.getScheme()))) {
@@ -151,12 +152,12 @@ public final class CommunityApi {
     }
 
     private static JsonObject parseOrEmpty(String body) {
-        if (body == null || body.isBlank()) {
+        if (Objects.isNull(body) || body.isBlank()) {
             return new JsonObject();
         }
         try {
             JsonElement element = GSON.fromJson(body, JsonElement.class);
-            return element != null && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
+            return Objects.nonNull(element) && element.isJsonObject() ? element.getAsJsonObject() : new JsonObject();
         } catch (JsonParseException e) {
             return new JsonObject();
         }
@@ -164,7 +165,7 @@ public final class CommunityApi {
 
     private static String text(JsonObject json, String name) {
         JsonElement element = json.get(name);
-        return element == null || element.isJsonNull() ? "" : element.getAsString();
+        return Objects.isNull(element) || element.isJsonNull() ? "" : element.getAsString();
     }
 
     private static String required(JsonObject json, String name) throws ApiException {
@@ -177,13 +178,13 @@ public final class CommunityApi {
 
     private static boolean bool(JsonObject json, String name) {
         JsonElement element = json.get(name);
-        return element != null && !element.isJsonNull() && element.getAsBoolean();
+        return Objects.nonNull(element) && !element.isJsonNull() && element.getAsBoolean();
     }
 
     private static List<String> roles(JsonObject json) {
         List<String> roles = new ArrayList<>();
         JsonElement element = json.get("roles");
-        if (element != null && element.isJsonArray()) {
+        if (Objects.nonNull(element) && element.isJsonArray()) {
             JsonArray array = element.getAsJsonArray();
             for (JsonElement role : array) {
                 roles.add(role.getAsString());
@@ -194,18 +195,18 @@ public final class CommunityApi {
 
     private static Server server(JsonObject json) {
         JsonElement element = json.get("server");
-        if (element == null || !element.isJsonObject()) {
+        if (Objects.isNull(element) || !element.isJsonObject()) {
             return null;
         }
         JsonObject server = element.getAsJsonObject();
         JsonElement port = server.get("port");
         return new Server(text(server, "name"), text(server, "address"),
-                port == null || port.isJsonNull() ? 25565 : port.getAsInt());
+                Objects.isNull(port) || port.isJsonNull() ? 25565 : port.getAsInt());
     }
 
     private static Pack pack(JsonObject json) {
         JsonElement element = json.get("pack");
-        if (element == null || !element.isJsonObject()) {
+        if (Objects.isNull(element) || !element.isJsonObject()) {
             return null;
         }
         JsonObject pack = element.getAsJsonObject();

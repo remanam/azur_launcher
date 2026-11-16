@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import com.azur.launcher.auth.OfflineAccount;
 
 /** Pure input checks: i18n key of the error, or null when the value is fine. */
@@ -8,7 +9,7 @@ final class FieldRules {
     }
 
     static String nick(String text) {
-        String name = text == null ? "" : text.trim();
+        String name = Objects.isNull(text) ? "" : text.trim();
         if (name.isEmpty()) {
             return "field.err.nick_required";
         }
@@ -17,7 +18,7 @@ final class FieldRules {
 
     /** Empty is allowed (system proxy settings). */
     static String port(String text) {
-        String value = text == null ? "" : text.trim();
+        String value = Objects.isNull(text) ? "" : text.trim();
         if (value.isEmpty()) {
             return null;
         }
@@ -30,6 +31,6 @@ final class FieldRules {
     }
 
     static String required(String text, String key) {
-        return text == null || text.isBlank() ? key : null;
+        return Objects.isNull(text) || text.isBlank() ? key : null;
     }
 }

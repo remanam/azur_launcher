@@ -2,6 +2,7 @@ package com.azur.launcher.model;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class VersionMeta {
 
@@ -112,7 +113,7 @@ public class VersionMeta {
     }
 
     public DownloadInfo getClientDownload() {
-        return downloads == null ? null : downloads.get("client");
+        return Objects.isNull(downloads) ? null : downloads.get("client");
     }
 
     public static class JavaVersion {

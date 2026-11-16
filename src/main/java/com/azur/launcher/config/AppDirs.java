@@ -3,6 +3,7 @@ package com.azur.launcher.config;
 import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * The only place that decides where launcher data lives.
@@ -39,10 +40,10 @@ public final class AppDirs {
 
     /** Platform rule, separated from the environment so it can be tested. */
     public static Path resolveRoot(String osName, Path userHome, Map<String, String> env) {
-        String os = osName == null ? "" : osName.toLowerCase(Locale.ROOT);
+        String os = Objects.isNull(osName) ? "" : osName.toLowerCase(Locale.ROOT);
         if (os.contains("win")) {
             String appData = env.get("APPDATA");
-            Path base = appData == null || appData.isBlank()
+            Path base = Objects.isNull(appData) || appData.isBlank()
                     ? userHome.resolve("AppData").resolve("Roaming") : Path.of(appData);
             return base.resolve("AzurLauncher");
         }
@@ -50,7 +51,7 @@ public final class AppDirs {
             return userHome.resolve("Library").resolve("Application Support").resolve("AzurLauncher");
         }
         String xdg = env.get("XDG_DATA_HOME");
-        Path base = xdg == null || xdg.isBlank() ? userHome.resolve(".local").resolve("share") : Path.of(xdg);
+        Path base = Objects.isNull(xdg) || xdg.isBlank() ? userHome.resolve(".local").resolve("share") : Path.of(xdg);
         return base.resolve("azur-launcher");
     }
 

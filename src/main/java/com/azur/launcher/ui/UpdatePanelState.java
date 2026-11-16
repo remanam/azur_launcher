@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import com.azur.launcher.update.UpdateService;
 
 /**
@@ -13,7 +14,7 @@ record UpdatePanelState(Kind kind, String running, String target, String reason,
 
     static UpdatePanelState of(String running, UpdateService.Status last, long checkedAtMillis, boolean translocated,
                                boolean gameBusy) {
-        if (last == null) {
+        if (Objects.isNull(last)) {
             return new UpdatePanelState(Kind.NEVER_CHECKED, running, "", "", 0, translocated, gameBusy);
         }
         return switch (last.kind()) {
@@ -21,7 +22,7 @@ record UpdatePanelState(Kind kind, String running, String target, String reason,
                     translocated, gameBusy);
             case WRAPPER_OLD -> new UpdatePanelState(Kind.WRAPPER_OLD, running, last.manifest().minWrapper(), "",
                     checkedAtMillis, translocated, gameBusy);
-            case FAILED -> new UpdatePanelState(Kind.FAILED, running, "", last.message() == null ? "" : last.message(),
+            case FAILED -> new UpdatePanelState(Kind.FAILED, running, "", Objects.isNull(last.message()) ? "" : last.message(),
                     checkedAtMillis, translocated, gameBusy);
             case UP_TO_DATE, BUSY -> new UpdatePanelState(Kind.UP_TO_DATE, running, "", "", checkedAtMillis,
                     translocated, gameBusy);

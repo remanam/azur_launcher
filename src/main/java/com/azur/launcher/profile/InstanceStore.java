@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** One instance per server under {@code <AppDirs>/instances/<serverId>/}; the pin comes from {@code profile.json}. */
 public final class InstanceStore {
@@ -35,7 +36,7 @@ public final class InstanceStore {
     /** The profile shipped inside the launcher jar. */
     public static Profile bundledProfile() throws IOException {
         try (InputStream in = InstanceStore.class.getResourceAsStream(BUNDLED)) {
-            if (in == null) {
+            if (Objects.isNull(in)) {
                 throw new ProfileException("Bundled profile.json is missing");
             }
             return ProfileLoader.parse(new String(in.readAllBytes(), StandardCharsets.UTF_8), "bundled profile.json");
@@ -64,7 +65,7 @@ public final class InstanceStore {
     public Instance loadDefault() throws IOException {
         String json;
         try (InputStream in = InstanceStore.class.getResourceAsStream(BUNDLED)) {
-            if (in == null) {
+            if (Objects.isNull(in)) {
                 throw new ProfileException("Bundled profile.json is missing");
             }
             json = new String(in.readAllBytes(), StandardCharsets.UTF_8);

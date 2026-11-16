@@ -4,6 +4,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
 /** Path rules of the pack: only clean relative paths under the allowed roots, no symlinks, glob matching. */
@@ -20,12 +21,12 @@ public final class PackPaths {
     }
 
     public static boolean validHash(String h) {
-        return h != null && h.matches("[0-9a-f]{64}");
+        return Objects.nonNull(h) && h.matches("[0-9a-f]{64}");
     }
 
     /** Zip-slip and traversal guard; mirrors the Go {@code SafeRel}. */
     public static boolean isSafeRel(String p) {
-        if (p == null || p.isEmpty() || p.length() > 240 || p.startsWith("/") || p.contains("\\") || p.contains(":")
+        if (Objects.isNull(p) || p.isEmpty() || p.length() > 240 || p.startsWith("/") || p.contains("\\") || p.contains(":")
                 || p.indexOf('\0') >= 0) {
             return false;
         }

@@ -21,6 +21,7 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.LongConsumer;
 
@@ -54,7 +55,7 @@ public final class PackServer {
         } catch (java.net.URISyntaxException e) {
             throw new PackException(PackException.NETWORK, "the pack server address is wrong", e);
         }
-        if (base.getHost() == null) {
+        if (Objects.isNull(base.getHost())) {
             throw new PackException(PackException.NETWORK, "the pack server address is wrong");
         }
         this.keys = trusted.isPresent() ? List.copyOf(trusted.get()) : List.of(source.publicKey());
@@ -111,7 +112,7 @@ public final class PackServer {
     public Status status(Duration timeout) throws PackException {
         try (InputStream in = get("status", 0, timeout).body()) {
             Status s = GSON.fromJson(new String(in.readNBytes(1 << 16), StandardCharsets.UTF_8), Status.class);
-            return s == null ? new Status(false, "", "") : s;
+            return Objects.isNull(s) ? new Status(false, "", "") : s;
         } catch (PackException e) {
             throw e;
         } catch (IOException | JsonSyntaxException e) {

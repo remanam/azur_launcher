@@ -4,6 +4,7 @@ import com.azur.launcher.auth.StringVault;
 import com.google.gson.Gson;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Where the {@link SiteSession} lives. The real one is the encrypted vault (AES-GCM, key in the OS keychain, file 0600). */
@@ -24,7 +25,7 @@ public interface SessionStorage {
                 try {
                     String json = vault.read();
                     SiteSession s = json.isEmpty() ? null : gson.fromJson(json, SiteSession.class);
-                    return s != null && s.complete() ? Optional.of(s) : Optional.empty();
+                    return Objects.nonNull(s) && s.complete() ? Optional.of(s) : Optional.empty();
                 } catch (RuntimeException e) {
                     return Optional.empty();
                 }

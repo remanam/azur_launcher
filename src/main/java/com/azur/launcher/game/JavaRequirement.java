@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
+import java.util.Objects;
 
 /** Which Java major version a game version needs. */
 public final class JavaRequirement {
@@ -25,7 +26,7 @@ public final class JavaRequirement {
      * or the rule for the release number when the JSON declares nothing.
      */
     public static int requiredMajor(String versionId, Path versionJson) {
-        if (versionJson != null) {
+        if (Objects.nonNull(versionJson)) {
             int declared = readDeclared(versionJson, 0);
             if (declared > 0) {
                 return declared;
@@ -35,7 +36,7 @@ public final class JavaRequirement {
     }
 
     private static int readDeclared(Path versionJson, int depth) {
-        if (depth > MAX_INHERIT_DEPTH || versionJson == null || !Files.isRegularFile(versionJson)) {
+        if (depth > MAX_INHERIT_DEPTH || Objects.isNull(versionJson) || !Files.isRegularFile(versionJson)) {
             return -1;
         }
         JsonObject root;
@@ -44,7 +45,7 @@ public final class JavaRequirement {
         } catch (IOException | RuntimeException e) {
             return -1;
         }
-        if (root == null) {
+        if (Objects.isNull(root)) {
             return -1;
         }
         if (root.has("javaVersion") && root.get("javaVersion").isJsonObject()) {
@@ -60,10 +61,10 @@ public final class JavaRequirement {
                 }
             }
         }
-        if (root.has("inheritsFrom") && !root.get("inheritsFrom").isJsonNull() && versionJson.getParent() != null
-                && versionJson.getParent().getParent() != null) {
+        if (root.has("inheritsFrom") && !root.get("inheritsFrom").isJsonNull() && Objects.nonNull(versionJson.getParent())
+                && Objects.nonNull(versionJson.getParent().getParent())) {
             String parent = root.get("inheritsFrom").getAsString();
-            if (parent != null && !parent.isBlank()) {
+            if (Objects.nonNull(parent) && !parent.isBlank()) {
                 Path parentJson = versionJson.getParent().getParent().resolve(parent).resolve(parent + ".json");
                 return readDeclared(parentJson, depth + 1);
             }
@@ -74,7 +75,7 @@ public final class JavaRequirement {
     /** Release-number rule: up to 1.16 Java 8, up to 1.19 Java 17, 1.20.5 and later Java 21. */
     public static int ruleMajorFor(String versionId) {
         int[] parsed = parseReleaseNumber(versionId);
-        if (parsed == null) {
+        if (Objects.isNull(parsed)) {
             return DEFAULT_MAJOR;
         }
         int minor = parsed[0];
@@ -92,7 +93,7 @@ public final class JavaRequirement {
     }
 
     private static int[] parseReleaseNumber(String versionId) {
-        if (versionId == null) {
+        if (Objects.isNull(versionId)) {
             return null;
         }
         String text = versionId.trim().toLowerCase(Locale.ROOT);

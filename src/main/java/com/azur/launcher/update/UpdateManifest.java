@@ -15,6 +15,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * {@code launcher.json}: version, sha256, size, date, url, min_wrapper, required, notes, signature (legacy, servers key)
@@ -110,7 +111,7 @@ public record UpdateManifest(String version, String sha256, long size, String da
             throw new UpdateException("invalid manifest fields");
         }
         URI uri = URI.create(url);
-        if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getUserInfo() != null) {
+        if (!"https".equalsIgnoreCase(uri.getScheme()) || Objects.isNull(uri.getHost()) || Objects.nonNull(uri.getUserInfo())) {
             throw new UpdateException("jar url must be plain https");
         }
     }

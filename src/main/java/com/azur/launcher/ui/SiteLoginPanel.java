@@ -18,6 +18,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.LongSupplier;
 
@@ -83,7 +84,7 @@ final class SiteLoginPanel {
      * running request keeps the same screen: the button shows a spinner, fields lock, a failure is a plate under the fields.
      */
     private Node signedOut(AccountFlowState s) {
-        if (form == null) {
+        if (Objects.isNull(form)) {
             form = buildForm();
         }
         form.apply(SignInUi.button(s, submitted), SignInUi.notice(s.errorKey()));
@@ -163,7 +164,7 @@ final class SiteLoginPanel {
             login.getStyleClass().remove("field-invalid");
             password.getStyleClass().remove("field-invalid");
             plate.getStyleClass().removeAll("notice-error", "notice-warn", "notice-info");
-            boolean show = notice != null;
+            boolean show = Objects.nonNull(notice);
             plate.setManaged(show);
             plate.setVisible(show);
             if (!show) {
@@ -177,7 +178,7 @@ final class SiteLoginPanel {
                 case PASSWORD -> password;
                 case NONE -> null;
             };
-            if (target != null) {
+            if (Objects.nonNull(target)) {
                 target.getStyleClass().add("field-invalid");
                 javafx.application.Platform.runLater(target::requestFocus);
             }
@@ -219,7 +220,7 @@ final class SiteLoginPanel {
     }
 
     private void updateCountdown() {
-        if (state == null || !state.showsCode()) {
+        if (Objects.isNull(state) || !state.showsCode()) {
             return;
         }
         long left = state.secondsLeft(clock.getAsLong());

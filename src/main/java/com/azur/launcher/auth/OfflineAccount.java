@@ -1,6 +1,7 @@
 package com.azur.launcher.auth;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -25,12 +26,12 @@ public final class OfflineAccount implements AuthAccount {
     }
 
     public static boolean isValidName(String name) {
-        return name != null && VALID_NAME.matcher(name).matches();
+        return Objects.nonNull(name) && VALID_NAME.matcher(name).matches();
     }
 
     /** @throws IllegalArgumentException when the nickname is not 3-16 characters of [A-Za-z0-9_] */
     public static OfflineAccount of(String name) {
-        String trimmed = name == null ? "" : name.trim();
+        String trimmed = Objects.isNull(name) ? "" : name.trim();
         if (!isValidName(trimmed)) {
             throw new IllegalArgumentException("invalid nickname");
         }

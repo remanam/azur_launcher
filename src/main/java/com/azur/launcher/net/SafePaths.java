@@ -2,6 +2,7 @@ package com.azur.launcher.net;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Objects;
 
 /** Path-traversal guard shared by every extraction and by paths taken from downloaded manifests. */
 public final class SafePaths {
@@ -11,7 +12,7 @@ public final class SafePaths {
 
     /** Resolves {@code relative} under {@code base}; throws when the result leaves {@code base}. */
     public static Path resolve(Path base, String relative) throws IOException {
-        if (relative == null || relative.isEmpty() || relative.indexOf('\0') >= 0) {
+        if (Objects.isNull(relative) || relative.isEmpty() || relative.indexOf('\0') >= 0) {
             throw new IOException("Invalid path: " + relative);
         }
         String clean = relative.replace('\\', '/');

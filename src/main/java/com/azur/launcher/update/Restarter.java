@@ -3,6 +3,7 @@ package com.azur.launcher.update;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -76,7 +77,7 @@ public final class Restarter {
      * bootstrap still picks {@code updates/current.jar}, but the player should move the app to Programs once.
      */
     public static boolean isTranslocated(String appPath) {
-        return appPath != null && appPath.contains("/AppTranslocation/");
+        return Objects.nonNull(appPath) && appPath.contains("/AppTranslocation/");
     }
 
     /** Starts the copy; the caller halts right after. False when the command is unknown or did not start. */

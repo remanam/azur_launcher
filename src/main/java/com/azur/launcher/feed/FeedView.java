@@ -1,6 +1,7 @@
 package com.azur.launcher.feed;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -13,7 +14,7 @@ public record FeedView(List<FeedNotice> active, Optional<FeedNotice> banner, lon
     public static final FeedView EMPTY = new FeedView(List.of(), Optional.empty(), 0, false, Optional.empty());
 
     public static FeedView of(FeedDocument doc, FeedFilter.Context ctx, FeedState state) {
-        if (doc == null) {
+        if (Objects.isNull(doc)) {
             return EMPTY;
         }
         List<FeedNotice> active = FeedFilter.active(doc.notices(), ctx);

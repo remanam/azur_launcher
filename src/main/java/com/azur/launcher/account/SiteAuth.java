@@ -3,6 +3,7 @@ package com.azur.launcher.account;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -78,7 +79,7 @@ public final class SiteAuth {
                 throw new SiteException(400, "expired");
             }
             SiteApi.Polled r = pollQuietly(p);
-            if (r != null && r.approved()) {
+            if (Objects.nonNull(r) && r.approved()) {
                 SiteSession s = new SiteSession(r.deviceId(), r.refresh(), r.nick(), p.key().seedBase64Url(),
                         p.key().publicKeyBase64Url(), p.deviceName(), clock.getAsLong(), 0);
                 storage.write(s);
@@ -115,7 +116,7 @@ public final class SiteAuth {
         SiteSession s = storage.read().orElseThrow(() -> new SiteException(401, "unauthorized"));
         s = rotateIfDue(s);
         try {
-            SiteApi.Ticket t = api.ticket(s.deviceId(), s.refresh(), server == null ? "" : server);
+            SiteApi.Ticket t = api.ticket(s.deviceId(), s.refresh(), Objects.isNull(server) ? "" : server);
             storage.write(s.withRefresh(t.refresh()));
             return t.ticket();
         } catch (SiteException e) {

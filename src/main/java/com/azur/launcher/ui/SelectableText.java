@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import javafx.scene.control.TextArea;
 import javafx.scene.text.Text;
 
@@ -16,11 +17,11 @@ final class SelectableText extends TextArea {
     private final Text probe = new Text();
 
     SelectableText(String text, String extraStyleClass) {
-        super(text == null ? "" : text);
+        super(Objects.isNull(text) ? "" : text);
         setEditable(false);
         setWrapText(true);
         getStyleClass().add("selectable-text");
-        if (extraStyleClass != null) {
+        if (Objects.nonNull(extraStyleClass)) {
             getStyleClass().add(extraStyleClass);
         }
         textProperty().addListener(observable -> fit());
@@ -31,7 +32,7 @@ final class SelectableText extends TextArea {
 
     /** Replaces the text; null means empty. */
     void show(String text) {
-        setText(text == null ? "" : text);
+        setText(Objects.isNull(text) ? "" : text);
     }
 
     private void fit() {

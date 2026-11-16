@@ -1,6 +1,7 @@
 package com.azur.launcher.servers;
 
 import java.util.List;
+import java.util.Objects;
 
 /** Which server Home shows: the remembered one, else the default {@code isles}, else the first. A selector exists only for 2+ servers. */
 public final class ServerChoice {
@@ -16,7 +17,7 @@ public final class ServerChoice {
         }
         for (String wanted : new String[] {lastServerId, DEFAULT_ID}) {
             for (ServerEntry e : servers) {
-                if (wanted != null && !wanted.isEmpty() && e.id().equals(wanted)) {
+                if (Objects.nonNull(wanted) && !wanted.isEmpty() && e.id().equals(wanted)) {
                     return e;
                 }
             }

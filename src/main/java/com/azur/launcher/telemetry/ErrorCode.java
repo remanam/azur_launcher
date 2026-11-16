@@ -10,6 +10,7 @@ import java.net.UnknownHostException;
 import java.net.http.HttpTimeoutException;
 import java.net.SocketTimeoutException;
 import java.util.Locale;
+import java.util.Objects;
 
 /** Maps a failure to one word of the fixed list the site accepts. The message text is looked at here and never sent. */
 public final class ErrorCode {
@@ -26,7 +27,7 @@ public final class ErrorCode {
     }
 
     public static String classify(Throwable failure) {
-        for (Throwable t = failure; t != null; t = t.getCause()) {
+        for (Throwable t = failure; Objects.nonNull(t); t = t.getCause()) {
             if (t instanceof PackException p) {
                 return switch (p.code()) {
                     case PackException.NETWORK -> NETWORK;
@@ -41,7 +42,7 @@ public final class ErrorCode {
                     || t instanceof SocketTimeoutException || t instanceof HttpTimeoutException) {
                 return NETWORK;
             }
-            String message = t.getMessage() == null ? "" : t.getMessage().toLowerCase(Locale.ROOT);
+            String message = Objects.isNull(t.getMessage()) ? "" : t.getMessage().toLowerCase(Locale.ROOT);
             if (message.contains("no space left") || message.contains("not enough space")) {
                 return DISK;
             }

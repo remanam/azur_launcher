@@ -13,6 +13,7 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 /**
  * The ONE HTTP proxy used by every request of the launcher (downloads, pack sync, sign-in) and handed to the child
@@ -39,11 +40,11 @@ public final class ProxyConfig {
 
     /** Blank host or a port outside 1..65535 gives {@link #NONE}. */
     public static ProxyConfig of(String host, int port, String user, String password) {
-        String h = host == null ? "" : host.trim();
+        String h = Objects.isNull(host) ? "" : host.trim();
         if (h.isEmpty() || port < 1 || port > 65535) {
             return NONE;
         }
-        return new ProxyConfig(h, port, user == null ? "" : user.trim(), password == null ? "" : password);
+        return new ProxyConfig(h, port, Objects.isNull(user) ? "" : user.trim(), Objects.isNull(password) ? "" : password);
     }
 
     public static ProxyConfig current() {
@@ -52,7 +53,7 @@ public final class ProxyConfig {
 
     /** Replaces the proxy for all later requests and installs the proxy authenticator (idempotent). */
     public static void set(ProxyConfig config) {
-        current = config == null ? NONE : config;
+        current = Objects.isNull(config) ? NONE : config;
         System.setProperty("jdk.http.auth.tunneling.disabledSchemes", "");
         Authenticator.setDefault(new ProxyAuthenticator());
         SharedHttp.invalidate();
@@ -104,7 +105,7 @@ public final class ProxyConfig {
             public List<Proxy> select(URI uri) {
                 ProxyConfig now = current;
                 if (!now.active() || isLoopback(uri)) {
-                    return fallback == null ? List.of(Proxy.NO_PROXY) : fallback.select(uri);
+                    return Objects.isNull(fallback) ? List.of(Proxy.NO_PROXY) : fallback.select(uri);
                 }
                 return List.of(new Proxy(Proxy.Type.HTTP, new InetSocketAddress(now.host, now.port)));
             }
@@ -144,7 +145,7 @@ public final class ProxyConfig {
     }
 
     private static boolean isLoopback(URI uri) {
-        String h = uri.getHost() == null ? "" : uri.getHost().toLowerCase(Locale.ROOT);
+        String h = Objects.isNull(uri.getHost()) ? "" : uri.getHost().toLowerCase(Locale.ROOT);
         return h.equals("127.0.0.1") || h.equals("localhost") || h.equals("[::1]") || h.equals("::1");
     }
 

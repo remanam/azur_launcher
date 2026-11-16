@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextInputControl;
 import javafx.scene.layout.VBox;
@@ -28,7 +29,7 @@ public final class FieldError {
 
     /** Shows {@code text} under the field (already localized); null or empty clears. */
     public void show(String text) {
-        boolean bad = text != null && !text.isEmpty();
+        boolean bad = Objects.nonNull(text) && !text.isEmpty();
         message.setText(bad ? text : "");
         message.getStyleClass().remove("field-error");
         field.getStyleClass().remove("field-invalid");
@@ -48,7 +49,7 @@ public final class FieldError {
 
     /** Returns true when valid; otherwise shows the message of {@code errorKey} (null = valid). */
     public boolean check(String errorKey) {
-        show(errorKey == null ? null : com.azur.launcher.i18n.I18n.tr(errorKey));
-        return errorKey == null;
+        show(Objects.isNull(errorKey) ? null : com.azur.launcher.i18n.I18n.tr(errorKey));
+        return Objects.isNull(errorKey);
     }
 }

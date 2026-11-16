@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -115,7 +116,7 @@ class KeysetInteropTest {
 
     /** Temp keys, root_keys.txt with three roots and keyset v1 signed by A with servers-1, pack-1, launcher-1. */
     private Keyset setup() throws Exception {
-        assumeTrue(servers != null && dist != null, "Go toolchain not available");
+        assumeTrue(Objects.nonNull(servers) && Objects.nonNull(dist), "Go toolchain not available");
         for (String r : List.of("root_a", "root_a2", "root_x")) {
             run("keygen", "--role", "root_working", "--out", "keys/" + r + ".key");
         }

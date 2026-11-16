@@ -1,5 +1,6 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
 import com.azur.launcher.game.PinService;
 import com.azur.launcher.pack.PackSource;
 import com.azur.launcher.profile.Instance;
@@ -38,7 +39,7 @@ final class PackState {
     /** @param server the selected server or null (default instance: no pack to track) */
     synchronized Snapshot read(Instance instance, ServerEntry server, boolean force) {
         boolean gameInstalled = new PinService(ctx.dirs, ctx.gamePaths(), ctx::log).check(instance).isEmpty();
-        boolean packExpected = server != null && server.pack().present();
+        boolean packExpected = Objects.nonNull(server) && server.pack().present();
         String local = packExpected ? service.installedVersion(instance.gameDir()) : "";
         boolean installed = HomeState.installed(gameInstalled, packExpected, local);
         if (!packExpected) {

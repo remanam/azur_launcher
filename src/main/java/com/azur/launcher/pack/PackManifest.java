@@ -5,6 +5,7 @@ import com.google.gson.annotations.SerializedName;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /** Pack manifest v1 (the JSON that the publisher signs). Unknown fields are ignored. */
@@ -31,15 +32,15 @@ public record PackManifest(
     }
 
     public List<Entry> filesOrEmpty() {
-        return files == null ? List.of() : files;
+        return Objects.isNull(files) ? List.of() : files;
     }
 
     public List<String> retiredOrEmpty() {
-        return retired == null ? List.of() : retired;
+        return Objects.isNull(retired) ? List.of() : retired;
     }
 
     public List<String> userOwnedOrEmpty() {
-        return userOwned == null ? List.of() : userOwned;
+        return Objects.isNull(userOwned) ? List.of() : userOwned;
     }
 
     /** Structural checks after the signature: version, limits, safe paths, hashes, known policies, no duplicates. */
@@ -55,7 +56,7 @@ public record PackManifest(
             if (!PackPaths.isSafeRel(f.path())) {
                 throw path(f.path());
             }
-            if (!PackPaths.validHash(f.sha256()) || f.size() < 0 || f.size() > MAX_FILE_SIZE || f.url() == null) {
+            if (!PackPaths.validHash(f.sha256()) || f.size() < 0 || f.size() > MAX_FILE_SIZE || Objects.isNull(f.url())) {
                 throw bad("bad hash or size of " + f.path());
             }
             if (!seen.add(f.path().toLowerCase(Locale.ROOT))) {

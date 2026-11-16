@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Stream;
 
 /** Lists installed versions from disk; works without network. */
@@ -23,7 +24,7 @@ public final class LocalVersionScanner {
 
     public static List<LocalVersion> scan(Path gameDir) {
         List<LocalVersion> result = new ArrayList<>();
-        if (gameDir == null) {
+        if (Objects.isNull(gameDir)) {
             return result;
         }
         Path versionsDir = gameDir.resolve("versions");
@@ -52,7 +53,7 @@ public final class LocalVersionScanner {
         if (Files.isRegularFile(json)) {
             try {
                 VersionMeta meta = GSON.fromJson(Files.readString(json, StandardCharsets.UTF_8), VersionMeta.class);
-                if (meta != null) {
+                if (Objects.nonNull(meta)) {
                     valid = true;
                     type = meta.getType();
                     inheritsFrom = meta.getInheritsFrom();

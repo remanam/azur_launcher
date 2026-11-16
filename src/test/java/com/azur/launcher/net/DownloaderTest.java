@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -66,7 +67,7 @@ class DownloaderTest {
         server.createContext(path, ex -> {
             hits.incrementAndGet();
             String range = ex.getRequestHeaders().getFirst("Range");
-            if (range != null) {
+            if (Objects.nonNull(range)) {
                 int from = Integer.parseInt(range.substring("bytes=".length(), range.indexOf('-')));
                 ex.getResponseHeaders().add("Content-Range", "bytes " + from + "-" + (data.length - 1) + "/" + data.length);
                 ex.sendResponseHeaders(206, data.length - from);

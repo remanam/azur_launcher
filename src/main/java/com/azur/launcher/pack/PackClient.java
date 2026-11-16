@@ -13,6 +13,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutionException;
@@ -102,7 +103,7 @@ public final class PackClient {
         Map<String, PackManifest.Entry> need = new TreeMap<>();
         long total = 0;
         for (PackPlan.Item item : plan.items()) {
-            if (item.needsDownload() && need.putIfAbsent(item.file().sha256(), item.file()) == null) {
+            if (item.needsDownload() && Objects.isNull(need.putIfAbsent(item.file().sha256(), item.file()))) {
                 total += item.size();
             }
         }
@@ -163,7 +164,7 @@ public final class PackClient {
             }
             throw e instanceof PackException pe ? pe : new PackException(PackException.APPLY, e.getMessage(), e);
         }
-        state.packVersion = manifest.packVersion() == null ? "" : manifest.packVersion();
+        state.packVersion = Objects.isNull(manifest.packVersion()) ? "" : manifest.packVersion();
         state.owned = owned;
         state.save(home, game);
         return state.packVersion;
@@ -191,7 +192,7 @@ public final class PackClient {
                 owned.remove(item.path());
             }
             case KEEP -> {
-                if (f != null && PackManifest.OVERWRITE.equals(f.policy())) {
+                if (Objects.nonNull(f) && PackManifest.OVERWRITE.equals(f.policy())) {
                     owned.put(item.path(), f.sha256());
                 }
             }
@@ -246,8 +247,8 @@ public final class PackClient {
 
     /** Dotted numeric versions; -1, 0, 1. A null or blank side counts as 0. */
     static int compareVersion(String a, String b) {
-        String[] pa = a == null ? new String[0] : a.split("\\.");
-        String[] pb = b == null ? new String[0] : b.split("\\.");
+        String[] pa = Objects.isNull(a) ? new String[0] : a.split("\\.");
+        String[] pb = Objects.isNull(b) ? new String[0] : b.split("\\.");
         for (int i = 0; i < Math.max(pa.length, pb.length); i++) {
             int x = i < pa.length ? number(pa[i]) : 0;
             int y = i < pb.length ? number(pb[i]) : 0;

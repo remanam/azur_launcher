@@ -1,6 +1,7 @@
 package com.azur.launcher.pack;
 
 import java.util.Base64;
+import java.util.Objects;
 
 /**
  * Where a server's pack comes from: base URL and the base64 Ed25519 public key that signs its manifest. Both come from
@@ -11,8 +12,8 @@ public record PackSource(String url, String key) {
     public static final PackSource NONE = new PackSource("", "");
 
     public PackSource {
-        url = url == null ? "" : url.strip();
-        key = key == null ? "" : key.strip();
+        url = Objects.isNull(url) ? "" : url.strip();
+        key = Objects.isNull(key) ? "" : key.strip();
     }
 
     public boolean present() {

@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -39,12 +40,12 @@ public class NeoForgeInstaller {
 
     public NeoForgeInstaller(AppDirs dirs, Consumer<String> logger) {
         this.dirs = dirs;
-        this.logger = logger == null ? msg -> { } : logger;
+        this.logger = Objects.isNull(logger) ? msg -> { } : logger;
     }
 
     /** Reports the installer's libraries (file counts) while the launcher fetches them before the installer runs. */
     public NeoForgeInstaller withLibraryProgress(DownloadManager.ProgressListener listener) {
-        this.libraryProgress = listener == null ? DownloadManager.ProgressListener.NOOP : listener;
+        this.libraryProgress = Objects.isNull(listener) ? DownloadManager.ProgressListener.NOOP : listener;
         return this;
     }
 
@@ -94,8 +95,8 @@ public class NeoForgeInstaller {
             InstallerLibraries.fetch(installerJar, gameDir, logger, libraryProgress);
 
             JavaDetector.JavaInfo java = pickJava(mcVersion);
-            Path javaExe = java != null ? java.getJavaExecutable() : downloadedJava(mcVersion);
-            if (javaExe == null) {
+            Path javaExe = Objects.nonNull(java) ? java.getJavaExecutable() : downloadedJava(mcVersion);
+            if (Objects.isNull(javaExe)) {
                 return fail(I18n.tr("neoforge.no_java"));
             }
             int exitCode = run(command(javaExe, installerJar, gameDir), gameDir);
@@ -149,7 +150,7 @@ public class NeoForgeInstaller {
             try (BufferedReader in = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
                 String line;
-                while ((line = in.readLine()) != null) {
+                while (Objects.nonNull((line = in.readLine()))) {
                     if (!line.isBlank()) {
                         logger.accept("[installer] " + line.strip());
                     }
@@ -182,6 +183,6 @@ public class NeoForgeInstaller {
         int required = JavaRequirement.ruleMajorFor(mcVersion);
         List<JavaDetector.JavaInfo> all = JavaDetector.detectAll();
         JavaDetector.JavaInfo best = JavaDetector.pickBest(all, required);
-        return best != null ? best : JavaDetector.pickFallback(all, required);
+        return Objects.nonNull(best) ? best : JavaDetector.pickFallback(all, required);
     }
 }

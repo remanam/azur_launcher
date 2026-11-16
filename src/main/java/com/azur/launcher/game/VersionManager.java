@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 
@@ -33,12 +34,12 @@ public class VersionManager {
 
     public VersionManager(GamePaths paths, Consumer<String> logger) {
         this.paths = paths;
-        this.logger = logger == null ? m -> {
+        this.logger = Objects.isNull(logger) ? m -> {
         } : logger;
     }
 
     public VersionManifest getManifest(boolean forceDownload) throws IOException {
-        if (!forceDownload && manifest != null) {
+        if (!forceDownload && Objects.nonNull(manifest)) {
             return manifest;
         }
         Path file = paths.manifestFile();
@@ -48,7 +49,7 @@ public class VersionManager {
         }
         String json = Files.readString(file, StandardCharsets.UTF_8);
         VersionManifest m = GSON.fromJson(json, VersionManifest.class);
-        if (m == null || m.getVersions() == null || m.getVersions().isEmpty()) {
+        if (Objects.isNull(m) || Objects.isNull(m.getVersions()) || m.getVersions().isEmpty()) {
             throw new IOException("Version manifest is empty or unreadable: " + file);
         }
         manifest = m;
@@ -58,7 +59,7 @@ public class VersionManager {
     public VersionMeta getVersionMeta(String versionId, boolean forceDownload) throws IOException {
         if (!forceDownload) {
             VersionMeta cached = metaCache.get(versionId);
-            if (cached != null) {
+            if (Objects.nonNull(cached)) {
                 return cached;
             }
         }
@@ -66,7 +67,7 @@ public class VersionManager {
         List<VersionMeta> chain = new ArrayList<>();
         Set<String> visited = new HashSet<>();
         String current = versionId;
-        while (current != null && !current.isBlank()) {
+        while (Objects.nonNull(current) && !current.isBlank()) {
             if (!visited.add(current)) {
                 throw new IOException("Circular inheritsFrom chain: " + versionId);
             }
@@ -89,7 +90,7 @@ public class VersionManager {
         boolean missing = !Files.exists(jsonFile);
         if (forceDownload || missing) {
             VersionManifest.VersionEntry entry = findEntry(getManifest(false), versionId);
-            if (entry != null && entry.getUrl() != null && !entry.getUrl().isBlank()) {
+            if (Objects.nonNull(entry) && Objects.nonNull(entry.getUrl()) && !entry.getUrl().isBlank()) {
                 logger.accept("Fetching version JSON: " + versionId);
                 HttpUtils.download(entry.getUrl(), jsonFile, entry.getSha1(), 0);
             } else if (missing) {
@@ -97,14 +98,14 @@ public class VersionManager {
             }
         }
         VersionMeta meta = GSON.fromJson(Files.readString(jsonFile, StandardCharsets.UTF_8), VersionMeta.class);
-        if (meta == null) {
+        if (Objects.isNull(meta)) {
             throw new IOException("Cannot parse version JSON: " + jsonFile);
         }
         return meta;
     }
 
     private static VersionManifest.VersionEntry findEntry(VersionManifest manifest, String versionId) {
-        if (manifest == null || manifest.getVersions() == null) {
+        if (Objects.isNull(manifest) || Objects.isNull(manifest.getVersions())) {
             return null;
         }
         for (VersionManifest.VersionEntry entry : manifest.getVersions()) {
@@ -116,10 +117,10 @@ public class VersionManager {
     }
 
     private VersionMeta merge(VersionMeta parent, VersionMeta child) {
-        if (parent == null) {
+        if (Objects.isNull(parent)) {
             return child;
         }
-        if (child == null) {
+        if (Objects.isNull(child)) {
             return parent;
         }
         VersionMeta r = new VersionMeta();
@@ -129,26 +130,26 @@ public class VersionManager {
         r.setAssets(firstNonBlank(child.getAssets(), parent.getAssets()));
         r.setJar(firstNonBlank(child.getJar(), parent.getJar()));
         r.setMinecraftArguments(firstNonBlank(child.getMinecraftArguments(), parent.getMinecraftArguments()));
-        r.setAssetIndex(child.getAssetIndex() != null ? child.getAssetIndex() : parent.getAssetIndex());
+        r.setAssetIndex(Objects.nonNull(child.getAssetIndex()) ? child.getAssetIndex() : parent.getAssetIndex());
         r.setArguments(com.azur.launcher.model.Arguments.merge(parent.getArguments(), child.getArguments()));
-        r.setJavaVersion(child.getJavaVersion() != null ? child.getJavaVersion() : parent.getJavaVersion());
+        r.setJavaVersion(Objects.nonNull(child.getJavaVersion()) ? child.getJavaVersion() : parent.getJavaVersion());
 
         Map<String, DownloadInfo> downloads = new LinkedHashMap<>();
-        if (parent.getDownloads() != null) {
+        if (Objects.nonNull(parent.getDownloads())) {
             downloads.putAll(parent.getDownloads());
         }
-        if (child.getDownloads() != null) {
+        if (Objects.nonNull(child.getDownloads())) {
             downloads.putAll(child.getDownloads());
         }
         r.setDownloads(downloads);
 
         Map<String, Library> libs = new LinkedHashMap<>();
-        if (parent.getLibraries() != null) {
+        if (Objects.nonNull(parent.getLibraries())) {
             for (Library lib : parent.getLibraries()) {
                 libs.put(dedupKey(lib), lib);
             }
         }
-        if (child.getLibraries() != null) {
+        if (Objects.nonNull(child.getLibraries())) {
             for (Library lib : child.getLibraries()) {
                 libs.put(dedupKey(lib), lib);
             }
@@ -159,11 +160,11 @@ public class VersionManager {
 
     /** Same library = group, artifact and classifier; version is not part of it (the child's version wins). */
     static String dedupKey(Library lib) {
-        String[] coords = lib.getName() == null ? new String[0] : lib.getName().split(":");
+        String[] coords = Objects.isNull(lib.getName()) ? new String[0] : lib.getName().split(":");
         return lib.getGroupId() + ":" + lib.getArtifactId() + (coords.length > 3 ? ":" + coords[3] : "");
     }
 
     private static String firstNonBlank(String a, String b) {
-        return (a == null || a.isBlank()) ? b : a;
+        return (Objects.isNull(a) || a.isBlank()) ? b : a;
     }
 }

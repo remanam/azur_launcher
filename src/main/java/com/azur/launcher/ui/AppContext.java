@@ -27,6 +27,7 @@ import javafx.stage.Stage;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -92,13 +93,13 @@ final class AppContext {
         // (the policy is a central allowlist, so a host not added here is never fetched).
         HttpUtils.allowHosts(this.pack.getServersUrl());
         this.keysets = createKeysets(dirs, this.pack.getServersUrl());
-        config.migrateTelemetryNotice(accounts.selected() != null);
+        config.migrateTelemetryNotice(Objects.nonNull(accounts.selected()));
         this.telemetry = new com.azur.launcher.telemetry.TelemetryClient(config::isTelemetrySendable, config::getTelemetryId, AppVersion.APP,
                 telemetrySender(this.pack.getServersUrl()));
         this.site = createSiteAuth(dirs, this.pack.getServersUrl());
-        this.accountController = site == null ? null : new AccountController(site, io, state -> Platform.runLater(() -> accountViews.forEach(v -> v.accept(state))),
+        this.accountController = Objects.isNull(site) ? null : new AccountController(site, io, state -> Platform.runLater(() -> accountViews.forEach(v -> v.accept(state))),
                 url -> Platform.runLater(() -> host.showDocument(url)), AppContext::deviceName, this::siteSessionChanged);
-        if (accountController != null) {
+        if (Objects.nonNull(accountController)) {
             accountController.load();
         }
         warmUpSite(this.pack.getServersUrl());
@@ -116,7 +117,7 @@ final class AppContext {
     private static com.azur.launcher.telemetry.TelemetrySender telemetrySender(String serversUrl) {
         try {
             java.net.URI u = java.net.URI.create(serversUrl);
-            if ("https".equals(u.getScheme()) && u.getHost() != null) {
+            if ("https".equals(u.getScheme()) && Objects.nonNull(u.getHost())) {
                 return new com.azur.launcher.telemetry.HttpTelemetrySender("https://" + u.getHost());
             }
         } catch (IllegalArgumentException ignored) {
@@ -152,12 +153,12 @@ final class AppContext {
 
     /** The saved nick counts as a player only without a site (dev run) or when `allow_anonymous` is on; otherwise a site sign-in is needed. */
     com.azur.launcher.auth.AuthAccount anonymousAccount() {
-        return site == null || config.isAllowAnonymous() ? accounts.selected() : null;
+        return Objects.isNull(site) || config.isAllowAnonymous() ? accounts.selected() : null;
     }
 
     /** Who plays now: the signed-in site account (nick in exact case), else {@link #anonymousAccount()}. */
     com.azur.launcher.auth.AuthAccount currentPlayer() {
-        if (site != null && site.session().isPresent()
+        if (Objects.nonNull(site) && site.session().isPresent()
                 && com.azur.launcher.auth.OfflineAccount.isValidName(site.session().get().nick())) {
             return com.azur.launcher.auth.OfflineAccount.of(site.session().get().nick());
         }
@@ -177,7 +178,7 @@ final class AppContext {
     /** The account block (Home wizard, Advanced) listens here; the last state is replayed to a new listener. */
     void bindAccount(Consumer<AccountFlowState> view) {
         accountViews.add(view);
-        if (accountController != null) {
+        if (Objects.nonNull(accountController)) {
             view.accept(accountController.state());
         }
     }
@@ -218,8 +219,8 @@ final class AppContext {
     /** {@code https://host} of the servers URL (the site lives next to the signed list), or empty. */
     static String siteOrigin(String serversUrl) {
         try {
-            java.net.URI uri = java.net.URI.create(serversUrl == null ? "" : serversUrl.trim());
-            if (uri.getScheme() == null || uri.getHost() == null) {
+            java.net.URI uri = java.net.URI.create(Objects.isNull(serversUrl) ? "" : serversUrl.trim());
+            if (Objects.isNull(uri.getScheme()) || Objects.isNull(uri.getHost())) {
                 return "";
             }
             return uri.getScheme() + "://" + uri.getHost() + (uri.getPort() > 0 ? ":" + uri.getPort() : "");
@@ -233,10 +234,10 @@ final class AppContext {
      * list stay the source of truth.
      */
     void applyCommunity(CommunityApi.Session session) {
-        if (session == null) {
+        if (Objects.isNull(session)) {
             return;
         }
-        if (session.server() != null && !session.server().address().isBlank()) {
+        if (Objects.nonNull(session.server()) && !session.server().address().isBlank()) {
             log("Community API: server " + session.server().address() + ":" + session.server().port());
         }
     }
@@ -255,7 +256,7 @@ final class AppContext {
 
     Path gameDir() {
         String configured = config.getGameDir();
-        return configured == null || configured.isBlank() ? dirs.gameDir() : Path.of(configured);
+        return Objects.isNull(configured) || configured.isBlank() ? dirs.gameDir() : Path.of(configured);
     }
 
     void saveConfig() {

@@ -15,6 +15,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -51,7 +52,7 @@ class KeysetServiceTest {
         return new KeysetService(dir.resolve("keyset.json"), roots, legacy.getPublic(), "https://example.test/dl/keyset.json",
                 url -> {
                     fetches.incrementAndGet();
-                    if (served == null) {
+                    if (Objects.isNull(served)) {
                         throw new IOException("offline");
                     }
                     return served;

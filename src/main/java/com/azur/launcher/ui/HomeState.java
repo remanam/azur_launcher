@@ -1,5 +1,7 @@
 package com.azur.launcher.ui;
 
+import java.util.Objects;
+
 /** Pure mapping from the pack/game state to the one big Home button, and the first-run condition. */
 final class HomeState {
 
@@ -53,7 +55,7 @@ final class HomeState {
     }
 
     private static boolean blank(String s) {
-        return s == null || s.isBlank();
+        return Objects.isNull(s) || s.isBlank();
     }
 
     /** Button label while busy: checking the server, first install, or topping up an existing pack. */

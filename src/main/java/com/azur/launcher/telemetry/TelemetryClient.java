@@ -1,6 +1,7 @@
 package com.azur.launcher.telemetry;
 
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.function.BooleanSupplier;
@@ -46,7 +47,7 @@ public final class TelemetryClient {
             return; // off, or the notice has not been shown yet: nothing is queued, no id is created
         }
         String id = installId.get();
-        if (id == null || id.isEmpty()) {
+        if (Objects.isNull(id) || id.isEmpty()) {
             return;
         }
         if (!queue.offer(json(id, event))) {
@@ -57,7 +58,7 @@ public final class TelemetryClient {
 
     /** The user switched telemetry off: ask the site to erase every row of this install id (best effort, in the background). */
     public void forget(String id) {
-        if (id == null || id.isEmpty()) {
+        if (Objects.isNull(id) || id.isEmpty()) {
             return;
         }
         Thread t = new Thread(() -> {
@@ -81,7 +82,7 @@ public final class TelemetryClient {
     }
 
     private synchronized void startWorker() {
-        if (worker != null && worker.isAlive()) {
+        if (Objects.nonNull(worker) && worker.isAlive()) {
             return;
         }
         worker = new Thread(this::drain, "azur-telemetry");
@@ -91,7 +92,7 @@ public final class TelemetryClient {
 
     private void drain() {
         String body;
-        while ((body = queue.poll()) != null) {
+        while (Objects.nonNull((body = queue.poll()))) {
             try {
                 sender.post(PATH, body);
             } catch (Exception ignored) {

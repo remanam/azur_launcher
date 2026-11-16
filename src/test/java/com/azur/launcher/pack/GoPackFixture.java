@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,14 +37,14 @@ final class GoPackFixture implements AutoCloseable {
 
     /** Builds the Go publisher once; null when Go is missing. */
     static synchronized Path binary(Path buildDir) {
-        if (binary == null) {
+        if (Objects.isNull(binary)) {
             binary = build(buildDir, "azur-dist");
         }
         return binary;
     }
 
     private static synchronized Path serversBinary(Path buildDir) {
-        if (serversBinary == null) {
+        if (Objects.isNull(serversBinary)) {
             serversBinary = build(buildDir, "azur-servers");
         }
         return serversBinary;
@@ -151,7 +152,7 @@ final class GoPackFixture implements AutoCloseable {
 
     @Override
     public void close() {
-        if (server != null) {
+        if (Objects.nonNull(server)) {
             server.destroyForcibly();
         }
     }

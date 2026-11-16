@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -15,7 +16,7 @@ class LocalVersionScannerTest {
     private static void version(Path root, String id, String json, boolean jar) throws IOException {
         Path dir = root.resolve("versions").resolve(id);
         Files.createDirectories(dir);
-        if (json != null) {
+        if (Objects.nonNull(json)) {
             Files.writeString(dir.resolve(id + ".json"), json);
         }
         if (jar) {

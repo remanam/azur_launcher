@@ -1,5 +1,7 @@
 package com.azur.launcher;
 
+import java.util.Objects;
+
 /**
  * Versions compiled into this jar. {@code APP} is the launcher version (bump with every release).
  * {@code WRAPPER} is the version of the bootstrap + jpackage wrapper; change it
@@ -22,7 +24,7 @@ public final class AppVersion {
      */
     private static String load() {
         try (java.io.InputStream in = AppVersion.class.getResourceAsStream("/azur-version.properties")) {
-            if (in != null) {
+            if (Objects.nonNull(in)) {
                 java.util.Properties p = new java.util.Properties();
                 p.load(in);
                 String v = p.getProperty("version", "").trim();
